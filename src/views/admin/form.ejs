@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Novo Registro</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light d-flex align-items-center justify-content-center" style="min-height: 100vh;">
+    
+    <div class="card shadow-sm p-4" style="width: 100%; max-width: 500px;">
+        <h2 class="mb-4 text-capitalize">Novo em <%= tabela %></h2>
+        
+        <form action="/admin/<%= tabela %>/salvar" method="POST">
+            
+            <div class="mb-3">
+                <label class="form-label">Nome / Descrição</label>
+                <input type="text" name="nome" class="form-control" required placeholder="Digite o nome...">
+            </div>
+
+            <% if (tabela === 'cursos') { %>
+                <div class="mb-3">
+                    <label class="form-label">Nome do Coordenador</label>
+                    <input type="text" name="coordenador" class="form-control" placeholder="Ex: Prof. Michel Junio">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Total de Semestres</label>
+                    <input type="number" name="semestres_total" class="form-control" value="8">
+                </div>
+            <% } %>
+
+            <% if (tabela === 'turmas') { %>
+                <div class="mb-3">
+                    <label class="form-label">Semestre(s) da Turma</label>
+                    <input type="text" name="semestre_ref" class="form-control" placeholder="Ex: 1º ou 1º e 2º" required>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Curso</label>
+                    <select name="curso_id" class="form-select" required>
+                        <option value="">Selecione um curso...</option>
+                        <% if(locals.cursos) { %>
+                            <% cursos.forEach(curso => { %>
+                                <option value="<%= curso.id %>"><%= curso.nome %></option>
+                            <% }) %>
+                        <% } %>
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Turno</label>
+                    <select name="turno_id" class="form-select" required>
+                        <option value="">Selecione o turno...</option>
+                        <% if(locals.turnos) { %>
+                            <% turnos.forEach(turno => { %>
+                                <option value="<%= turno.id %>">
+                                    <%= turno.nome %> </option>
+                            <% }) %>
+                        <% } %>
+                    </select>
+                </div>
+            <% } %>
+
+            <% if (tabela === 'professores' || tabela === 'usuarios') { %>
+                <div class="mb-3">
+                    <label class="form-label">Email</label>
+                    <input type="email" name="email" class="form-control">
+                </div>
+            <% } %>
+
+            <% if (tabela === 'disciplinas') { %>
+                <div class="mb-3">
+                    <label class="form-label">Carga Horária</label>
+                    <input type="number" name="carga_horaria" class="form-control" value="60">
+                </div>
+            <% } %>
+
+            <div class="d-grid gap-2 mt-4">
+                <button type="submit" class="btn btn-success">Salvar Registro</button>
+                <a href="/admin/<%= tabela %>" class="btn btn-link text-secondary text-center">Cancelar</a>
+            </div>
+        </form>
+    </div>
+
+</body>
+</html>

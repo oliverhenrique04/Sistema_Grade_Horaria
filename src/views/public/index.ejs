@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grade Horária • 2026.1</title>
+    
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="/css/style.css">
+
+    <style>
+        /* Cores específicas para os botões dos novos turnos */
+        .shift-btn.active-int {
+            background: rgba(6, 182, 212, 0.2);
+            border-color: rgba(6, 182, 212, 0.5);
+            color: #fff;
+            box-shadow: 0 0 15px rgba(6, 182, 212, 0.3);
+        }
+        .shift-btn.active-ves {
+            background: rgba(234, 179, 8, 0.2);
+            border-color: rgba(234, 179, 8, 0.5);
+            color: #fff;
+            box-shadow: 0 0 15px rgba(234, 179, 8, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="parallax" aria-hidden="true">
+        <div class="layer l1"></div>
+        <div class="layer l2"></div>
+        <div class="layer l3"></div>
+    </div>
+    <div class="grain" aria-hidden="true"></div>
+
+    <main class="wrap">
+        <header class="hero glass">
+            <div class="hero-top">
+                <div class="hero-title">
+                    <div>
+                        <h1>Grade Horária</h1>
+                        <div class="meta">
+                            <span class="pill">
+                                <i class="fa-solid fa-user-tie"></i> 
+                                Coordenação: <%= cursoDetalhes && cursoDetalhes.coordenador ? cursoDetalhes.coordenador : 'Geral / Todos' %>
+                            </span>
+                            <span class="pill"><i class="fa-solid fa-calendar"></i> 2026.1</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <form action="/" method="GET" style="margin-top: 20px;">
+                <div class="glass-soft" style="padding: 10px 15px; display: inline-flex; flex-wrap: wrap; gap: 10px; align-items: center; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">
+                    <label style="color: rgba(255,255,255,0.9); font-weight: 600; font-size: 0.9rem;">
+                        <i class="fa-solid fa-filter"></i> Selecione o Curso:
+                    </label>
+                    <select name="curso_id" onchange="this.form.submit()" style="padding: 8px 12px; border-radius: 8px; border: none; background: rgba(255,255,255,0.9); color: #0f172a; font-weight: 600; cursor: pointer; outline: none;">
+                        <option value="">-- Visualizar Todos --</option>
+                        <% cursos.forEach(c => { %>
+                            <option value="<%= c.id %>" <%= cursoSelecionado == c.id ? 'selected' : '' %>>
+                                <%= c.nome %>
+                            </option>
+                        <% }) %>
+                    </select>
+                </div>
+            </form>
+
+            <% if (turnos && turnos.length > 0) { %>
+                <div class="controls glass-soft" role="tablist" style="margin-top: 15px;">
+                    <% turnos.forEach((turno, index) => { %>
+                        <button <button class="shift-btn <%= index === 0 ? 'active-' + (turno.slug || 'geral').substring(0,3) : '' %>" 
+                                id="btn-<%= turno.slug %>" 
+                                onclick="showShift('<%= turno.slug %>')">
+                            <i class="fa-solid <%= turno.icone %>"></i> <%= turno.nome %>
+                        </button>
+                    <% }) %>
+                </div>
+            <% } %>
+        </header>
+
+        <% if (turnos && turnos.length > 0) { %>
+            <% turnos.forEach((turno, index) => { %>
+                <section id="<%= turno.slug %>" class="shift-container <%= turno.tema_class %> <%= index === 0 ? 'active' : '' %>">
+                    
+                    <% const turmasDoTurno = turmas.filter(t => t.turno === turno.slug); %>
+                    
+                    <% if (turmasDoTurno.length === 0) { %>
+                        <div class="glass" style="padding: 40px; text-align: center; margin-top: 20px; color: rgba(255,255,255,0.7);">
+                            <i class="fa-solid fa-ghost fa-2x mb-3"></i><br>
+                            Nenhuma turma cadastrada para o turno <%= turno.nome %> neste curso.
+                        </div>
+                    <% } %>
+
+                    <% turmasDoTurno.forEach(turma => { %>
+                        <article class="class-infographic-card glass">
+                            <div class="infographic-header">
+                                <div class="class-ident">
+                                    <div class="class-icon-box" style="background: var(--<%= (turno.slug || 'gen').substring(0,3) %>-gradient ...">
+                                        <i class="fa-solid fa-graduation-cap"></i>
+                                    </div>
+                                    <div>
+                                        <div class="class-title"><%= turma.nome %></div>
+                                        <div class="class-semesters">
+                                            <i class="fa-solid fa-layer-group"></i> Semestre: <%= turma.semestre || 'Geral' %>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="weekly-load">
+                                    <% const diasOcupados = turma.dias.filter(d => !d.livre).length; %>
+                                    <span class="load-label">Ocupação: <%= diasOcupados %>/5 Dias</span>
+                                    <div class="load-bar">
+                                        <div class="load-fill" style="width:<%= (diasOcupados/5)*100 %>%"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="week-modules-grid">
+                                <% turma.dias.forEach(dia => { %>
+                                    <div class="day-module <%= dia.livre ? 'empty-day' : 'has-class' %>">
+                                        <div class="day-header">
+                                            <%= dia.dia %> 
+                                            <i class="fa-solid <%= dia.icone || 'fa-calendar' %>"></i>
+                                        </div>
+                                        
+                                        <div class="subject-info">
+                                            <% if (dia.livre) { %>
+                                                <span style="opacity: 0.7;">Sem aula</span>
+                                            <% } else { %>
+                                                <div class="subject-name"><%= dia.disciplina %></div>
+                                                <div class="prof-badge">
+                                                    <i class="fa-solid fa-chalkboard-user"></i> <%= dia.prof %>
+                                                </div>
+                                            <% } %>
+                                        </div>
+                                    </div>
+                                <% }) %>
+                            </div>
+                        </article>
+                    <% }) %>
+                </section>
+            <% }) %>
+        <% } else { %>
+            <div class="glass" style="padding: 50px; text-align: center; margin-top: 30px;">
+                <h2 style="color: #fff;">Nenhuma grade encontrada</h2>
+                <p>Não há aulas cadastradas para o curso selecionado.</p>
+                <a href="/" class="shift-btn" style="display:inline-block; width:auto; margin-top:15px;">Limpar Filtros</a>
+            </div>
+        <% } %>
+        
+        <footer class="glass">
+            <div class="footer-grid">
+                <div>
+                    <div class="footer-title"><i class="fa-solid fa-shield-halved"></i> Acesso Restrito</div>
+                    <div class="footer-links" style="margin-top: 10px;">
+                        <a href="/admin">Painel da Coordenação</a>
+                    </div>
+                </div>
+                <div class="footer-small" style="text-align: right; opacity: 0.6;">
+                    Sistema Acadêmico v1.0
+                </div>
+            </div>
+        </footer>
+    </main>
+
+    <script>
+        function showShift(shiftSlug) {
+            // 1. Esconder todos os containers de conteúdo
+            document.querySelectorAll(".shift-container").forEach(el => el.classList.remove("active"));
+            
+            // 2. Remover classes ativas de todos os botões
+            const btns = document.querySelectorAll(".shift-btn");
+            btns.forEach(btn => {
+                // Remove active-mat, active-not, active-int, active-ves, etc.
+                const classes = btn.className.split(" ").filter(c => !c.startsWith("active-"));
+                btn.className = classes.join(" ");
+            });
+
+            // 3. Mostrar o container selecionado
+            const target = document.getElementById(shiftSlug);
+            if(target) target.classList.add("active");
+
+            // 4. Ativar o botão clicado com a cor correta
+            const activeBtn = document.getElementById("btn-" + shiftSlug);
+            if(activeBtn) {
+                // Pega as 3 primeiras letras do slug (int, mat, ves, not) para formar a classe CSS
+                const prefix = shiftSlug.substring(0, 3); 
+                activeBtn.classList.add("active-" + prefix);
+            }
+        }
+
+        // Parallax Effect
+        const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)");
+        function updateParallax() {
+            if (prefersReduced.matches) return;
+            const y = window.scrollY || 0;
+            document.documentElement.style.setProperty("--p1", y + "px");
+            document.documentElement.style.setProperty("--p2", y + "px");
+            document.documentElement.style.setProperty("--p3", y + "px");
+        }
+        window.addEventListener("scroll", updateParallax, { passive: true });
+    </script>
+</body>
+</html>

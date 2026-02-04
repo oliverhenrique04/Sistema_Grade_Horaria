@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Gerenciar <%= tabela %></title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="p-4 bg-light">
+    <div class="container bg-white p-5 rounded shadow-sm">
+        
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="text-capitalize display-6">
+                <i class="fa-solid fa-list-ul text-primary"></i> Gerenciar <%= tabela %>
+            </h1>
+            <div>
+                <a href="/admin" class="btn btn-outline-secondary me-2">
+                    <i class="fa-solid fa-arrow-left"></i> Voltar
+                </a>
+                <a href="/admin/<%= tabela %>/novo" class="btn btn-primary">
+                    <i class="fa-solid fa-plus"></i> Novo Registro
+                </a>
+            </div>
+        </div>
+
+        <% if (itens.length === 0) { %>
+            <div class="alert alert-info d-flex align-items-center">
+                <i class="fa-solid fa-circle-info me-2"></i>
+                <div>
+                    Nenhum registro encontrado nesta tabela. Clique em "Novo Registro" para começar.
+                </div>
+            </div>
+        <% } else { %>
+            
+            <div class="table-responsive">
+                <table class="table table-hover align-middle border">
+                    <thead class="table-dark">
+                        <tr>
+                            <th style="width: 50px;">ID</th>
+                            <th>Detalhes do Registro</th>
+                            <th class="text-end" style="width: 250px;">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% itens.forEach(item => { %>
+                        <tr>
+                            <td class="fw-bold text-muted">#<%= item.id %></td>
+                            <td>
+                                <span class="fw-bold fs-5">
+                                    <%= item.nome || item.descricao || 'Registro #' + item.id %>
+                                </span>
+                                <br>
+                                <small class="text-muted" style="font-size: 0.8rem;">
+                                    <% 
+                                        // Remove o ID do preview para ficar mais limpo
+                                        const preview = {...item}; 
+                                        delete preview.id; 
+                                    %>
+                                    <%= JSON.stringify(preview).replace(/{|}|"/g, '').substring(0, 100) %>...
+                                </small>
+                            </td>
+                            
+                            <td class="text-end">
+                                <% if (tabela === 'turmas') { %>
+                                    <a href="/admin/turmas/<%= item.id %>/grade" class="btn btn-sm btn-warning me-1 text-dark fw-bold">
+                                        <i class="fa-solid fa-table-cells"></i> Montar Grade
+                                    </a>
+                                <% } %>
+                                
+                                <form action="/admin/<%= tabela %>/excluir/<%= item.id %>" method="POST" style="display:inline;" onsubmit="return confirm('Tem certeza que deseja excluir este registro? Esta ação não pode ser desfeita.');">
+            <button type="submit" class="btn btn-sm btn-outline-danger" title="Excluir">
+        <i class="fa-solid fa-trash"></i>
+    </button>
+</form>
+                            </td>
+                        </tr>
+                        <% }) %>
+                    </tbody>
+                </table>
+            </div>
+        <% } %>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

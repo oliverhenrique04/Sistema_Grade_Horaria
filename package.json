@@ -1,0 +1,27 @@
+{
+  "name": "sistema_grade_horaria",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/oliverhenrique04/Sistema_Grade_Horaria.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/oliverhenrique04/Sistema_Grade_Horaria/issues"
+  },
+  "homepage": "https://github.com/oliverhenrique04/Sistema_Grade_Horaria#readme",
+  "dependencies": {
+    "body-parser": "^2.2.2",
+    "ejs": "^4.0.1",
+    "express": "^5.2.1",
+    "pg": "^8.18.0"
+  }
+}
