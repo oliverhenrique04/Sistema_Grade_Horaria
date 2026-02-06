@@ -2,92 +2,99 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <title>Montar Grade - <%= turma.nome %></title>
+    <title>Grade - <%= turma.nome %></title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
 </head>
 <body class="bg-light p-4">
     <div class="container bg-white p-5 rounded shadow">
         
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
-                <h2 class="text-primary"><%= turma.nome %></h2>
-                <p class="text-muted">Adicione as disciplinas e professores aos dias da semana.</p>
+                <h2 class="text-primary"><%= turma.nome %> <small class="text-muted h6">(<%= turma.unidade %>)</small></h2>
+                <p class="text-muted">
+                    <% if(usuarioLogado.tipo === 'nap') { %>
+                        Modo NAP: Defina as salas.
+                    <% } else { %>
+                        Adicione disciplinas e professores.
+                    <% } %>
+                </p>
             </div>
-            <a href="/admin/turmas" class="btn btn-secondary">Voltar</a>
+            <a href="/admin/turmas?token=<%= token %>" class="btn btn-secondary">Voltar</a>
         </div>
 
         <div class="row">
-            <div class="col-md-4">
-                <div class="card bg-light border-0">
-                    <div class="card-body">
-                        <h5 class="card-title mb-3">Adicionar Aula</h5>
-                        
-                        <form action="/admin/turmas/<%= turma.id %>/grade/salvar" method="POST">
-                            
-                            <div class="mb-3">
-                                <label class="form-label fw-bold">Dia da Semana</label>
-                                <select name="dia_semana" class="form-select" required>
-                                    <option value="SEG">Segunda-feira</option>
-                                    <option value="TER">Terça-feira</option>
-                                    <option value="QUA">Quarta-feira</option>
-                                    <option value="QUI">Quinta-feira</option>
-                                    <option value="SEX">Sexta-feira</option>
-                                </select>
-                            </div>
-
-                            <div class="mb-3">
-                                <label class="form-label fw-bold">Disciplina</label>
-                                <select name="disciplina_id" class="form-select" required>
-                                    <option value="">Selecione...</option>
-                                    <% disciplinas.forEach(d => { %>
-                                        <option value="<%= d.id %>"><%= d.nome %></option>
-                                    <% }) %>
-                                </select>
-                            </div>
-
-                            <div class="mb-3">
-                                <label class="form-label fw-bold">Professor</label>
-                                <select name="professor_id" class="form-select" required>
-                                    <option value="">Selecione...</option>
-                                    <% professores.forEach(p => { %>
-                                        <option value="<%= p.id %>"><%= p.nome %></option>
-                                    <% }) %>
-                                </select>
-                            </div>
-
-                            <button type="submit" class="btn btn-success w-100">
-                                + Adicionar na Grade
-                            </button>
-                        </form>
+            <% if(usuarioLogado.tipo !== 'nap') { %>
+                <div class="col-md-4">
+                    <div class="card bg-light border-0">
+                        <div class="card-body">
+                            <h5 class="card-title mb-3">Adicionar Aula</h5>
+                            <form action="/admin/turmas/<%= turma.id %>/grade/salvar?token=<%= token %>" method="POST">
+                                <div class="mb-3">
+                                    <label class="fw-bold">Dia</label>
+                                    <select name="dia_semana" class="form-select" required>
+                                        <option value="SEG">Segunda</option>
+                                        <option value="TER">Terça</option>
+                                        <option value="QUA">Quarta</option>
+                                        <option value="QUI">Quinta</option>
+                                        <option value="SEX">Sexta</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="fw-bold">Disciplina</label>
+                                    <select name="disciplina_id" class="form-select" required>
+                                        <% disciplinas.forEach(d => { %><option value="<%= d.id %>"><%= d.nome %></option><% }) %>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="fw-bold">Professor</label>
+                                    <select name="professor_id" class="form-select" required>
+                                        <% professores.forEach(p => { %><option value="<%= p.id %>"><%= p.nome %></option><% }) %>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="fw-bold">Sala (Opcional)</label>
+                                    <input type="text" name="sala" class="form-control">
+                                </div>
+                                <button type="submit" class="btn btn-success w-100">+ Adicionar</button>
+                            </form>
+                        </div>
                     </div>
                 </div>
-            </div>
+            <% } %>
 
-            <div class="col-md-8">
-                <h5 class="mb-3">Grade Atual</h5>
-                <table class="table table-bordered">
+            <div class="<%= usuarioLogado.tipo === 'nap' ? 'col-12' : 'col-md-8' %>">
+                <table class="table table-bordered align-middle">
                     <thead class="table-dark">
                         <tr>
                             <th>Dia</th>
                             <th>Disciplina</th>
                             <th>Professor</th>
-                            <th>Ação</th>
+                            <th>Sala</th>
+                            <% if(usuarioLogado.tipo !== 'nap') { %><th>Ação</th><% } %>
                         </tr>
                     </thead>
                     <tbody>
-                        <% if(grade.length === 0) { %>
-                            <tr><td colspan="4" class="text-center">Nenhuma aula cadastrada ainda.</td></tr>
-                        <% } %>
-
                         <% grade.forEach(item => { %>
                             <tr>
                                 <td class="fw-bold text-center"><%= item.dia_semana %></td>
                                 <td><%= item.disciplina %></td>
                                 <td><%= item.professor %></td>
-                                <td class="text-center">
-                                    <a href="/admin/turmas/<%= turma.id %>/grade/remover/<%= item.id %>" 
-                                       class="btn btn-sm btn-outline-danger">X</a>
+                                <td>
+                                    <% if(usuarioLogado.tipo === 'nap') { %>
+                                        <form action="/admin/turmas/<%= turma.id %>/grade/item/<%= item.id %>/sala?token=<%= token %>" method="POST" class="d-flex gap-2">
+                                            <input type="text" name="sala" class="form-control form-control-sm" value="<%= item.sala || '' %>">
+                                            <button type="submit" class="btn btn-sm btn-primary"><i class="fa-solid fa-check"></i></button>
+                                        </form>
+                                    <% } else { %>
+                                        <span class="badge bg-secondary"><%= item.sala || '-' %></span>
+                                    <% } %>
                                 </td>
+                                <% if(usuarioLogado.tipo !== 'nap') { %>
+                                    <td class="text-center">
+                                        <a href="/admin/turmas/<%= turma.id %>/grade/remover/<%= item.id %>?token=<%= token %>" class="btn btn-sm btn-outline-danger">X</a>
+                                    </td>
+                                <% } %>
                             </tr>
                         <% }) %>
                     </tbody>

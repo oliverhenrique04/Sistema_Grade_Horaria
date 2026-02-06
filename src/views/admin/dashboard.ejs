@@ -7,67 +7,90 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
 </head>
 <body class="bg-light">
+    
     <nav class="navbar navbar-dark bg-dark mb-5">
         <div class="container">
-            <a class="navbar-brand" href="/"><i class="fa-solid fa-graduation-cap"></i> Sistema Acadêmico</a>
+            <a class="navbar-brand" href="#"><i class="fa-solid fa-graduation-cap"></i> Sistema Acadêmico</a>
             <a href="/" class="btn btn-outline-light btn-sm">Ver Site Público</a>
         </div>
     </nav>
 
     <div class="container">
         <h1 class="mb-4">Painel da Coordenação</h1>
-        <p class="text-muted mb-4">Selecione uma categoria para gerenciar:</p>
+        
+        <p class="text-muted mb-4">
+            <small>
+                <i class="fa-solid fa-user-shield"></i> Logado como: 
+                <strong><%= usuarioLogado.nome %></strong> 
+                (<span class="text-uppercase"><%= usuarioLogado.tipo %></span>)
+            </small>
+        </p>
 
         <div class="row g-4">
-            <div class="col-md-4">
-                <div class="card shadow-sm h-100 border-0">
-                    <div class="card-body text-center">
-                        <i class="fa-solid fa-book fa-3x text-primary mb-3"></i>
-                        <h3>Cursos</h3>
-                        <a href="/admin/cursos" class="btn btn-primary w-100 mt-2">Gerenciar</a>
+            
+            <% if (usuarioLogado.tipo !== 'nap') { %>
+                <div class="col-md-4">
+                    <div class="card shadow-sm h-100 border-0">
+                        <div class="card-body text-center">
+                            <i class="fa-solid fa-book fa-3x text-primary mb-3"></i>
+                            <h3>Cursos</h3>
+                            <a href="/admin/cursos?token=<%= token %>" class="btn btn-primary w-100 mt-2">Gerenciar</a>
+                        </div>
                     </div>
                 </div>
-            </div>
-
-            <div class="col-md-4">
-                <div class="card shadow-sm h-100 border-0">
-                    <div class="card-body text-center">
-                        <i class="fa-solid fa-chalkboard-user fa-3x text-success mb-3"></i>
-                        <h3>Professores</h3>
-                        <a href="/admin/professores" class="btn btn-success w-100 mt-2">Gerenciar</a>
+                <div class="col-md-4">
+                    <div class="card shadow-sm h-100 border-0">
+                        <div class="card-body text-center">
+                            <i class="fa-solid fa-chalkboard-user fa-3x text-success mb-3"></i>
+                            <h3>Professores</h3>
+                            <a href="/admin/professores?token=<%= token %>" class="btn btn-success w-100 mt-2">Gerenciar</a>
+                        </div>
                     </div>
                 </div>
-            </div>
-
-            <div class="col-md-4">
-                <div class="card shadow-sm h-100 border-0">
-                    <div class="card-body text-center">
-                        <i class="fa-solid fa-list-check fa-3x text-warning mb-3"></i>
-                        <h3>Disciplinas</h3>
-                        <a href="/admin/disciplinas" class="btn btn-warning text-white w-100 mt-2">Gerenciar</a>
+                <div class="col-md-4">
+                    <div class="card shadow-sm h-100 border-0">
+                        <div class="card-body text-center">
+                            <i class="fa-solid fa-list-check fa-3x text-warning mb-3"></i>
+                            <h3>Disciplinas</h3>
+                            <a href="/admin/disciplinas?token=<%= token %>" class="btn btn-warning text-white w-100 mt-2">Gerenciar</a>
+                        </div>
                     </div>
                 </div>
-            </div>
+            <% } %>
 
             <div class="col-md-4">
                 <div class="card shadow-sm h-100 border-0">
                     <div class="card-body text-center">
                         <i class="fa-solid fa-users-rectangle fa-3x text-danger mb-3"></i>
                         <h3>Turmas</h3>
-                        <a href="/admin/turmas" class="btn btn-danger w-100 mt-2">Gerenciar</a>
+                        <a href="/admin/turmas?token=<%= token %>" class="btn btn-danger w-100 mt-2">
+                            <%= usuarioLogado.tipo === 'nap' ? 'Alocar Salas' : 'Gerenciar' %>
+                        </a>
                     </div>
                 </div>
             </div>
 
-             <div class="col-md-4">
-                <div class="card shadow-sm h-100 border-0">
-                    <div class="card-body text-center">
-                        <i class="fa-solid fa-clock fa-3x text-info mb-3"></i>
-                        <h3>Turnos</h3>
-                        <a href="/admin/turnos" class="btn btn-info text-white w-100 mt-2">Gerenciar</a>
+            <% if (usuarioLogado.tipo === 'admin') { %>
+                <div class="col-md-4">
+                    <div class="card shadow-sm h-100 border-0">
+                        <div class="card-body text-center">
+                            <i class="fa-solid fa-clock fa-3x text-info mb-3"></i>
+                            <h3>Turnos</h3>
+                            <a href="/admin/turnos?token=<%= token %>" class="btn btn-info text-white w-100 mt-2">Gerenciar</a>
+                        </div>
                     </div>
                 </div>
-            </div>
+                <div class="col-md-4">
+                    <div class="card shadow-sm h-100 border-0">
+                        <div class="card-body text-center">
+                            <i class="fa-solid fa-user-gear fa-3x text-secondary mb-3"></i>
+                            <h3>Usuários</h3>
+                            <a href="/admin/usuarios?token=<%= token %>" class="btn btn-secondary w-100 mt-2">Gerenciar</a>
+                        </div>
+                    </div>
+                </div>
+            <% } %>
+
         </div>
     </div>
 </body>

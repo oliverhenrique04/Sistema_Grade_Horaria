@@ -1,4 +1,8 @@
--- Limpa tabelas antigas se existirem (para evitar erros de conflito)
+-- ====================================================
+-- ESQUEMA FINAL DO BANCO DE DADOS - SISTEMA ACADÊMICO
+-- ====================================================
+
+-- Limpa tudo para recriar do zero (Cuidado! Apaga dados existentes)
 DROP TABLE IF EXISTS grade CASCADE;
 DROP TABLE IF EXISTS turmas CASCADE;
 DROP TABLE IF EXISTS turnos CASCADE;
@@ -7,83 +11,112 @@ DROP TABLE IF EXISTS disciplinas CASCADE;
 DROP TABLE IF EXISTS professores CASCADE;
 DROP TABLE IF EXISTS usuarios CASCADE;
 
--- 1. Tabela de Usuários (Login do Admin)
-CREATE TABLE usuarios (
-    id SERIAL PRIMARY KEY,
-    nome VARCHAR(100) NOT NULL,
-    email VARCHAR(100) UNIQUE NOT NULL,
-    senha VARCHAR(255) NOT NULL, -- Em produção, usar hash!
-    tipo VARCHAR(20) DEFAULT 'admin'
-);
+-- 1. TABELAS DE BASE
 
--- 2. Tabela de Turnos (Agora com Ordem, Ícone e Slug)
 CREATE TABLE turnos (
     id SERIAL PRIMARY KEY,
     nome VARCHAR(50) NOT NULL,
-    slug VARCHAR(50) UNIQUE NOT NULL, -- matutino, noturno, etc.
-    icone VARCHAR(50) DEFAULT 'fa-clock', -- Ícone do FontAwesome
-    tema_class VARCHAR(50) DEFAULT 'matutino-theme', -- Classe CSS para cores
-    ordem INT DEFAULT 99 -- Para ordenar: Integral(1) -> Noturno(4)
+    slug VARCHAR(50) UNIQUE, -- matutino, noturno, integral, vespertino
+    icone VARCHAR(50) DEFAULT 'fa-clock',
+    tema_class VARCHAR(50) DEFAULT 'matutino-theme',
+    ordem INT DEFAULT 99
 );
 
--- 3. Tabela de Cursos (Com Coordenador)
 CREATE TABLE cursos (
     id SERIAL PRIMARY KEY,
     nome VARCHAR(100) NOT NULL,
     semestres_total INT DEFAULT 8,
-    coordenador VARCHAR(100) -- Nome do coordenador do curso
+    coordenador VARCHAR(100) -- Nome exibicional do coordenador
 );
 
--- 4. Tabela de Professores
-CREATE TABLE professores (
-    id SERIAL PRIMARY KEY,
-    nome VARCHAR(100) NOT NULL,
-    email VARCHAR(100)
-);
-
--- 5. Tabela de Disciplinas
 CREATE TABLE disciplinas (
     id SERIAL PRIMARY KEY,
     nome VARCHAR(100) NOT NULL,
     carga_horaria INT DEFAULT 60
 );
 
--- 6. Tabela de Turmas (Vincula Curso + Turno + Semestre)
+CREATE TABLE professores (
+    id SERIAL PRIMARY KEY,
+    nome VARCHAR(100) NOT NULL,
+    email VARCHAR(100)
+);
+
+-- 2. TABELA DE USUÁRIOS (LOGIN E PERMISSÕES)
+CREATE TABLE usuarios (
+    id SERIAL PRIMARY KEY,
+    nome VARCHAR(100) NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    senha VARCHAR(255) NOT NULL,
+    
+    -- Tipos: 'admin', 'coordenador', 'nap'
+    tipo VARCHAR(20) NOT NULL DEFAULT 'coordenador',
+    
+    -- Token para login via URL (ex: ?token=michelTI)
+    token_acesso VARCHAR(50) UNIQUE,
+    
+    -- Se for Coordenador, cuida de qual curso?
+    curso_responsavel_id INT REFERENCES cursos(id) ON DELETE SET NULL,
+    
+    -- Se for NAP, cuida de qual unidade? (Águas Claras / Asa Sul)
+    unidade_responsavel VARCHAR(50)
+);
+
+-- 3. TABELA DE TURMAS (O CENTRO DO SISTEMA)
 CREATE TABLE turmas (
     id SERIAL PRIMARY KEY,
-    nome VARCHAR(100) NOT NULL, -- Ex: "Turma A - 1º Semestre"
-    semestre_ref VARCHAR(50),   -- Ex: "1º" ou "1º e 2º"
+    nome VARCHAR(100) NOT NULL, -- Ex: "Turma A"
+    semestre_ref VARCHAR(50),   -- Ex: "1º Semestre"
+    unidade VARCHAR(50) DEFAULT 'Águas Claras', -- Águas Claras ou Asa Sul
+    
     curso_id INT REFERENCES cursos(id) ON DELETE CASCADE,
     turno_id INT REFERENCES turnos(id) ON DELETE SET NULL
 );
 
--- 7. Tabela Grade (Onde acontece o relacionamento final)
+-- 4. TABELA GRADE (AULAS)
 CREATE TABLE grade (
     id SERIAL PRIMARY KEY,
     turma_id INT REFERENCES turmas(id) ON DELETE CASCADE,
     disciplina_id INT REFERENCES disciplinas(id) ON DELETE CASCADE,
     professor_id INT REFERENCES professores(id) ON DELETE SET NULL,
+    
     dia_semana VARCHAR(3) NOT NULL, -- SEG, TER, QUA, QUI, SEX
+    sala VARCHAR(20),               -- Ex: Lab 03 (NAP edita isso)
+    
     icone_dia VARCHAR(50) DEFAULT 'fa-calendar',
-    e_livre BOOLEAN DEFAULT FALSE -- Se for true, é "Sem Aula"
+    e_livre BOOLEAN DEFAULT FALSE
 );
 
 -- ==========================================
 -- DADOS INICIAIS (SEEDS)
 -- ==========================================
 
--- Criar Admin Padrão
-INSERT INTO usuarios (nome, email, senha) VALUES 
-('Administrador', 'admin@escola.com', 'admin123');
-
--- Criar Turnos Padrão (Na ordem correta e com ícones)
+-- 1. TURNOS
 INSERT INTO turnos (nome, slug, icone, tema_class, ordem) VALUES 
 ('Integral', 'integral', 'fa-clock', 'integral-theme', 1),
 ('Matutino', 'matutino', 'fa-sun', 'matutino-theme', 2),
 ('Vespertino', 'vespertino', 'fa-cloud-sun', 'vespertino-theme', 3),
 ('Noturno', 'noturno', 'fa-moon', 'noturno-theme', 4);
 
--- Criar alguns cursos de exemplo
+-- 2. CURSOS DE EXEMPLO
 INSERT INTO cursos (nome, coordenador, semestres_total) VALUES 
 ('Ciência da Computação', 'Prof. Michel Junio', 8),
-('Direito', 'Profa. Ana Silva', 10);
+('Direito', 'Profa. Ana Silva', 10),
+('Enfermagem', 'Prof. João Médico', 8);
+
+-- 3. USUÁRIOS PADRÃO (SENHAS DE ACESSO)
+INSERT INTO usuarios (nome, email, senha, tipo, token_acesso, curso_responsavel_id, unidade_responsavel) VALUES 
+-- Admin Geral (Vê tudo)
+('Diretor Geral', 'admin@escola.com', '123', 'admin', 'master123', NULL, NULL),
+
+-- Coordenador TI (Vê só TI)
+('Prof. Michel (TI)', 'michel@escola.com', '123', 'coordenador', 'michelTI', 1, NULL),
+
+-- NAP Águas Claras (Vê Águas Claras e edita Salas)
+('NAP Águas Claras', 'napac@escola.com', '123', 'nap', 'nap_ac', NULL, 'Águas Claras'),
+
+-- NAP Asa Sul (Vê Asa Sul e edita Salas)
+('NAP Asa Sul', 'napasa@escola.com', '123', 'nap', 'nap_asa', NULL, 'Asa Sul');
+
+-- 4. ALGUNS PROFESSORES E DISCIPLINAS
+INSERT INTO professores (nome) VALUES ('Prof. Edward Lima'), ('Profa. Maria Jurista'), ('Prof. Alan Turing');
+INSERT INTO disciplinas (nome) VALUES ('Algoritmos'), ('Direito Constitucional'), ('Anatomia');

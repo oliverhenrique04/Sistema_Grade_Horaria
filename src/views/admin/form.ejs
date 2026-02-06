@@ -2,84 +2,113 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <title>Novo Registro</title>
+    <title><%= typeof item !== 'undefined' ? 'Editar' : 'Novo' %> Registro</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body class="bg-light d-flex align-items-center justify-content-center" style="min-height: 100vh;">
     
     <div class="card shadow-sm p-4" style="width: 100%; max-width: 500px;">
-        <h2 class="mb-4 text-capitalize">Novo em <%= tabela %></h2>
+        <h2 class="mb-4 text-capitalize"><%= typeof item !== 'undefined' ? 'Editar' : 'Novo' %> em <%= tabela %></h2>
         
-        <form action="/admin/<%= tabela %>/salvar" method="POST">
+        <% const actionUrl = typeof item !== 'undefined' ? '/admin/' + tabela + '/atualizar/' + item.id : '/admin/' + tabela + '/salvar'; %>
+        
+        <form action="<%= actionUrl %>?token=<%= token %>" method="POST">
             
             <div class="mb-3">
                 <label class="form-label">Nome / Descrição</label>
-                <input type="text" name="nome" class="form-control" required placeholder="Digite o nome...">
+                <input type="text" name="nome" class="form-control" required 
+                       value="<%= typeof item !== 'undefined' ? item.nome : '' %>">
             </div>
 
-            <% if (tabela === 'cursos') { %>
+            <% if (tabela === 'usuarios') { %>
                 <div class="mb-3">
-                    <label class="form-label">Nome do Coordenador</label>
-                    <input type="text" name="coordenador" class="form-control" placeholder="Ex: Prof. Michel Junio">
+                    <label class="form-label">Email</label>
+                    <input type="email" name="email" class="form-control" required value="<%= typeof item !== 'undefined' ? item.email : '' %>">
                 </div>
                 <div class="mb-3">
-                    <label class="form-label">Total de Semestres</label>
-                    <input type="number" name="semestres_total" class="form-control" value="8">
+                    <label class="form-label">Senha</label>
+                    <input type="text" name="senha" class="form-control" required value="<%= typeof item !== 'undefined' ? item.senha : '' %>">
                 </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Tipo</label>
+                        <select name="tipo" class="form-select" id="userType" onchange="toggleUserFields()">
+                            <option value="admin" <%= (typeof item !== 'undefined' && item.tipo === 'admin') ? 'selected' : '' %>>Admin</option>
+                            <option value="coordenador" <%= (typeof item !== 'undefined' && item.tipo === 'coordenador') ? 'selected' : '' %>>Coordenador</option>
+                            <option value="nap" <%= (typeof item !== 'undefined' && item.tipo === 'nap') ? 'selected' : '' %>>NAP (Unidade)</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Token</label>
+                        <input type="text" name="token_acesso" class="form-control" required value="<%= typeof item !== 'undefined' ? item.token_acesso : '' %>">
+                    </div>
+                </div>
+                <div class="mb-3" id="courseField" style="display:none;">
+                    <label class="form-label">Curso Responsável</label>
+                    <select name="curso_responsavel_id" class="form-select">
+                        <option value="">-- Selecione --</option>
+                        <% if(locals.cursos) { cursos.forEach(c => { %>
+                            <option value="<%= c.id %>" <%= (typeof item !== 'undefined' && item.curso_responsavel_id === c.id) ? 'selected' : '' %>><%= c.nome %></option>
+                        <% }) } %>
+                    </select>
+                </div>
+                <div class="mb-3" id="unitField" style="display:none;">
+                    <label class="form-label">Unidade Responsável</label>
+                    <select name="unidade_responsavel" class="form-select">
+                        <option value="Águas Claras" <%= (typeof item !== 'undefined' && item.unidade_responsavel === 'Águas Claras') ? 'selected' : '' %>>Águas Claras</option>
+                        <option value="Asa Sul" <%= (typeof item !== 'undefined' && item.unidade_responsavel === 'Asa Sul') ? 'selected' : '' %>>Asa Sul</option>
+                    </select>
+                </div>
+                <script>
+                    function toggleUserFields() {
+                        const type = document.getElementById('userType').value;
+                        document.getElementById('courseField').style.display = (type === 'coordenador') ? 'block' : 'none';
+                        document.getElementById('unitField').style.display = (type === 'nap') ? 'block' : 'none';
+                    }
+                    window.onload = toggleUserFields;
+                </script>
             <% } %>
 
             <% if (tabela === 'turmas') { %>
                 <div class="mb-3">
-                    <label class="form-label">Semestre(s) da Turma</label>
-                    <input type="text" name="semestre_ref" class="form-control" placeholder="Ex: 1º ou 1º e 2º" required>
+                    <label class="form-label">Unidade</label>
+                    <select name="unidade" class="form-select" required>
+                        <option value="Águas Claras" <%= (typeof item !== 'undefined' && item.unidade === 'Águas Claras') ? 'selected' : '' %>>Águas Claras</option>
+                        <option value="Asa Sul" <%= (typeof item !== 'undefined' && item.unidade === 'Asa Sul') ? 'selected' : '' %>>Asa Sul</option>
+                    </select>
                 </div>
-
+                <div class="mb-3">
+                    <label class="form-label">Semestre</label>
+                    <input type="text" name="semestre_ref" class="form-control" required value="<%= typeof item !== 'undefined' ? item.semestre_ref : '' %>">
+                </div>
                 <div class="mb-3">
                     <label class="form-label">Curso</label>
                     <select name="curso_id" class="form-select" required>
-                        <option value="">Selecione um curso...</option>
-                        <% if(locals.cursos) { %>
-                            <% cursos.forEach(curso => { %>
-                                <option value="<%= curso.id %>"><%= curso.nome %></option>
-                            <% }) %>
-                        <% } %>
+                        <% if(locals.cursos) { cursos.forEach(c => { %>
+                            <option value="<%= c.id %>" <%= (typeof item !== 'undefined' && item.curso_id === c.id) ? 'selected' : '' %>><%= c.nome %></option>
+                        <% }) } %>
                     </select>
                 </div>
-
                 <div class="mb-3">
                     <label class="form-label">Turno</label>
                     <select name="turno_id" class="form-select" required>
-                        <option value="">Selecione o turno...</option>
-                        <% if(locals.turnos) { %>
-                            <% turnos.forEach(turno => { %>
-                                <option value="<%= turno.id %>">
-                                    <%= turno.nome %> </option>
-                            <% }) %>
-                        <% } %>
+                        <% if(locals.turnos) { turnos.forEach(t => { %>
+                            <option value="<%= t.id %>" <%= (typeof item !== 'undefined' && item.turno_id === t.id) ? 'selected' : '' %>><%= t.nome %></option>
+                        <% }) } %>
                     </select>
                 </div>
             <% } %>
 
-            <% if (tabela === 'professores' || tabela === 'usuarios') { %>
-                <div class="mb-3">
-                    <label class="form-label">Email</label>
-                    <input type="email" name="email" class="form-control">
-                </div>
-            <% } %>
-
-            <% if (tabela === 'disciplinas') { %>
-                <div class="mb-3">
-                    <label class="form-label">Carga Horária</label>
-                    <input type="number" name="carga_horaria" class="form-control" value="60">
-                </div>
+            <% if (tabela === 'cursos') { %>
+                <div class="mb-3"><label>Coordenador</label><input type="text" name="coordenador" class="form-control" value="<%= typeof item !== 'undefined' ? item.coordenador : '' %>"></div>
+                <div class="mb-3"><label>Semestres</label><input type="number" name="semestres_total" class="form-control" value="<%= typeof item !== 'undefined' ? item.semestres_total : 8 %>"></div>
             <% } %>
 
             <div class="d-grid gap-2 mt-4">
-                <button type="submit" class="btn btn-success">Salvar Registro</button>
-                <a href="/admin/<%= tabela %>" class="btn btn-link text-secondary text-center">Cancelar</a>
+                <button type="submit" class="btn btn-success">Salvar</button>
+                <a href="/admin/<%= tabela %>?token=<%= token %>" class="btn btn-link text-secondary text-center">Cancelar</a>
             </div>
         </form>
     </div>
-
 </body>
 </html>

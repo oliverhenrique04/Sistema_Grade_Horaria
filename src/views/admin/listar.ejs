@@ -11,33 +11,41 @@
         
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h1 class="text-capitalize display-6">
-                <i class="fa-solid fa-list-ul text-primary"></i> Gerenciar <%= tabela %>
+                <i class="fa-solid fa-list-ul text-primary"></i> <%= tabela %>
             </h1>
+
+            <% if (tabela === 'turmas' && locals.cursosFiltro) { %>
+                <form action="/admin/turmas" method="GET" class="d-flex align-items-center gap-2">
+                    <input type="hidden" name="token" value="<%= token %>">
+                    <select name="filtro_curso" class="form-select form-select-sm" style="width: 200px;" onchange="this.form.submit()">
+                        <option value="">-- Todos os Cursos --</option>
+                        <% cursosFiltro.forEach(c => { %>
+                            <option value="<%= c.id %>" <%= (typeof filtroAtual !== 'undefined' && filtroAtual == c.id) ? 'selected' : '' %>><%= c.nome %></option>
+                        <% }) %>
+                    </select>
+                    <% if(typeof filtroAtual !== 'undefined' && filtroAtual) { %>
+                        <a href="/admin/turmas?token=<%= token %>" class="btn btn-sm btn-outline-secondary">X</a>
+                    <% } %>
+                </form>
+            <% } %>
+
             <div>
-                <a href="/admin" class="btn btn-outline-secondary me-2">
-                    <i class="fa-solid fa-arrow-left"></i> Voltar
-                </a>
-                <a href="/admin/<%= tabela %>/novo" class="btn btn-primary">
-                    <i class="fa-solid fa-plus"></i> Novo Registro
-                </a>
+                <a href="/admin?token=<%= token %>" class="btn btn-outline-secondary me-2">Voltar</a>
+                <% if (usuarioLogado.tipo !== 'nap') { %>
+                    <a href="/admin/<%= tabela %>/novo?token=<%= token %>" class="btn btn-primary">Novo Registro</a>
+                <% } %>
             </div>
         </div>
 
         <% if (itens.length === 0) { %>
-            <div class="alert alert-info d-flex align-items-center">
-                <i class="fa-solid fa-circle-info me-2"></i>
-                <div>
-                    Nenhum registro encontrado nesta tabela. Clique em "Novo Registro" para começar.
-                </div>
-            </div>
+            <div class="alert alert-info">Nenhum registro encontrado.</div>
         <% } else { %>
-            
             <div class="table-responsive">
                 <table class="table table-hover align-middle border">
                     <thead class="table-dark">
                         <tr>
                             <th style="width: 50px;">ID</th>
-                            <th>Detalhes do Registro</th>
+                            <th>Detalhes</th>
                             <th class="text-end" style="width: 250px;">Ações</th>
                         </tr>
                     </thead>
@@ -46,41 +54,30 @@
                         <tr>
                             <td class="fw-bold text-muted">#<%= item.id %></td>
                             <td>
-                                <span class="fw-bold fs-5">
-                                    <%= item.nome || item.descricao || 'Registro #' + item.id %>
-                                </span>
-                                <br>
-                                <small class="text-muted" style="font-size: 0.8rem;">
-                                    <% 
-                                        // Remove o ID do preview para ficar mais limpo
-                                        const preview = {...item}; 
-                                        delete preview.id; 
-                                    %>
-                                    <%= JSON.stringify(preview).replace(/{|}|"/g, '').substring(0, 100) %>...
-                                </small>
+                                <span class="fw-bold fs-5"><%= item.nome || item.descricao %></span>
+                                <% if (item.unidade) { %>
+                                    <span class="badge bg-primary ms-2"><%= item.unidade %></span>
+                                <% } %>
                             </td>
-                            
                             <td class="text-end">
                                 <% if (tabela === 'turmas') { %>
-                                    <a href="/admin/turmas/<%= item.id %>/grade" class="btn btn-sm btn-warning me-1 text-dark fw-bold">
-                                        <i class="fa-solid fa-table-cells"></i> Montar Grade
+                                    <a href="/admin/turmas/<%= item.id %>/grade?token=<%= token %>" class="btn btn-sm btn-warning me-1">
+                                        <i class="fa-solid fa-table"></i> <%= usuarioLogado.tipo === 'nap' ? 'Definir Salas' : 'Grade' %>
                                     </a>
                                 <% } %>
-                                
-                                <form action="/admin/<%= tabela %>/excluir/<%= item.id %>" method="POST" style="display:inline;" onsubmit="return confirm('Tem certeza que deseja excluir este registro? Esta ação não pode ser desfeita.');">
-            <button type="submit" class="btn btn-sm btn-outline-danger" title="Excluir">
-        <i class="fa-solid fa-trash"></i>
-    </button>
-</form>
+                                <% if (usuarioLogado.tipo !== 'nap') { %>
+                                    <a href="/admin/<%= tabela %>/editar/<%= item.id %>?token=<%= token %>" class="btn btn-sm btn-info me-1 text-white"><i class="fa-solid fa-pen"></i></a>
+                                    <form action="/admin/<%= tabela %>/excluir/<%= item.id %>?token=<%= token %>" method="POST" style="display:inline;" onsubmit="return confirm('Excluir?');">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger"><i class="fa-solid fa-trash"></i></button>
+                                    </form>
+                                <% } %>
                             </td>
                         </tr>
-                        <% }) %>
+                        <% }) %> 
                     </tbody>
                 </table>
             </div>
         <% } %>
     </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

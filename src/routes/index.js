@@ -3,23 +3,32 @@ const router = express.Router();
 const publicController = require('../controllers/publicController');
 const adminController = require('../controllers/adminController');
 
-// --- PÁGINA PÚBLICA ---
+// --- ÁREA PÚBLICA ---
 router.get('/', publicController.getGradePage);
 
-// --- ÁREA ADMIN (CRUDs) ---
-router.get('/admin', adminController.getDashboard);
+// --- ÁREA ADMIN ---
+router.get('/admin', (req, res) => res.render('admin/dashboard'));
 
-// ROTAS ESPECÍFICAS PARA MONTAR A GRADE (Relacionamentos)
+// Listagem (Com filtros no controller)
+router.get('/admin/:entidade', adminController.listar);
+
+// Criação
+router.get('/admin/:entidade/novo', adminController.formCriar);
+router.post('/admin/:entidade/salvar', adminController.salvar);
+
+// Edição
+router.get('/admin/:entidade/editar/:id', adminController.formEditar);
+router.post('/admin/:entidade/atualizar/:id', adminController.atualizar);
+
+// Exclusão
+router.post('/admin/:entidade/excluir/:id', adminController.excluir);
+
+// --- ROTAS DA GRADE ---
 router.get('/admin/turmas/:id/grade', adminController.montarGrade);
 router.post('/admin/turmas/:id/grade/salvar', adminController.adicionarItemGrade);
 router.get('/admin/turmas/:id/grade/remover/:id_item', adminController.removerItemGrade);
-// Rota genérica para exclusão
-router.post('/admin/:entidade/excluir/:id', adminController.excluir);
 
-module.exports = router;
-// Rotas dinâmicas para CRUDs (Ex: /admin/professores, /admin/cursos)
-router.get('/admin/:entidade', adminController.listar);
-router.get('/admin/:entidade/novo', adminController.formCriar);
-router.post('/admin/:entidade/salvar', adminController.criar);
+// ROTA ESPECIAL NAP (Salvar Sala)
+router.post('/admin/turmas/:id/grade/item/:id_item/sala', adminController.atualizarSalaGrade);
 
 module.exports = router;
