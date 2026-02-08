@@ -2,22 +2,18 @@ const db = require('../database/db');
 
 exports.getGradePage = async (req, res) => {
     try {
-        const { curso_id, unidade } = req.query; // Recebe também a unidade
+        const { curso_id, unidade } = req.query;
 
-        // 1. Buscar Cursos (para o select)
+        // 1. Buscas auxiliares
         const cursosRes = await db.query('SELECT * FROM cursos ORDER BY nome');
-        
-        // 2. Buscar Unidades Existentes (para o select de unidade)
-        // Pega apenas as unidades que realmente têm turmas cadastradas
         const unidadesRes = await db.query('SELECT DISTINCT unidade FROM turmas WHERE unidade IS NOT NULL ORDER BY unidade');
 
-        // 3. Buscar Detalhes do Curso Selecionado
         let cursoDetalhes = null;
         if (curso_id) {
             cursoDetalhes = (await db.query('SELECT * FROM cursos WHERE id = $1', [curso_id])).rows[0];
         }
 
-        // 4. Query Principal da Grade
+        // 2. QUERY PRINCIPAL
         let queryText = `
             SELECT 
                 t.id as turma_id, t.nome as turma_nome, t.semestre_ref, t.unidade,
@@ -33,25 +29,30 @@ exports.getGradePage = async (req, res) => {
             WHERE 1=1
         `;
         
-        // Aplica Filtros
-        if (curso_id) {
-            queryText += ` AND t.curso_id = ${curso_id}`;
-        }
-        if (unidade) {
-            queryText += ` AND t.unidade = '${unidade}'`;
-        }
+        if (curso_id) queryText += ` AND t.curso_id = ${curso_id}`;
+        if (unidade) queryText += ` AND t.unidade = '${unidade}'`;
         
         // Ordenação
-        queryText += ` ORDER BY CASE g.dia_semana WHEN 'SEG' THEN 1 WHEN 'TER' THEN 2 WHEN 'QUA' THEN 3 WHEN 'QUI' THEN 4 WHEN 'SEX' THEN 5 END`;
+        queryText += ` 
+            ORDER BY 
+                CAST(SUBSTRING(t.semestre_ref FROM '^[0-9]+') AS INTEGER) ASC, 
+                t.nome ASC,
+                CASE g.dia_semana 
+                    WHEN 'SEG' THEN 1 WHEN 'TER' THEN 2 WHEN 'QUA' THEN 3 
+                    WHEN 'QUI' THEN 4 WHEN 'SEX' THEN 5 
+                END,
+                g.id ASC
+        `;
 
         const gradeRes = await db.query(queryText);
 
-        // 5. Processamento dos Dados
+        // 3. Processamento (AGRUPAMENTO POR DIA)
         const turmasMap = new Map();
         const turnosComAula = new Set();
 
         gradeRes.rows.forEach(row => {
             turnosComAula.add(row.turno_slug);
+            
             if (!turmasMap.has(row.turma_id)) {
                 turmasMap.set(row.turma_id, {
                     id: row.turma_id,
@@ -59,14 +60,24 @@ exports.getGradePage = async (req, res) => {
                     semestre: row.semestre_ref,
                     unidade: row.unidade,
                     turno: row.turno_slug,
-                    dias: []
+                    diasMap: new Map() // Usamos um Map interno para agrupar aulas por dia
                 });
             }
+
             if (row.dia_semana) {
                 const turma = turmasMap.get(row.turma_id);
-                turma.dias.push({
-                    dia: row.dia_semana,
-                    icone: row.icone_dia,
+                
+                // Se o dia ainda não existe na turma, cria ele
+                if (!turma.diasMap.has(row.dia_semana)) {
+                    turma.diasMap.set(row.dia_semana, {
+                        dia: row.dia_semana,
+                        icone: row.icone_dia,
+                        aulas: [] // Lista de aulas DENTRO deste dia
+                    });
+                }
+
+                // Adiciona a aula na lista daquele dia
+                turma.diasMap.get(row.dia_semana).aulas.push({
                     disciplina: row.disciplina_nome,
                     prof: row.prof_nome,
                     sala: row.sala,
@@ -75,7 +86,14 @@ exports.getGradePage = async (req, res) => {
             }
         });
 
-        // 6. Filtrar Turnos vazios
+        // 4. Converter Maps para Arrays para o EJS ler
+        const turmasFinais = Array.from(turmasMap.values()).map(turma => {
+            return {
+                ...turma,
+                dias: Array.from(turma.diasMap.values()) // Transforma o Map de dias em Array
+            };
+        });
+
         const todosTurnos = (await db.query('SELECT * FROM turnos ORDER BY ordem ASC')).rows;
         const turnosFiltrados = todosTurnos.filter(t => 
             turnosComAula.has(t.slug) || (!curso_id && !unidade && turnosComAula.size === 0)
@@ -84,10 +102,10 @@ exports.getGradePage = async (req, res) => {
         res.render('public/index', {
             turnos: turnosFiltrados.length > 0 ? turnosFiltrados : todosTurnos,
             cursos: cursosRes.rows,
-            unidades: unidadesRes.rows, // Envia lista de unidades
-            turmas: Array.from(turmasMap.values()),
+            unidades: unidadesRes.rows,
+            turmas: turmasFinais,
             cursoSelecionado: curso_id,
-            unidadeSelecionada: unidade, // Envia unidade escolhida
+            unidadeSelecionada: unidade,
             cursoDetalhes: cursoDetalhes
         });
 

@@ -1,10 +1,10 @@
 const db = require('../database/db');
 
-// --- LISTAR COM FILTROS DE UNIDADE E CURSO ---
+// --- LISTAR COM ORDENAÇÃO DE SEMESTRE ---
 exports.listar = async (req, res) => {
     const tabela = req.params.entidade;
     const usuario = res.locals.usuarioLogado;
-    const { filtro_curso } = req.query; // ID do curso vindo do dropdown
+    const { filtro_curso } = req.query;
 
     try {
         let sql = `SELECT * FROM ${tabela} WHERE 1=1`;
@@ -12,36 +12,36 @@ exports.listar = async (req, res) => {
         let paramIndex = 1;
 
         if (tabela === 'turmas') {
-            // 1. REGRA COORDENADOR: Vê tudo do seu curso (qualquer unidade)
             if (usuario.tipo === 'coordenador') {
                 sql += ` AND curso_id = $${paramIndex++}`;
                 params.push(usuario.curso_responsavel_id);
             }
-            
-            // 2. REGRA NAP: Vê todos os cursos, MAS SÓ DA SUA UNIDADE
             if (usuario.tipo === 'nap') {
                 sql += ` AND unidade = $${paramIndex++}`;
                 params.push(usuario.unidade_responsavel);
             }
-
-            // 3. FILTRO DE CURSO (Opcional, vindo do select na tela)
             if (filtro_curso) {
                 sql += ` AND curso_id = $${paramIndex++}`;
                 params.push(filtro_curso);
             }
         }
         
-        // Coordenador só vê seu próprio curso na lista de cursos
         if (tabela === 'cursos' && usuario.tipo === 'coordenador') {
              sql += ` AND id = $${paramIndex++}`;
              params.push(usuario.curso_responsavel_id);
         }
 
-        sql += ` ORDER BY id DESC`;
+        // --- LÓGICA DE ORDENAÇÃO ---
+        if (tabela === 'turmas') {
+            // Extrai o número do texto (ex: "1º" vira 1) e ordena ASC
+            sql += ` ORDER BY CAST(SUBSTRING(semestre_ref FROM '^[0-9]+') AS INTEGER) ASC`;
+        } else {
+            // Para as outras tabelas (Professores, Cursos), mostra os mais novos primeiro
+            sql += ` ORDER BY id DESC`;
+        }
 
         const result = await db.query(sql, params);
 
-        // BUSCAR LISTA DE CURSOS PARA O DROPDOWN DE FILTRO
         let listaCursosParaFiltro = [];
         if (tabela === 'turmas') {
             listaCursosParaFiltro = (await db.query('SELECT * FROM cursos ORDER BY nome')).rows;
@@ -252,17 +252,22 @@ exports.adicionarItemGrade = async (req, res) => {
     const token = req.query.token;
     const usuario = res.locals.usuarioLogado;
 
-    if (usuario.tipo === 'nap') return res.status(403).send("NAP não adiciona.");
+    // NAP não adiciona, só edita sala
+    if (usuario.tipo === 'nap') return res.status(403).send("NAP não adiciona disciplinas.");
 
     try {
-        // VERIFICA DUPLICIDADE DE DIA
-        const duplicidade = await db.query('SELECT * FROM grade WHERE turma_id = $1 AND dia_semana = $2', [id, dia_semana]);
-        if (duplicidade.rows.length > 0) {
-            return res.send(`<script>alert('Já existe aula na ${dia_semana}.'); window.location.href = '/admin/turmas/${id}/grade?token=${token}';</script>`);
-        }
-        await db.query(`INSERT INTO grade (turma_id, dia_semana, disciplina_id, professor_id, sala) VALUES ($1, $2, $3, $4, $5)`, [id, dia_semana, disciplina_id, professor_id, sala]);
+        // --- REMOVIDO: BLOQUEIO DE DUPLICIDADE ---
+        // Agora o sistema permite adicionar quantas aulas quiser no mesmo dia.
+        
+        await db.query(`
+            INSERT INTO grade (turma_id, dia_semana, disciplina_id, professor_id, sala)
+            VALUES ($1, $2, $3, $4, $5)
+        `, [id, dia_semana, disciplina_id, professor_id, sala]);
+
         res.redirect(`/admin/turmas/${id}/grade?token=${token}`);
-    } catch (err) { res.status(500).send(err.message); }
+    } catch (err) {
+        res.status(500).send("Erro ao adicionar: " + err.message);
+    }
 };
 
 exports.removerItemGrade = async (req, res) => {
