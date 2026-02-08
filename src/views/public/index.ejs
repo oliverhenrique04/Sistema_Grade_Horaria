@@ -28,10 +28,11 @@
         <header class="hero glass">
             <div class="hero-top">
                 <div class="hero-title">
+                    <img src="/logo_unieuro.png" alt="Logo do Unieuro" class="hero-logo">
                     <div>
-                        <h1>Grade Horária</h1>
+                        <h1>Grade Horária dos Cursos</h1>
                         <div class="meta">
-                            <span class="pill"><i class="fa-solid fa-user-tie"></i> Coordenação: <%= cursoDetalhes && cursoDetalhes.coordenador ? cursoDetalhes.coordenador : 'Geral / Todos' %></span>
+                            <%if(cursoDetalhes) { %><span class="pill"><i class="fa-solid fa-user-tie"></i> Coordenação: <%= cursoDetalhes && cursoDetalhes.coordenador ? cursoDetalhes.coordenador : 'Geral / Todos' %></span><% } %>
                             <span class="pill"><i class="fa-solid fa-calendar"></i> 2026.1</span>
                             <% if(unidadeSelecionada) { %><span class="pill"><i class="fa-solid fa-location-dot"></i> <%= unidadeSelecionada %></span><% } %>
                         </div>
@@ -190,7 +191,20 @@
                 </section>
             <% }) %>
         <% } %>
-        <footer class="glass"><div class="footer-grid"><div class="footer-small" style="text-align: center; width: 100%; opacity: 0.6;">Sistema Acadêmico v2.2</div></div></footer>
+        <footer class="glass">
+            <div class="footer-grid">
+                <div>
+                    <div class="footer-brand-row">
+                        <img src="/logo_nuted.png" alt="Logo do NUTED" class="footer-logo">
+                    </div>
+                    <div class="footer-small">
+                        Este material é informativo e pode sofrer ajustes conforme calendário acadêmico e alocação docente.
+                    </div>
+                    <div class="footer-small">
+<div class="footer-title"><i class="fa-solid fa-graduation-cap"></i> Grade Horária - Unieuro</div>                    </div>
+                </div>
+            </div>
+        </footer>
     </main>
 
     <script>
