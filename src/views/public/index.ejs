@@ -97,11 +97,24 @@
                                         </div>
                                     </div>
                                 </div>
+                                
                                 <div class="weekly-load">
-                                    <span class="load-label">Aulas na Semana</span>
-                                    <div class="load-bar"><div class="load-fill" style="width: <%= turma.dias.length > 0 ? '100%' : '0%' %>"></div></div>
+                                    <% 
+                                        const diasCount = turma.dias.length; 
+                                        const porcentagem = Math.min((diasCount / 5) * 100, 100);
+                                        let corBarra = '#3b82f6'; 
+                                        if(diasCount >= 3) corBarra = '#fbbf24'; 
+                                        if(diasCount >= 5) corBarra = '#22c55e'; 
+                                    %>
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                                        <span class="load-label" style="margin-right: 8px;">Aulas na Semana</span>
+                                        <span style="font-size: 0.8rem; font-weight: 700; color: rgba(255,255,255,0.9);"><%= diasCount %>/5</span>
+                                    </div>
+                                    <div class="load-bar" style="background: rgba(255,255,255,0.1); height: 6px; border-radius: 4px; overflow: hidden;">
+                                        <div class="load-fill" style="width: <%= porcentagem %>%; background-color: <%= corBarra %>; height: 100%; transition: width 0.5s ease;"></div>
+                                    </div>
                                 </div>
-                            </div>
+                                </div>
 
                             <div class="week-modules-grid">
                                 <% turma.dias.forEach(dia => { %>
@@ -118,27 +131,33 @@
                                                 
                                                 <% if (!lastAula || lastAula.disciplina !== aula.disciplina) { %>
                                                     <div class="aula-item">
-                                                        <div class="subject-name" style="font-size: 0.95rem; font-weight: 600; line-height: 1.3; margin-bottom: 6px; color: #fff;">
+                                                        <div class="subject-name" style="font-size: 0.95rem; font-weight: 700; line-height: 1.3; margin-bottom: 8px; color: #fff;">
                                                             <%= aula.livre ? 'Sem Aula' : aula.disciplina %>
                                                         </div>
                                                         
                                                         <% if (!aula.livre) { %>
-                                                            <div class="d-flex justify-content-between align-items-center mt-2">
-                                                                <div class="prof-badge" style="font-size: 0.75rem; opacity: 0.8;">
+                                                            <div class="d-flex flex-wrap align-items-center" style="gap: 8px;">
+                                                                
+                                                                <div class="info-badge" style="margin-bottom: 2px; background: rgba(79, 70, 229, 0.25); border: 1px solid rgba(99, 102, 241, 0.3); color: #e0e7ff; padding: 5px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; flex-grow: 1;">
                                                                     <% if(aula.prof) { %>
                                                                         <% const cleanName = aula.prof.replace(/(Prof\.|Profa\.|Dr\.|Dra\.|Me\.|Ma\.)\s*/gi, '').trim(); %>
-                                                                        <i class="fa-solid fa-chalkboard-user"></i> <%= cleanName.split(' ').slice(0, 2).join(' ') %>
+                                                                        <i class="fa-solid fa-chalkboard-user" style="opacity: 0.8;"></i> 
+                                                                        <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><%= cleanName.split(' ').slice(0, 2).join(' ') %></span>
                                                                     <% } else { %>
                                                                         <span style="opacity:0.5;">-</span>
                                                                     <% } %>
                                                                 </div>
-                                                                <% if (aula.sala === 'EAD') { %>
-                                                                    <div class="room-badge room-badge-ead" style="font-size: 0.7rem; padding: 3px 8px; border-radius: 6px;">EAD</div>
-                                                                <% } else if (aula.sala) { %>
-                                                                    <div class="room-badge room-badge-physical" style="font-size: 0.7rem; padding: 3px 8px; border-radius: 6px;">
-                                                                        <i class="fa-solid fa-door-open"></i> <%= aula.sala %>
+
+                                                                <% if (aula.sala) { %>
+                                                                    <div class="info-badge" style="background: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255, 255, 255, 0.1); color: #f1f5f9; padding: 5px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; min-width: fit-content;">
+                                                                        <% if (aula.sala === 'EAD') { %>
+                                                                            <i class="fa-solid fa-wifi" style="opacity: 0.8;"></i> EAD
+                                                                        <% } else { %>
+                                                                            <i class="fa-solid fa-door-open" style="opacity: 0.8;"></i> <%= aula.sala %>
+                                                                        <% } %>
                                                                     </div>
                                                                 <% } %>
+
                                                             </div>
                                                         <% } %>
                                                     </div>

@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict l59SmHBXiVA0nsXyH5Ew8l8oFruXgOOLkTUw3ptdVvDDyBnut89lCO7Z8rgVev3
+\restrict bmGlYQD1tJ2t4hkaeO3j1e0qTSR4pcwCKxum8xEs0EY6pKdaoIEUXag9CFLmVHK
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -340,12 +340,12 @@ ALTER TABLE ONLY public.usuarios ALTER COLUMN id SET DEFAULT nextval('public.usu
 --
 
 COPY public.cursos (id, nome, semestres_total, coordenador) FROM stdin;
-1	Ciência da Computação	\N	\N
 2	Administração	8	Erica Harbs
 3	Direito	8	Miria e Cleyber
 4	Biomedicina	8	Carla Danielle Dias Costa
 6	Arquitetura e Urbanismo	10	Coordenação Arquitetura
 8	Enfermagem	10	Coordenação Enfermagem
+10	Computação	8	Prof. Michel Junio
 \.
 
 
@@ -356,6 +356,7 @@ COPY public.cursos (id, nome, semestres_total, coordenador) FROM stdin;
 COPY public.disciplinas (id, nome, carga_horaria) FROM stdin;
 1	Lógica Computacional	\N
 2	Engenharia de Software	\N
+2320	Empreendedorismo em TI	\N
 3	Orientação a Objetos	\N
 4	Bioestatística	\N
 5	Deontologia e Legislação em Biomedicina	\N
@@ -377,6 +378,25 @@ COPY public.disciplinas (id, nome, carga_horaria) FROM stdin;
 21	Hematologia Clínica	\N
 22	Estágio Supervisionado I	\N
 23	Citopatologia	\N
+2321	Redes de Computadores	\N
+2322	Programação Concorrente e Distribuída	\N
+2323	Fundamentos de Sistemas de Informação	\N
+2324	Programação para Web	\N
+2325	Projeto Integrador Programação Estruturada	\N
+2326	Gerência de Projetos	\N
+2327	Programação Mobile	\N
+2328	Estrutura de Dados	\N
+2329	Matemática Computacional	\N
+2330	Engenharia de Requisitos	\N
+2331	Interação Humano-Computador	\N
+2332	Banco de Dados I	\N
+2334	Projeto Integrador Programação Paralela	\N
+2335	Projeto de Sistemas de Informação I	\N
+2337	Mineração de Dados	\N
+2338	Projeto Integrador Modelagem de Software	\N
+2339	Algoritmos	\N
+2340	Projeto Integrador DEVOPS	\N
+2341	Organização e Arquitetura de Computadores	\N
 54	Desenho e Plástica	\N
 55	Estética e História da Arte	\N
 56	Fundamentos da Metodologia de Projeto	\N
@@ -407,6 +427,19 @@ COPY public.disciplinas (id, nome, carga_horaria) FROM stdin;
 81	Ensaio Teórico	\N
 82	Tópicos Especiais em Arquitetura	\N
 83	TFG II	\N
+2369	PI Modelagem de Software	\N
+2371	Org. e Arq. de Computadores	\N
+2375	PI Prog. Estruturada	\N
+2377	PI Computação Paralela	\N
+2379	Prog. Mobile	\N
+2380	Prog. Concorrente e Distribuída	\N
+2382	Projeto de S.I.	\N
+2383	Estágio Sup. I	\N
+2385	PI DEVOPS	\N
+2390	PI Programação Estruturada	\N
+2391	Programação Web	\N
+2462	Redes de Computadores (SI)	\N
+2463	Programação Mobile (ADS)	\N
 204	Nutrição Humana	\N
 205	Fisiologia Humana	\N
 206	Fundamentação do Processo do Cuidar I	\N
@@ -429,6 +462,8 @@ COPY public.disciplinas (id, nome, carga_horaria) FROM stdin;
 244	Cuidado Integral em Saúde Mental (Quinzenal)	\N
 246	Processo Integrativo do Cuidado 1 (Quinzenal)	\N
 251	Processo Integrativo do Cuidado 3 (Quinzenal)	\N
+2464	Dia Livre	\N
+2465	Dia Livre (SI)	\N
 402	Filosofia Jurídica e História do Direito	\N
 403	Língua Portuguesa e Comunicação Jurídica	\N
 404	Teoria Geral do Estado	\N
@@ -503,6 +538,8 @@ COPY public.disciplinas (id, nome, carga_horaria) FROM stdin;
 --
 
 COPY public.grade (id, turma_id, dia_semana, disciplina_id, professor_id, icone_dia, nota_compartilhada, e_livre, e_split, sala) FROM stdin;
+6066	732	SEG	2462	921	fa-calendar	\N	f	f	Lab 02
+6074	731	SEX	2331	901	fa-calendar	\N	f	f	Lab 01
 5631	653	QUA	404	175	fa-calendar	\N	f	f	\N
 3959	520	SEX	428	182	fa-calendar	\N	f	f	\N
 5653	655	QUA	430	183	fa-calendar	\N	f	f	\N
@@ -688,6 +725,7 @@ COPY public.grade (id, turma_id, dia_semana, disciplina_id, professor_id, icone_
 1125	106	QUA	223	\N	fa-calendar	\N	f	f	\N
 1126	106	QUA	223	\N	fa-calendar	\N	f	f	\N
 1127	106	QUA	223	\N	fa-calendar	\N	f	f	\N
+6067	732	QUA	2463	903	fa-calendar	\N	f	f	Lab 02
 932	\N	SEG	215	83	fa-calendar	\N	f	f	\N
 933	\N	SEG	215	83	fa-calendar	\N	f	f	\N
 935	\N	TER	216	88	fa-calendar	\N	f	f	\N
@@ -697,6 +735,9 @@ COPY public.grade (id, turma_id, dia_semana, disciplina_id, professor_id, icone_
 939	\N	QUI	244	88	fa-calendar	\N	f	f	\N
 940	\N	QUI	244	88	fa-calendar	\N	f	f	\N
 941	\N	SEX	246	89	fa-calendar	\N	f	f	\N
+6068	732	QUI	2334	903	fa-calendar	\N	f	f	Skill Lab
+6076	725	QUI	2465	975	fa-calendar	\N	f	f	
+6077	724	QUI	2465	975	fa-calendar	\N	f	f	
 942	\N	SEX	246	89	fa-calendar	\N	f	f	\N
 1128	106	QUI	223	\N	fa-calendar	\N	f	f	\N
 1129	106	QUI	223	\N	fa-calendar	\N	f	f	\N
@@ -866,11 +907,23 @@ COPY public.grade (id, turma_id, dia_semana, disciplina_id, professor_id, icone_
 512	53	QUA	80	35	fa-calendar	\N	f	f	\N
 473	57	SEX	83	35	fa-calendar	\N	f	f	\N
 472	57	SEX	83	35	fa-calendar	\N	f	f	\N
+6069	732	SEX	2331	901	fa-calendar	\N	f	f	Lab 01
+6078	731	SEG	2327	926	fa-calendar	\N	f	f	Skill Lab
+6079	731	QUA	2322	903	fa-calendar	\N	f	f	Lab 02
+5988	721	QUI	2339	2	fa-calendar	\N	f	f	Skill Lab
+5989	722	QUI	2339	2	fa-calendar	\N	f	f	Skill Lab
+5990	721	SEG	1	901	fa-calendar	\N	f	f	SALA
+5991	722	SEG	1	901	fa-calendar	\N	f	f	SALA
+5992	721	SEX	2341	901	fa-calendar	\N	f	f	SALA
+5993	722	SEX	2341	901	fa-calendar	\N	f	f	SALA
+5994	721	QUI	2339	904	fa-calendar	\N	f	f	Skill Lab
 5639	654	SEG	20	581	fa-calendar	\N	f	f	\N
 5688	658	TER	402	173	fa-calendar	\N	f	f	\N
 5689	658	TER	402	173	fa-calendar	\N	f	f	\N
 5690	658	TER	402	173	fa-calendar	\N	f	f	\N
 5693	658	QUI	403	174	fa-calendar	\N	f	f	\N
+5995	722	QUI	2339	904	fa-calendar	\N	f	f	Skill Lab
+5996	721	QUA	2338	907	fa-calendar	\N	f	f	Lab 01
 5694	658	QUI	403	174	fa-calendar	\N	f	f	\N
 5695	658	QUI	403	174	fa-calendar	\N	f	f	\N
 5634	653	SEX	406	175	fa-calendar	\N	f	f	\N
@@ -884,6 +937,7 @@ COPY public.grade (id, turma_id, dia_semana, disciplina_id, professor_id, icone_
 5687	658	SEG	405	176	fa-calendar	\N	f	f	\N
 5637	654	SEG	413	177	fa-calendar	\N	f	f	\N
 5638	654	SEG	413	177	fa-calendar	\N	f	f	\N
+5997	722	QUA	2338	907	fa-calendar	\N	f	f	Lab 01
 5699	659	SEG	413	177	fa-calendar	\N	f	f	\N
 5700	659	SEG	413	177	fa-calendar	\N	f	f	\N
 5640	654	TER	414	178	fa-calendar	\N	f	f	\N
@@ -900,6 +954,20 @@ COPY public.grade (id, turma_id, dia_semana, disciplina_id, professor_id, icone_
 5691	658	QUA	404	198	fa-calendar	\N	f	f	\N
 5692	658	QUA	404	198	fa-calendar	\N	f	f	\N
 5701	659	SEG	20	581	fa-calendar	\N	f	f	\N
+5998	721	TER	2	908	fa-calendar	\N	f	f	Skill Lab
+5999	722	TER	2	908	fa-calendar	\N	f	f	Skill Lab
+6000	723	TER	2328	2	fa-calendar	\N	f	f	Lab 01 + Lab 02
+6001	723	QUA	2321	901	fa-calendar	\N	f	f	SALA
+6002	723	TER	2328	904	fa-calendar	\N	f	f	Lab 01 + Lab 02
+6003	723	SEX	2332	907	fa-calendar	\N	f	f	Lab 02
+6004	723	QUI	2325	908	fa-calendar	\N	f	f	SALA
+6005	723	SEG	2330	908	fa-calendar	\N	f	f	Lab 01
+6007	725	SEG	2334	2	fa-calendar	\N	f	f	Lab 02
+6008	724	TER	2331	900	fa-calendar	\N	f	f	SALA
+6009	725	TER	2331	900	fa-calendar	\N	f	f	SALA
+6010	724	QUI	2327	903	fa-calendar	\N	f	f	Lab 01
+6011	725	QUI	2327	903	fa-calendar	\N	f	f	Lab 01
+6012	724	SEX	2391	903	fa-calendar	\N	f	f	Lab 01
 3905	513	QUA	410	178	fa-calendar	\N	f	f	\N
 3906	513	QUA	410	178	fa-calendar	\N	f	f	\N
 3907	513	QUA	410	178	fa-calendar	\N	f	f	\N
@@ -931,6 +999,8 @@ COPY public.grade (id, turma_id, dia_semana, disciplina_id, professor_id, icone_
 3912	514	TER	421	195	fa-calendar	\N	f	f	\N
 3916	514	SEX	424	196	fa-calendar	\N	f	f	\N
 3911	514	SEG	420	197	fa-calendar	\N	f	f	\N
+6071	731	SEG	2462	901	fa-calendar	\N	f	f	Lab 02
+6080	732	SEG	2327	926	fa-calendar	\N	f	f	Skill Lab
 5752	662	QUI	9	\N	fa-calendar	\N	f	f	EAD
 5636	653	SEX	407	\N	fa-calendar	\N	f	f	EAD
 5754	662	QUI	407	\N	fa-calendar	\N	f	f	EAD
@@ -939,6 +1009,7 @@ COPY public.grade (id, turma_id, dia_semana, disciplina_id, professor_id, icone_
 5711	659	SEX	418	\N	fa-calendar	\N	f	f	EAD
 5712	659	SEX	419	\N	fa-calendar	\N	f	f	EAD
 5647	654	SEX	419	\N	fa-calendar	\N	f	f	EAD
+6081	732	QUA	2322	903	fa-calendar	\N	f	f	Lab 02
 5746	662	TER	456	173	fa-calendar	\N	f	f	\N
 5747	662	TER	456	173	fa-calendar	\N	f	f	\N
 3927	516	QUA	452	173	fa-calendar	\N	f	f	\N
@@ -946,12 +1017,45 @@ COPY public.grade (id, turma_id, dia_semana, disciplina_id, professor_id, icone_
 3943	518	TER	403	174	fa-calendar	\N	f	f	\N
 3944	518	QUA	406	175	fa-calendar	\N	f	f	\N
 3946	518	QUI	405	176	fa-calendar	\N	f	f	\N
+6013	725	SEX	2391	903	fa-calendar	\N	f	f	Lab 01
+6014	724	SEG	2334	904	fa-calendar	\N	f	f	Lab 02
+6015	725	SEG	2334	904	fa-calendar	\N	f	f	Lab 02
 5728	660	SEX	433	\N	fa-calendar	\N	f	f	EAD
 5662	655	SEX	433	\N	fa-calendar	\N	f	f	EAD
+6016	724	QUA	2322	908	fa-calendar	\N	f	f	Lab 02
+6017	725	QUA	2322	908	fa-calendar	\N	f	f	Lab 02
+6019	725	TER	2331	925	fa-calendar	\N	f	f	SALA
+6021	725	TER	2331	964	fa-calendar	\N	f	f	SALA
+6022	726	QUA	2337	2	fa-calendar	\N	f	f	Skill Lab
+6023	727	QUA	2337	2	fa-calendar	\N	f	f	Skill Lab
+6024	726	SEX	2340	2	fa-calendar	\N	f	f	Skill Lab
+6025	727	SEX	2340	2	fa-calendar	\N	f	f	Skill Lab
+6026	726	QUI	2327	903	fa-calendar	\N	f	f	Lab 01
+6027	727	QUI	2327	903	fa-calendar	\N	f	f	Lab 01
+6028	726	QUA	2337	904	fa-calendar	\N	f	f	Skill Lab
+6029	727	QUA	2337	904	fa-calendar	\N	f	f	Skill Lab
+6030	726	SEX	2340	904	fa-calendar	\N	f	f	Skill Lab
+6031	727	SEX	2340	904	fa-calendar	\N	f	f	Skill Lab
+6032	726	SEG	2335	909	fa-calendar	\N	f	f	Skill Lab
+6033	727	SEG	2335	909	fa-calendar	\N	f	f	Skill Lab
+6034	728	SEG	2320	900	fa-calendar	\N	f	f	SALA
+6035	733	SEG	2320	900	fa-calendar	\N	f	f	SALA
+6036	728	TER	2323	901	fa-calendar	\N	f	f	Lab 01 + Lab 02
+6037	733	TER	2323	901	fa-calendar	\N	f	f	Lab 01 + Lab 02
+6040	728	QUA	2326	905	fa-calendar	\N	f	f	Skill Lab
+6041	733	QUA	2326	905	fa-calendar	\N	f	f	Skill Lab
+6042	728	QUI	2329	906	fa-calendar	\N	f	f	SALA
+6043	733	QUI	2329	906	fa-calendar	\N	f	f	SALA
+6044	729	SEG	2321	901	fa-calendar	\N	f	f	Lab 02
+6045	730	SEG	2321	901	fa-calendar	\N	f	f	Lab 02
 5675	656	SEX	447	\N	fa-calendar	\N	f	f	EAD
 5744	661	SEX	447	\N	fa-calendar	\N	f	f	EAD
+6050	731	TER	2324	903	fa-calendar	\N	f	f	Skill Lab
 3932	516	SEX	454	\N	fa-calendar	\N	f	f	\N
+6051	732	TER	2324	903	fa-calendar	\N	f	f	Skill Lab
 3948	519	SEG	414	178	fa-calendar	\N	f	f	\N
+6056	729	TER	2325	2	fa-calendar	\N	f	f	SALA
+6057	730	TER	2325	2	fa-calendar	\N	f	f	SALA
 3963	521	TER	446	179	fa-calendar	\N	f	f	\N
 5656	655	QUI	431	179	fa-calendar	\N	f	f	\N
 5657	655	QUI	431	179	fa-calendar	\N	f	f	\N
@@ -977,9 +1081,13 @@ COPY public.grade (id, turma_id, dia_semana, disciplina_id, professor_id, icone_
 3917	514	SEX	426	\N	fa-calendar	\N	f	f	EAD
 3961	520	SEX	433	\N	fa-calendar	\N	f	f	EAD
 3924	515	SEX	440	\N	fa-calendar	\N	f	f	EAD
+6073	731	QUI	2334	903	fa-calendar	\N	f	f	Skill Lab
+6058	729	QUA	2328	902	fa-calendar	\N	f	f	Lab 01
 3968	521	SEX	447	\N	fa-calendar	\N	f	f	EAD
 3930	516	SEX	451	\N	fa-calendar	\N	f	f	EAD
 3931	516	SEX	455	\N	fa-calendar	\N	f	f	EAD
+6059	730	QUA	2328	902	fa-calendar	\N	f	f	Lab 01
+6060	729	TER	2325	904	fa-calendar	\N	f	f	SALA
 3977	523	SEX	458	\N	fa-calendar	\N	f	f	EAD
 5751	662	QUI	458	\N	fa-calendar	\N	f	f	EAD
 5745	662	TER	456	173	fa-calendar	\N	f	f	\N
@@ -1007,12 +1115,15 @@ COPY public.grade (id, turma_id, dia_semana, disciplina_id, professor_id, icone_
 5682	657	QUA	462	190	fa-calendar	\N	f	f	\N
 3979	523	SEX	460	\N	fa-calendar	\N	f	f	EAD
 5753	662	QUI	460	\N	fa-calendar	\N	f	f	EAD
+6061	730	TER	2325	904	fa-calendar	\N	f	f	SALA
+6062	729	QUI	2330	905	fa-calendar	\N	f	f	Lab 01
 3974	522	SEX	463	\N	fa-calendar	\N	f	f	EAD
 5683	657	SEX	463	\N	fa-calendar	\N	f	f	EAD
 3972	522	SEX	464	\N	fa-calendar	\N	f	f	\N
 5684	657	SEX	464	\N	fa-calendar	\N	f	f	\N
 3973	522	SEX	465	\N	fa-calendar	\N	f	f	\N
 5685	657	SEX	465	\N	fa-calendar	\N	f	f	\N
+6063	730	QUI	2330	905	fa-calendar	\N	f	f	Lab 01
 3939	517	SEX	468	\N	fa-calendar	\N	f	f	\N
 3940	517	SEX	470	\N	fa-calendar	\N	f	f	EAD
 3941	517	SEX	471	\N	fa-calendar	\N	f	f	EAD
@@ -1023,6 +1134,9 @@ COPY public.grade (id, turma_id, dia_semana, disciplina_id, professor_id, icone_
 3933	517	QUA	469	192	fa-calendar	\N	f	f	\N
 3934	517	QUA	469	192	fa-calendar	\N	f	f	\N
 3935	517	QUA	469	192	fa-calendar	\N	f	f	\N
+6064	729	SEX	2332	907	fa-calendar	\N	f	f	Lab 02
+6065	730	SEX	2332	907	fa-calendar	\N	f	f	Lab 02
+6082	723	QUA	2465	975	fa-calendar	\N	f	f	
 \.
 
 
@@ -1047,6 +1161,16 @@ COPY public.professores (id, nome, email) FROM stdin;
 14	Profa. Dra. Flávia Abreu	\N
 15	Prof. Angélica	\N
 16	Prof. Luzirlane	\N
+900	Lara Sanches	\N
+901	Edward Melo	\N
+902	Aldo Mendes	\N
+903	Rafael Marconi	\N
+904	Jorge Osvaldo	\N
+905	Grazielle Seabra	\N
+906	Carmem Elena	\N
+907	Hyago Santana	\N
+908	Paulo Augusto	\N
+909	Efrem Filho	\N
 27	Profa. Luciana	\N
 28	Prof. Montiel	\N
 29	Profa. Glaucia	\N
@@ -1057,6 +1181,12 @@ COPY public.professores (id, nome, email) FROM stdin;
 34	Prof. Lucas	\N
 35	Profa. Hiatiane	\N
 36	Prof. Tadeu	\N
+921	Edward Lima	\N
+925	Lara Câmara Sanches	\N
+926	Aldo Henrique	\N
+929	Michel Junio	\N
+931	Carmen Elena Ramirez	\N
+964	Lara Câmara	\N
 58	Prof. A Definir	\N
 81	Prof. Dejane	\N
 82	Prof. Roberto	\N
@@ -1074,6 +1204,7 @@ COPY public.professores (id, nome, email) FROM stdin;
 133	Prof. Carla Danielle	\N
 134	Prof. Fabiano	\N
 135	Prof. Flávia Abreu	\N
+975	Nenhum	\N
 173	Rodrigo Palma	\N
 174	Márcia Bicalho	\N
 175	José Roberto Carvalho	\N
@@ -1114,6 +1245,9 @@ COPY public.turmas (id, nome, semestre_ref, curso_id, turno_id, unidade) FROM st
 7	1º Período - Biomedicina (Noite)	1º	4	8	Águas Claras
 8	3º Período - Biomedicina (Noite)	3º	4	8	Águas Claras
 9	5º Período - Biomedicina (Noite)	5º	4	8	Águas Claras
+721	Computação 1º Semestre (Manhã)	1º	10	1	Águas Claras
+722	Computação 2º Semestre (Manhã)	2º	10	1	Águas Claras
+723	Computação 3º Semestre (Manhã)	3º	10	1	Águas Claras
 102	2º/3º Semestre - Enfermagem	2º/3º	8	1	Águas Claras
 103	4º/5º Semestre - Enfermagem	4º/5º	8	1	Águas Claras
 104	6º/7º/8º Semestre - Enfermagem	6º-8º	8	1	Águas Claras
@@ -1125,6 +1259,16 @@ COPY public.turmas (id, nome, semestre_ref, curso_id, turno_id, unidade) FROM st
 110	2º/3º Semestre - Enfermagem (AS)	2º/3º	8	1	Asa Sul
 111	4º-7º Semestre - Enfermagem (AS)	4º-7º	8	1	Asa Sul
 112	9º Semestre - Enfermagem (AS)	9º	8	1	Asa Sul
+724	Computação 4º Semestre (Manhã)	4º	10	1	Águas Claras
+725	Computação 5º Semestre (Manhã)	5º	10	1	Águas Claras
+726	Computação 6º Semestre (Manhã)	6º	10	1	Águas Claras
+727	Computação 7º Semestre (Manhã)	7º	10	1	Águas Claras
+728	Computação 1º Semestre (Noite)	1º	10	8	Águas Claras
+729	Computação 2º Semestre (Noite)	2º	10	8	Águas Claras
+730	Computação 3º Semestre (Noite)	3º	10	8	Águas Claras
+731	Computação 4º Semestre (Noite)	4º	10	8	Águas Claras
+732	Computação 5º Semestre (Noite)	5º	10	8	Águas Claras
+733	Computação 8º Semestre (Noite)	8º	10	8	Águas Claras
 48	1º Período - Arquitetura	1º	6	1	Águas Claras
 49	2º/3º Período - Arquitetura	2º/3º	6	1	Águas Claras
 50	4º/5º Período - Arquitetura	4º/5º	6	1	Águas Claras
@@ -1177,10 +1321,10 @@ COPY public.turnos (id, nome, slug, icone, tema_class, ordem) FROM stdin;
 
 COPY public.usuarios (id, nome, email, senha, tipo, token_acesso, curso_responsavel_id, unidade_responsavel) FROM stdin;
 1	Diretor Geral	admin@escola.com	x	admin	master123	\N	\N
-2	Prof. Michel	michel@escola.com	x	coordenador	michelTI	1	\N
 3	Assistente NAP	nap@escola.com	x	nap	nap123	\N	\N
 4	NAP Águas Claras	napac@escola.com	x	nap	nap_ac	\N	Águas Claras
 5	NAP Asa Sul	napasa@escola.com	x	nap	nap_asa	\N	Asa Sul
+2	Prof. Michel	michel@escola.com	x	coordenador	michelTI	\N	\N
 \.
 
 
@@ -1188,35 +1332,35 @@ COPY public.usuarios (id, nome, email, senha, tipo, token_acesso, curso_responsa
 -- Name: cursos_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.cursos_id_seq', 8, true);
+SELECT pg_catalog.setval('public.cursos_id_seq', 10, true);
 
 
 --
 -- Name: disciplinas_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.disciplinas_id_seq', 2319, true);
+SELECT pg_catalog.setval('public.disciplinas_id_seq', 2488, true);
 
 
 --
 -- Name: grade_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.grade_id_seq', 5754, true);
+SELECT pg_catalog.setval('public.grade_id_seq', 6082, true);
 
 
 --
 -- Name: professores_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.professores_id_seq', 899, true);
+SELECT pg_catalog.setval('public.professores_id_seq', 975, true);
 
 
 --
 -- Name: turmas_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.turmas_id_seq', 662, true);
+SELECT pg_catalog.setval('public.turmas_id_seq', 733, true);
 
 
 --
@@ -1381,5 +1525,5 @@ ALTER TABLE ONLY public.usuarios
 -- PostgreSQL database dump complete
 --
 
-\unrestrict l59SmHBXiVA0nsXyH5Ew8l8oFruXgOOLkTUw3ptdVvDDyBnut89lCO7Z8rgVev3
+\unrestrict bmGlYQD1tJ2t4hkaeO3j1e0qTSR4pcwCKxum8xEs0EY6pKdaoIEUXag9CFLmVHK
 
