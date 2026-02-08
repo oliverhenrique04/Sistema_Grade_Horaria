@@ -16,13 +16,8 @@ const dados = {
             turno: "matutino",
             icone: "fa-graduation-cap",
             ocupacao: 5,
-            grade: [
-                { dia: "SEG", icone: "fa-diagram-project", disciplinas: [{ nome: "Lógica Computacional", prof: "Prof. Edward Lima" }] },
-                { dia: "TER", icone: "fa-code-commit", disciplinas: [{ nome: "Engenharia de Software", prof: "Prof. Paulo Augusto" }] },
-                { dia: "QUA", icone: "fa-sitemap", disciplinas: [{ nome: "PI Modelagem de Software", prof: "Prof. Hyago Santana" }] },
-                { dia: "QUI", icone: "fa-terminal", disciplinas: [{ nome: "Algoritmos", prof: "Prof. Jorge Osvaldo" }] },
-                { dia: "SEX", icone: "fa-microchip", disciplinas: [{ nome: "Org. e Arq. de Computadores", prof: "Prof. Edward Lima" }] }
-            ]
+            grade: [ ] 
+            
         },
         {
             id: 2,

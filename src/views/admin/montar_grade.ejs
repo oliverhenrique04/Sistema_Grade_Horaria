@@ -2,34 +2,36 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Grade - <%= turma.nome %></title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
 </head>
 <body class="bg-light p-4">
-    <div class="container bg-white p-5 rounded shadow">
-        
+    <% const returnPath = (typeof returnTo !== 'undefined' && returnTo) ? returnTo : ('/admin/turmas?token=' + token); %>
+    <% const returnToEncoded = encodeURIComponent(returnPath); %>
+    <div class="container bg-white p-4 p-md-5 rounded shadow">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
-                <h2 class="text-primary"><%= turma.nome %> <small class="text-muted h6">(<%= turma.unidade %>)</small></h2>
-                <p class="text-muted">
+                <h2 class="text-primary mb-1"><%= turma.nome %> <small class="text-muted h6">(<%= turma.unidade %>)</small></h2>
+                <p class="text-muted mb-0">
                     <% if(usuarioLogado.tipo === 'nap') { %>
-                        Modo NAP: Defina as salas.
+                        Edite as salas diretamente na tabela e clique em <strong>Salvar Alterações</strong>.
                     <% } else { %>
-                        Adicione disciplinas e professores.
+                        Edite dia, disciplina, professor e sala diretamente na tabela e clique em <strong>Salvar Alterações</strong>.
                     <% } %>
                 </p>
             </div>
-            <a href="/admin/turmas?token=<%= token %>" class="btn btn-secondary">Voltar</a>
+            <a href="<%= returnPath %>" class="btn btn-secondary">Voltar</a>
         </div>
 
-        <div class="row">
+        <div class="row g-4">
             <% if(usuarioLogado.tipo !== 'nap') { %>
-                <div class="col-md-4">
+                <div class="col-lg-4">
                     <div class="card bg-light border-0">
                         <div class="card-body">
                             <h5 class="card-title mb-3">Adicionar Aula</h5>
-                            <form action="/admin/turmas/<%= turma.id %>/grade/salvar?token=<%= token %>" method="POST">
+                            <form action="/admin/turmas/<%= turma.id %>/grade/salvar?token=<%= token %>&return_to=<%= returnToEncoded %>" method="POST">
                                 <div class="mb-3">
                                     <label class="fw-bold">Dia</label>
                                     <select name="dia_semana" class="form-select" required>
@@ -43,13 +45,17 @@
                                 <div class="mb-3">
                                     <label class="fw-bold">Disciplina</label>
                                     <select name="disciplina_id" class="form-select" required>
-                                        <% disciplinas.forEach(d => { %><option value="<%= d.id %>"><%= d.nome %></option><% }) %>
+                                        <% disciplinas.forEach(d => { %>
+                                            <option value="<%= d.id %>"><%= d.nome %></option>
+                                        <% }) %>
                                     </select>
                                 </div>
                                 <div class="mb-3">
                                     <label class="fw-bold">Professor</label>
                                     <select name="professor_id" class="form-select" required>
-                                        <% professores.forEach(p => { %><option value="<%= p.id %>"><%= p.nome %></option><% }) %>
+                                        <% professores.forEach(p => { %>
+                                            <option value="<%= p.id %>"><%= p.nome %></option>
+                                        <% }) %>
                                     </select>
                                 </div>
                                 <div class="mb-3">
@@ -63,42 +69,99 @@
                 </div>
             <% } %>
 
-            <div class="<%= usuarioLogado.tipo === 'nap' ? 'col-12' : 'col-md-8' %>">
-                <table class="table table-bordered align-middle">
-                    <thead class="table-dark">
-                        <tr>
-                            <th>Dia</th>
-                            <th>Disciplina</th>
-                            <th>Professor</th>
-                            <th>Sala</th>
-                            <% if(usuarioLogado.tipo !== 'nap') { %><th>Ação</th><% } %>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <% grade.forEach(item => { %>
-                            <tr>
-                                <td class="fw-bold text-center"><%= item.dia_semana %></td>
-                                <td><%= item.disciplina %></td>
-                                <td><%= item.professor %></td>
-                                <td>
-                                    <% if(usuarioLogado.tipo === 'nap') { %>
-                                        <form action="/admin/turmas/<%= turma.id %>/grade/item/<%= item.id %>/sala?token=<%= token %>" method="POST" class="d-flex gap-2">
-                                            <input type="text" name="sala" class="form-control form-control-sm" value="<%= item.sala || '' %>">
-                                            <button type="submit" class="btn btn-sm btn-primary"><i class="fa-solid fa-check"></i></button>
-                                        </form>
-                                    <% } else { %>
-                                        <span class="badge bg-secondary"><%= item.sala || '-' %></span>
+            <div class="<%= usuarioLogado.tipo === 'nap' ? 'col-12' : 'col-lg-8' %>">
+                <form action="/admin/turmas/<%= turma.id %>/grade/atualizar?token=<%= token %>&return_to=<%= returnToEncoded %>" method="POST">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h5 class="mb-0">Aulas da Turma</h5>
+                        <button type="submit" class="btn btn-primary btn-sm">
+                            <i class="fa-solid fa-floppy-disk me-1"></i>Salvar Alterações
+                        </button>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-bordered align-middle mb-0">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th style="min-width: 140px;">Dia</th>
+                                    <th style="min-width: 220px;">Disciplina</th>
+                                    <th style="min-width: 220px;">Professor</th>
+                                    <th style="min-width: 180px;">Sala</th>
+                                    <% if(usuarioLogado.tipo !== 'nap') { %>
+                                        <th class="text-center" style="width: 120px;">Remover</th>
                                     <% } %>
-                                </td>
-                                <% if(usuarioLogado.tipo !== 'nap') { %>
-                                    <td class="text-center">
-                                        <a href="/admin/turmas/<%= turma.id %>/grade/remover/<%= item.id %>?token=<%= token %>" class="btn btn-sm btn-outline-danger">X</a>
-                                    </td>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% if (!grade || grade.length === 0) { %>
+                                    <tr>
+                                        <td colspan="<%= usuarioLogado.tipo === 'nap' ? 4 : 5 %>" class="text-center text-muted py-4">
+                                            Nenhuma aula cadastrada para esta turma.
+                                        </td>
+                                    </tr>
                                 <% } %>
-                            </tr>
-                        <% }) %>
-                    </tbody>
-                </table>
+
+                                <% grade.forEach(item => { %>
+                                    <tr>
+                                        <td>
+                                            <% if(usuarioLogado.tipo === 'nap') { %>
+                                                <span class="fw-bold"><%= item.dia_semana %></span>
+                                                <input type="hidden" name="itens[<%= item.id %>][dia_semana]" value="<%= item.dia_semana %>">
+                                            <% } else { %>
+                                                <select name="itens[<%= item.id %>][dia_semana]" class="form-select form-select-sm" required>
+                                                    <option value="SEG" <%= item.dia_semana === 'SEG' ? 'selected' : '' %>>Segunda</option>
+                                                    <option value="TER" <%= item.dia_semana === 'TER' ? 'selected' : '' %>>Terça</option>
+                                                    <option value="QUA" <%= item.dia_semana === 'QUA' ? 'selected' : '' %>>Quarta</option>
+                                                    <option value="QUI" <%= item.dia_semana === 'QUI' ? 'selected' : '' %>>Quinta</option>
+                                                    <option value="SEX" <%= item.dia_semana === 'SEX' ? 'selected' : '' %>>Sexta</option>
+                                                </select>
+                                            <% } %>
+                                        </td>
+                                        <td>
+                                            <% if(usuarioLogado.tipo === 'nap') { %>
+                                                <span><%= item.disciplina || ('Disciplina não encontrada (ID ' + (item.disciplina_id || '-') + ')') %></span>
+                                                <input type="hidden" name="itens[<%= item.id %>][disciplina_id]" value="<%= item.disciplina_id %>">
+                                            <% } else { %>
+                                                <select name="itens[<%= item.id %>][disciplina_id]" class="form-select form-select-sm" required>
+                                                    <option value="">-- Selecione disciplina --</option>
+                                                    <% disciplinas.forEach(d => { %>
+                                                        <option value="<%= d.id %>" <%= Number(item.disciplina_id) === Number(d.id) ? 'selected' : '' %>><%= d.nome %></option>
+                                                    <% }) %>
+                                                </select>
+                                            <% } %>
+                                        </td>
+                                        <td>
+                                            <% if(usuarioLogado.tipo === 'nap') { %>
+                                                <span><%= item.professor || ('Professor não encontrado') %></span>
+                                                <input type="hidden" name="itens[<%= item.id %>][professor_id]" value="<%= item.professor_id %>">
+                                            <% } else { %>
+                                                <select name="itens[<%= item.id %>][professor_id]" class="form-select form-select-sm" required>
+                                                    <option value="">-- Selecione professor --</option>
+                                                    <% professores.forEach(p => { %>
+                                                        <option value="<%= p.id %>" <%= Number(item.professor_id) === Number(p.id) ? 'selected' : '' %>><%= p.nome %></option>
+                                                    <% }) %>
+                                                </select>
+                                            <% } %>
+                                        </td>
+                                        <td>
+                                            <input
+                                                type="text"
+                                                name="itens[<%= item.id %>][sala]"
+                                                class="form-control form-control-sm"
+                                                value="<%= item.sala || '' %>"
+                                                placeholder="Ex: Lab 03 / EAD"
+                                            >
+                                        </td>
+                                        <% if(usuarioLogado.tipo !== 'nap') { %>
+                                            <td class="text-center">
+                                                <input type="checkbox" class="form-check-input" name="itens[<%= item.id %>][remover]">
+                                            </td>
+                                        <% } %>
+                                    </tr>
+                                <% }) %>
+                            </tbody>
+                        </table>
+                    </div>
+                </form>
             </div>
         </div>
     </div>

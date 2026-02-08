@@ -1,10 +1,21 @@
+require('dotenv').config();
+
 const { Pool } = require('pg');
 
+const databaseUrl = process.env.DATABASE_URL;
+
+if (!databaseUrl) {
+    throw new Error('Variável de ambiente DATABASE_URL não definida.');
+}
+
+const sslHabilitado = process.env.DB_SSL === 'true';
+
 const pool = new Pool({
-    // Sintaxe: postgresql://usuario:senha@host:porta/banco
-    connectionString: process.env.DATABASE_URL || 'postgresql://postgres:123456@127.0.0.1:5432/grade_horaria'
+    connectionString: databaseUrl,
+    ssl: sslHabilitado ? { rejectUnauthorized: false } : false,
 });
 
 module.exports = {
     query: (text, params) => pool.query(text, params),
+    getClient: () => pool.connect(),
 };

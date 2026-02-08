@@ -103,19 +103,9 @@ INSERT INTO cursos (nome, coordenador, semestres_total) VALUES
 ('Direito', 'Profa. Ana Silva', 10),
 ('Enfermagem', 'Prof. João Médico', 8);
 
--- 3. USUÁRIOS PADRÃO (SENHAS DE ACESSO)
-INSERT INTO usuarios (nome, email, senha, tipo, token_acesso, curso_responsavel_id, unidade_responsavel) VALUES 
--- Admin Geral (Vê tudo)
-('Diretor Geral', 'admin@escola.com', '123', 'admin', 'master123', NULL, NULL),
-
--- Coordenador TI (Vê só TI)
-('Prof. Michel (TI)', 'michel@escola.com', '123', 'coordenador', 'michelTI', 1, NULL),
-
--- NAP Águas Claras (Vê Águas Claras e edita Salas)
-('NAP Águas Claras', 'napac@escola.com', '123', 'nap', 'nap_ac', NULL, 'Águas Claras'),
-
--- NAP Asa Sul (Vê Asa Sul e edita Salas)
-('NAP Asa Sul', 'napasa@escola.com', '123', 'nap', 'nap_asa', NULL, 'Asa Sul');
+-- 3. USUÁRIOS
+-- Para segurança, usuários e senhas não são mais inseridos automaticamente no schema.
+-- Cadastre os usuários manualmente no banco após a configuração do ambiente.
 
 -- 4. ALGUNS PROFESSORES E DISCIPLINAS
 INSERT INTO professores (nome) VALUES ('Prof. Edward Lima'), ('Profa. Maria Jurista'), ('Prof. Alan Turing');

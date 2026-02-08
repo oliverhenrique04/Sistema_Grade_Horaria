@@ -13,6 +13,7 @@
         .shift-btn.active-int { background: rgba(6, 182, 212, 0.2); border-color: rgba(6, 182, 212, 0.5); color: #fff; box-shadow: 0 0 15px rgba(6, 182, 212, 0.3); }
         .shift-btn.active-ves { background: rgba(234, 179, 8, 0.2); border-color: rgba(234, 179, 8, 0.5); color: #fff; box-shadow: 0 0 15px rgba(234, 179, 8, 0.3); }
         .filter-select { padding: 8px 12px; border-radius: 8px; border: none; background: rgba(255,255,255,0.9); color: #0f172a; font-weight: 600; cursor: pointer; outline: none; min-width: 150px; font-size: 0.9rem; }
+        .filter-select:disabled { opacity: 0.6; cursor: not-allowed; }
         .aula-item { background: rgba(255,255,255,0.08); padding: 10px; border-radius: 8px; border-left: 3px solid rgba(255,255,255,0.3); transition: transform 0.2s ease, background 0.2s; }
         .aula-item:hover { background: rgba(255,255,255,0.15); transform: translateX(2px); }
         .room-badge-ead { background: #3b82f6; color: white; font-weight: 800; letter-spacing: 0.5px; box-shadow: 0 2px 5px rgba(59, 130, 246, 0.4); }
@@ -42,26 +43,33 @@
                 <div class="glass-soft" style="padding: 15px; display: inline-flex; flex-wrap: wrap; gap: 15px; align-items: center; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">
                     <div class="d-flex flex-column">
                         <label style="color: rgba(255,255,255,0.8); font-size: 0.75rem; margin-bottom: 4px; text-transform: uppercase;">Unidade</label>
-                        <select name="unidade" class="filter-select" onchange="this.form.submit()">
-                            <option value="">-- Todas --</option>
+                        <select id="unidadeSelect" name="unidade" class="filter-select" onchange="const c=document.getElementById('cursoSelect'); if(c){c.value='';} this.form.submit()">
+                            <option value="">-- Selecione --</option>
                             <% unidades.forEach(u => { %>
-                                <option value="<%= u.unidade %>" <%= unidadeSelecionada == u.unidade ? 'selected' : '' %>><%= u.unidade %></option>
+                                <option value="<%= u.slug %>" <%= unidadeSelecionadaSlug == u.slug ? 'selected' : '' %>><%= u.nome %></option>
                             <% }) %>
                         </select>
                     </div>
                     <div class="d-flex flex-column">
                         <label style="color: rgba(255,255,255,0.8); font-size: 0.75rem; margin-bottom: 4px; text-transform: uppercase;">Curso</label>
-                        <select name="curso_id" class="filter-select" onchange="this.form.submit()">
-                            <option value="">-- Todos --</option>
-                            <% cursos.forEach(c => { %>
-                                <option value="<%= c.id %>" <%= cursoSelecionado == c.id ? 'selected' : '' %>><%= c.nome %></option>
-                            <% }) %>
+                        <select id="cursoSelect" name="curso" class="filter-select" <%= !unidadeSelecionadaSlug ? 'disabled' : '' %> onchange="this.form.submit()">
+                            <% if (!unidadeSelecionadaSlug) { %>
+                                <option value="">-- Selecione uma unidade primeiro --</option>
+                            <% } else { %>
+                                <option value="">-- Selecione --</option>
+                                <% cursos.forEach(c => { %>
+                                    <option value="<%= c.slug %>" <%= cursoSelecionado == c.slug ? 'selected' : '' %>><%= c.nome %></option>
+                                <% }) %>
+                                <% if (!cursos || cursos.length === 0) { %>
+                                    <option value="" disabled>Nenhum curso disponível para a unidade</option>
+                                <% } %>
+                            <% } %>
                         </select>
                     </div>
                 </div>
             </form>
 
-            <% if (turnos && turnos.length > 0) { %>
+            <% if (!deveSelecionarFiltros && turnos && turnos.length > 0) { %>
                 <div class="controls glass-soft" role="tablist" style="margin-top: 15px;">
                     <% turnos.forEach((turno, index) => { %>
                         <button class="shift-btn <%= index === 0 ? 'active-' + (turno.slug || 'gen').substring(0,3) : '' %>" id="btn-<%= turno.slug %>" onclick="showShift('<%= turno.slug %>')">
@@ -72,7 +80,15 @@
             <% } %>
         </header>
 
-        <% if (turnos && turnos.length > 0) { %>
+        <% if (deveSelecionarFiltros) { %>
+            <section class="selection-required glass">
+                <div class="selection-required-icon"><i class="fa-solid fa-filter-circle-xmark"></i></div>
+                <h2>Selecione Unidade e Curso</h2>
+                <p>Para consultar sua grade horária, selecione primeiro a <strong>unidade</strong> e o <strong>curso</strong> nos filtros acima.</p>
+            </section>
+        <% } %>
+
+        <% if (!deveSelecionarFiltros && turnos && turnos.length > 0) { %>
             <% turnos.forEach((turno, index) => { %>
                 <section id="<%= turno.slug %>" class="shift-container <%= turno.tema_class %> <%= index === 0 ? 'active' : '' %>">
                     <% const turmasDoTurno = turmas.filter(t => t.turno === turno.slug); %>
@@ -193,6 +209,51 @@
                 activeBtn.classList.add("active-" + prefix);
             }
         }
+    
+        (function initParallaxBackground() {
+            const root = document.documentElement;
+            const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+
+            if (media.matches) {
+                return;
+            }
+
+            let ticking = false;
+            let pointerX = 0;
+
+            const update = () => {
+                const scrollY = window.scrollY || window.pageYOffset || 0;
+                root.style.setProperty("--p1", `${-scrollY}px`);
+                root.style.setProperty("--p2", `${-scrollY}px`);
+                root.style.setProperty("--p3", `${-scrollY}px`);
+                root.style.setProperty("--p1x", `${pointerX * 8}px`);
+                root.style.setProperty("--p2x", `${pointerX * 12}px`);
+                root.style.setProperty("--p3x", `${pointerX * 16}px`);
+                ticking = false;
+            };
+
+            const requestUpdate = () => {
+                if (ticking) return;
+                ticking = true;
+                window.requestAnimationFrame(update);
+            };
+
+            const onPointerMove = (event) => {
+                const x = (event.clientX / window.innerWidth) - 0.5;
+                pointerX = Math.max(-0.5, Math.min(0.5, x));
+                requestUpdate();
+            };
+
+            window.addEventListener("scroll", requestUpdate, { passive: true });
+            window.addEventListener("mousemove", onPointerMove, { passive: true });
+            window.addEventListener("touchmove", (event) => {
+                if (!event.touches || !event.touches[0]) return;
+                onPointerMove(event.touches[0]);
+            }, { passive: true });
+
+            update();
+        })();
     </script>
 </body>
 </html>
+

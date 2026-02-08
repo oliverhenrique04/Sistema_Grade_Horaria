@@ -2,96 +2,170 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Painel Administrativo</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
 </head>
 <body class="bg-light">
-    
-    <nav class="navbar navbar-dark bg-dark mb-5">
+    <nav class="navbar navbar-dark bg-dark border-bottom shadow-sm">
         <div class="container">
-            <a class="navbar-brand" href="#"><i class="fa-solid fa-graduation-cap"></i> Sistema Acadêmico</a>
-            <a href="/" class="btn btn-outline-light btn-sm">Ver Site Público</a>
+            <span class="navbar-brand mb-0 h1">
+                <i class="fa-solid fa-graduation-cap me-2"></i>Sistema Acadêmico
+            </span>
+            <div class="d-flex align-items-center gap-2">
+                <span class="badge text-bg-secondary text-uppercase"><%= usuarioLogado.tipo %></span>
+                <a href="/" class="btn btn-outline-light btn-sm">Ver Site Público</a>
+            </div>
         </div>
     </nav>
 
-    <div class="container">
-        <h1 class="mb-4">Painel da Coordenação</h1>
-        
-        <p class="text-muted mb-4">
-            <small>
-                <i class="fa-solid fa-user-shield"></i> Logado como: 
-                <strong><%= usuarioLogado.nome %></strong> 
-                (<span class="text-uppercase"><%= usuarioLogado.tipo %></span>)
-            </small>
-        </p>
+    <main class="container py-4 py-md-5">
+        <div class="mb-4">
+            <h1 class="h3 mb-1">Painel de Gestão</h1>
+            <p class="text-muted mb-0">Bem-vindo, <strong><%= usuarioLogado.nome %></strong>. Acompanhe os principais indicadores e acesse os módulos do sistema.</p>
+        </div>
 
-        <div class="row g-4">
-            
+        <div class="row g-3 mb-4">
+            <div class="col-6 col-lg-3">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-body">
+                        <div class="text-muted small">Turmas</div>
+                        <div class="fs-3 fw-bold"><%= stats.turmas %></div>
+                    </div>
+                </div>
+            </div>
+
             <% if (usuarioLogado.tipo !== 'nap') { %>
-                <div class="col-md-4">
-                    <div class="card shadow-sm h-100 border-0">
-                        <div class="card-body text-center">
-                            <i class="fa-solid fa-book fa-3x text-primary mb-3"></i>
-                            <h3>Cursos</h3>
-                            <a href="/admin/cursos?token=<%= token %>" class="btn btn-primary w-100 mt-2">Gerenciar</a>
+                <div class="col-6 col-lg-3">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body">
+                            <div class="text-muted small">Professores</div>
+                            <div class="fs-3 fw-bold"><%= stats.professores %></div>
                         </div>
                     </div>
                 </div>
-                <div class="col-md-4">
-                    <div class="card shadow-sm h-100 border-0">
-                        <div class="card-body text-center">
-                            <i class="fa-solid fa-chalkboard-user fa-3x text-success mb-3"></i>
-                            <h3>Professores</h3>
-                            <a href="/admin/professores?token=<%= token %>" class="btn btn-success w-100 mt-2">Gerenciar</a>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="card shadow-sm h-100 border-0">
-                        <div class="card-body text-center">
-                            <i class="fa-solid fa-list-check fa-3x text-warning mb-3"></i>
-                            <h3>Disciplinas</h3>
-                            <a href="/admin/disciplinas?token=<%= token %>" class="btn btn-warning text-white w-100 mt-2">Gerenciar</a>
+                <div class="col-6 col-lg-3">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body">
+                            <div class="text-muted small">Disciplinas</div>
+                            <div class="fs-3 fw-bold"><%= stats.disciplinas %></div>
                         </div>
                     </div>
                 </div>
             <% } %>
 
-            <div class="col-md-4">
-                <div class="card shadow-sm h-100 border-0">
-                    <div class="card-body text-center">
-                        <i class="fa-solid fa-users-rectangle fa-3x text-danger mb-3"></i>
-                        <h3>Turmas</h3>
-                        <a href="/admin/turmas?token=<%= token %>" class="btn btn-danger w-100 mt-2">
-                            <%= usuarioLogado.tipo === 'nap' ? 'Alocar Salas' : 'Gerenciar' %>
-                        </a>
+            <div class="col-6 col-lg-3">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-body">
+                        <div class="text-muted small">Aulas sem sala</div>
+                        <div class="fs-3 fw-bold <%= stats.pendenciasSala > 0 ? 'text-danger' : 'text-success' %>"><%= stats.pendenciasSala %></div>
                     </div>
                 </div>
             </div>
 
             <% if (usuarioLogado.tipo === 'admin') { %>
-                <div class="col-md-4">
-                    <div class="card shadow-sm h-100 border-0">
-                        <div class="card-body text-center">
-                            <i class="fa-solid fa-clock fa-3x text-info mb-3"></i>
-                            <h3>Turnos</h3>
-                            <a href="/admin/turnos?token=<%= token %>" class="btn btn-info text-white w-100 mt-2">Gerenciar</a>
+                <div class="col-6 col-lg-3">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body">
+                            <div class="text-muted small">Cursos</div>
+                            <div class="fs-3 fw-bold"><%= stats.cursos %></div>
                         </div>
                     </div>
                 </div>
-                <div class="col-md-4">
-                    <div class="card shadow-sm h-100 border-0">
-                        <div class="card-body text-center">
-                            <i class="fa-solid fa-user-gear fa-3x text-secondary mb-3"></i>
-                            <h3>Usuários</h3>
-                            <a href="/admin/usuarios?token=<%= token %>" class="btn btn-secondary w-100 mt-2">Gerenciar</a>
+                <div class="col-6 col-lg-3">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body">
+                            <div class="text-muted small">Turnos</div>
+                            <div class="fs-3 fw-bold"><%= stats.turnos %></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-lg-3">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body">
+                            <div class="text-muted small">Usuários</div>
+                            <div class="fs-3 fw-bold"><%= stats.usuarios %></div>
                         </div>
                     </div>
                 </div>
             <% } %>
-
         </div>
-    </div>
+
+        <div class="row g-3">
+            <% if (usuarioLogado.tipo !== 'nap') { %>
+                <div class="col-12 col-md-6 col-xl-4">
+                    <a href="/admin/cursos?token=<%= token %>" class="card border-0 shadow-sm h-100 text-decoration-none">
+                        <div class="card-body d-flex align-items-center gap-3">
+                            <i class="fa-solid fa-book fa-xl text-primary"></i>
+                            <div>
+                                <div class="fw-semibold text-dark">Cursos</div>
+                                <small class="text-muted">Cadastro e coordenação</small>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+                <div class="col-12 col-md-6 col-xl-4">
+                    <a href="/admin/professores?token=<%= token %>" class="card border-0 shadow-sm h-100 text-decoration-none">
+                        <div class="card-body d-flex align-items-center gap-3">
+                            <i class="fa-solid fa-chalkboard-user fa-xl text-success"></i>
+                            <div>
+                                <div class="fw-semibold text-dark">Professores</div>
+                                <small class="text-muted">Equipe docente</small>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+                <div class="col-12 col-md-6 col-xl-4">
+                    <a href="/admin/disciplinas?token=<%= token %>" class="card border-0 shadow-sm h-100 text-decoration-none">
+                        <div class="card-body d-flex align-items-center gap-3">
+                            <i class="fa-solid fa-list-check fa-xl text-warning"></i>
+                            <div>
+                                <div class="fw-semibold text-dark">Disciplinas</div>
+                                <small class="text-muted">Matriz curricular</small>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+            <% } %>
+
+            <div class="col-12 col-md-6 col-xl-4">
+                <a href="/admin/turmas?token=<%= token %>" class="card border-0 shadow-sm h-100 text-decoration-none">
+                    <div class="card-body d-flex align-items-center gap-3">
+                        <i class="fa-solid fa-users-rectangle fa-xl text-danger"></i>
+                        <div>
+                            <div class="fw-semibold text-dark">Turmas</div>
+                            <small class="text-muted"><%= usuarioLogado.tipo === 'nap' ? 'Definição de salas' : 'Montagem de grade' %></small>
+                        </div>
+                    </div>
+                </a>
+            </div>
+
+            <% if (usuarioLogado.tipo === 'admin') { %>
+                <div class="col-12 col-md-6 col-xl-4">
+                    <a href="/admin/turnos?token=<%= token %>" class="card border-0 shadow-sm h-100 text-decoration-none">
+                        <div class="card-body d-flex align-items-center gap-3">
+                            <i class="fa-solid fa-clock fa-xl text-info"></i>
+                            <div>
+                                <div class="fw-semibold text-dark">Turnos</div>
+                                <small class="text-muted">Configuração acadêmica</small>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+                <div class="col-12 col-md-6 col-xl-4">
+                    <a href="/admin/usuarios?token=<%= token %>" class="card border-0 shadow-sm h-100 text-decoration-none">
+                        <div class="card-body d-flex align-items-center gap-3">
+                            <i class="fa-solid fa-user-gear fa-xl text-secondary"></i>
+                            <div>
+                                <div class="fw-semibold text-dark">Usuários</div>
+                                <small class="text-muted">Perfis e permissões</small>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+            <% } %>
+        </div>
+    </main>
 </body>
 </html>

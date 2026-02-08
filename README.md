@@ -47,10 +47,18 @@ Siga estes passos para rodar o projeto localmente ou no GitHub Codespaces.
 git clone [https://github.com/seu-usuario/seu-repo.git](https://github.com/seu-usuario/seu-repo.git)
 cd Sistema_Grade_Horaria
 npm install
-
 ```
 
-### 3. Configurar o Banco de Dados
+### 3. Configurar variáveis de ambiente
+Crie o arquivo `.env` na raiz (ou copie de `.env.example`) e ajuste:
+
+```env
+PORT=3000
+DATABASE_URL=postgresql://SEU_USUARIO:SUA_SENHA@SEU_HOST:5432/grade_horaria
+DB_SSL=false
+```
+
+### 4. Configurar o Banco de Dados
 
 O sistema espera um banco de dados chamado `grade_horaria`.
 
@@ -65,17 +73,14 @@ sudo service postgresql start
 Execute o comando abaixo para criar o banco e importar a estrutura (tabelas e dados iniciais):
 
 ```bash
-# Define a senha temporária para executar o comando
-PGPASSWORD=123456 createdb -h 127.0.0.1 -U postgres grade_horaria
-
-# Importa o Schema
-PGPASSWORD=123456 psql -h 127.0.0.1 -U postgres -d grade_horaria -f src/database/schema.sql
+createdb -h 127.0.0.1 -U postgres grade_horaria
+psql -h 127.0.0.1 -U postgres -d grade_horaria -f src/database/schema.sql
 
 ```
 
-> **Nota:** O arquivo `src/database/db.js` está configurado para conectar em `localhost` com usuário `postgres` e senha `123456`. Se o seu banco tiver outra senha, altere este arquivo.
+> **Nota:** Usuários do admin não são criados automaticamente no schema por segurança. Crie manualmente os usuários com `token_acesso` no banco.
 
-### 4. Rodar o Projeto
+### 5. Rodar o Projeto
 
 ```bash
 node app.js
@@ -115,11 +120,16 @@ Sistema_Grade_Horaria/
 
 ## Acesso ao Admin
 
-Para acessar o painel administrativo, vá para `/admin`.
+Para acessar o painel administrativo, vá para `/admin?token=SEU_TOKEN`.
 
-* **Usuário Padrão:** (Criado pelo schema.sql)
-* Email: `admin@escola.com`
-* Senha: `admin123` *(Nota: Em produção, implementar hash de senha)*
+O token deve existir na tabela `usuarios.token_acesso`.
+
+Exemplo de criação manual de usuário admin:
+
+```sql
+INSERT INTO usuarios (nome, email, senha, tipo, token_acesso)
+VALUES ('Administrador', 'admin@dominio.com', 'SENHA_FORTE', 'admin', 'TOKEN_ADMIN');
+```
 
 
 

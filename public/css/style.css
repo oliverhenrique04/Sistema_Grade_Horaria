@@ -447,7 +447,7 @@
         }
 
         .day-header {
-            width: 58px;
+            min-width: 58px;
             flex: 0 0 auto;
             display: flex;
             flex-direction: column;
@@ -605,6 +605,41 @@
         .split-sep {
             border-top: 1px dashed rgba(255, 255, 255, .18);
             opacity: .7;
+        }
+
+        .selection-required {
+            margin-top: 16px;
+            padding: 26px 18px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, .16);
+        }
+
+        .selection-required-icon {
+            width: 54px;
+            height: 54px;
+            margin: 0 auto 12px;
+            border-radius: 16px;
+            display: grid;
+            place-items: center;
+            font-size: 1.45rem;
+            color: #fff;
+            background: linear-gradient(135deg, rgba(249, 115, 22, .9), rgba(99, 102, 241, .9));
+            box-shadow: 0 12px 26px rgba(0, 0, 0, .25);
+        }
+
+        .selection-required h2 {
+            font-size: 1.18rem;
+            font-weight: 800;
+            margin-bottom: 8px;
+            color: #fff;
+            letter-spacing: -.01em;
+        }
+
+        .selection-required p {
+            margin: 0;
+            color: rgba(226, 232, 240, .88);
+            font-size: .95rem;
+            line-height: 1.5;
         }
 
         .tag-warn {
@@ -792,3 +827,192 @@
 .vespertino-theme .load-fill { background: var(--vesp-gradient); }
 .vespertino-theme .class-icon-box { background: var(--vesp-gradient); }
 .vespertino-theme .day-header { border-color: rgba(234, 179, 8, .22); }
+/* =========================
+   Enhanced Parallax + Mobile-first refinements
+   ========================= */
+:root {
+    --p1x: 0px;
+    --p2x: 0px;
+    --p3x: 0px;
+}
+
+.parallax {
+    perspective: 1px;
+    isolation: isolate;
+}
+
+.parallax::before,
+.parallax::after {
+    content: "";
+    position: absolute;
+    inset: -12%;
+    pointer-events: none;
+}
+
+.parallax::before {
+    background:
+        radial-gradient(900px 520px at 50% 10%, rgba(255, 255, 255, .08), transparent 62%),
+        conic-gradient(from 140deg at 20% 20%, rgba(249, 115, 22, .10), rgba(99, 102, 241, .10), rgba(234, 179, 8, .08), rgba(249, 115, 22, .10));
+    transform: translate3d(calc(var(--p1x) * .12), calc(var(--p1) * .12), 0);
+    filter: blur(24px) saturate(115%);
+    opacity: .42;
+    mix-blend-mode: screen;
+}
+
+.parallax::after {
+    background-image:
+        linear-gradient(rgba(255, 255, 255, .045) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, .03) 1px, transparent 1px);
+    background-size: 22px 22px, 22px 22px;
+    transform: translate3d(calc(var(--p3x) * .08), calc(var(--p3) * .1), 0);
+    opacity: .16;
+    mask-image: radial-gradient(circle at 50% 28%, black 42%, transparent 88%);
+}
+
+.parallax .layer {
+    inset: -18%;
+}
+
+.parallax .l1 {
+    background:
+        radial-gradient(42vmax 26vmax at 12% 12%, rgba(249, 115, 22, .34), transparent 64%),
+        radial-gradient(48vmax 32vmax at 86% 24%, rgba(99, 102, 241, .30), transparent 68%),
+        radial-gradient(28vmax 20vmax at 50% 92%, rgba(6, 182, 212, .16), transparent 70%);
+    transform: translate3d(calc(var(--p1x) * .38), calc(var(--p1) * .26), 0) scale(1.06);
+    filter: blur(2px);
+    animation: parallaxDriftA 20s ease-in-out infinite alternate;
+}
+
+.parallax .l2 {
+    background:
+        radial-gradient(24vmax 18vmax at 22% 80%, rgba(251, 191, 36, .22), transparent 68%),
+        radial-gradient(28vmax 22vmax at 76% 74%, rgba(168, 85, 247, .20), transparent 72%),
+        radial-gradient(16vmax 12vmax at 52% 40%, rgba(255, 255, 255, .08), transparent 72%);
+    transform: translate3d(calc(var(--p2x) * .52), calc(var(--p2) * .42), 0) scale(1.04);
+    filter: blur(7px);
+    opacity: .78;
+    animation: parallaxDriftB 26s ease-in-out infinite alternate;
+}
+
+.parallax .l3 {
+    background:
+        radial-gradient(78vmax 42vmax at 50% 52%, rgba(255, 255, 255, .07), transparent 62%),
+        radial-gradient(22vmax 14vmax at 68% 18%, rgba(255, 255, 255, .05), transparent 74%);
+    transform: translate3d(calc(var(--p3x) * .68), calc(var(--p3) * .58), 0) scale(1.03);
+    filter: blur(12px);
+    opacity: .5;
+}
+
+@keyframes parallaxDriftA {
+    from { transform: translate3d(calc(var(--p1x) * .34), calc(var(--p1) * .24), 0) scale(1.05); }
+    to { transform: translate3d(calc(var(--p1x) * .42), calc(var(--p1) * .28), 0) scale(1.08); }
+}
+
+@keyframes parallaxDriftB {
+    from { transform: translate3d(calc(var(--p2x) * .48), calc(var(--p2) * .40), 0) scale(1.03); }
+    to { transform: translate3d(calc(var(--p2x) * .56), calc(var(--p2) * .44), 0) scale(1.06); }
+}
+
+@media (max-width: 679px) {
+    .wrap {
+        padding: 14px 12px 20px;
+    }
+
+    header.hero {
+        padding: 14px 12px;
+    }
+
+    header.hero form .glass-soft {
+        width: 100%;
+        display: grid !important;
+        grid-template-columns: 1fr;
+        gap: 10px !important;
+        padding: 12px !important;
+        align-items: stretch !important;
+    }
+
+    header.hero form .d-flex.flex-column {
+        width: 100%;
+    }
+
+    .filter-select {
+        width: 100%;
+        min-width: 0 !important;
+        font-size: .95rem;
+    }
+
+    .hero .meta {
+        gap: 8px;
+    }
+
+    .pill {
+        width: 100%;
+        justify-content: center;
+        font-size: .78rem;
+        padding: 7px 10px;
+    }
+
+    .controls {
+        top: 8px;
+        padding: 8px;
+        gap: 8px;
+        border-radius: 12px;
+        display: grid;
+        grid-template-columns: 1fr;
+    }
+
+    .shift-btn {
+        min-height: 44px;
+        font-size: .92rem;
+    }
+
+    .class-infographic-card {
+        padding: 12px;
+        margin-top: 12px;
+    }
+
+    .infographic-header {
+        gap: 10px;
+        margin-bottom: 12px;
+    }
+
+    .class-ident {
+        align-items: flex-start;
+    }
+
+    .weekly-load {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+    }
+
+    .load-bar {
+        width: 100%;
+        max-width: 100%;
+    }
+
+    .week-modules-grid {
+        gap: 8px;
+    }
+
+    .day-module {
+        padding: 10px;
+        gap: 10px;
+    }
+
+    .selection-required {
+        padding: 20px 14px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .parallax::before,
+    .parallax::after {
+        transform: none !important;
+    }
+
+    .parallax .l1,
+    .parallax .l2 {
+        animation: none !important;
+    }
+}

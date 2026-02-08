@@ -1,20 +1,152 @@
 const db = require('../database/db');
 
+const slugify = (value = '') =>
+    String(value)
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+
+const addFriendlySlug = (rows, labelKey) => {
+    const used = new Set();
+
+    return rows.map((row) => {
+        const base = slugify(row[labelKey]) || 'item';
+        let slug = base;
+        let count = 2;
+
+        while (used.has(slug)) {
+            slug = `${base}-${count++}`;
+        }
+
+        used.add(slug);
+        return { ...row, slug };
+    });
+};
+
+const buildPublicUrl = (unidadeSlug, cursoSlug) => {
+    const params = new URLSearchParams();
+
+    if (unidadeSlug) params.set('unidade', unidadeSlug);
+    if (unidadeSlug && cursoSlug) params.set('curso', cursoSlug);
+
+    const query = params.toString();
+    return query ? `/?${query}` : '/';
+};
+
 exports.getGradePage = async (req, res) => {
     try {
-        const { curso_id, unidade } = req.query;
+        const unidadeParam = typeof req.query.unidade === 'string' ? req.query.unidade.trim() : '';
+        const cursoParam = typeof req.query.curso === 'string' ? req.query.curso.trim() : '';
+        const cursoIdLegado = typeof req.query.curso_id === 'string' ? req.query.curso_id.trim() : '';
 
         // 1. Buscas auxiliares
-        const cursosRes = await db.query('SELECT * FROM cursos ORDER BY nome');
+        const cursosRes = await db.query('SELECT id, nome, coordenador, semestres_total FROM cursos ORDER BY nome, id');
         const unidadesRes = await db.query('SELECT DISTINCT unidade FROM turmas WHERE unidade IS NOT NULL ORDER BY unidade');
 
+        const cursosBase = addFriendlySlug(cursosRes.rows, 'nome');
+        const unidadesBase = addFriendlySlug(
+            unidadesRes.rows.map((row) => ({ nome: row.unidade })),
+            'nome'
+        );
+
+        const unidadeSelecionadaObj = unidadeParam
+            ? (unidadesBase.find((u) => u.slug === unidadeParam)
+                || unidadesBase.find((u) => u.nome.toLowerCase() === unidadeParam.toLowerCase()))
+            : null;
+
+        const unidadeSelecionada = unidadeSelecionadaObj ? unidadeSelecionadaObj.nome : '';
+        const unidadeSelecionadaSlug = unidadeSelecionadaObj ? unidadeSelecionadaObj.slug : '';
+
+        // Lista de cursos disponíveis apenas após selecionar unidade
+        let cursosDisponiveisIds = new Set();
+        if (unidadeSelecionada) {
+            const cursosDaUnidadeRes = await db.query(
+                `
+                SELECT DISTINCT c.id
+                FROM cursos c
+                JOIN turmas t ON t.curso_id = c.id
+                WHERE t.unidade = $1
+                `,
+                [unidadeSelecionada]
+            );
+            cursosDisponiveisIds = new Set(cursosDaUnidadeRes.rows.map((row) => row.id));
+        }
+
+        const cursosFiltrados = unidadeSelecionada
+            ? cursosBase.filter((c) => cursosDisponiveisIds.has(c.id))
+            : [];
+
+        let cursoSelecionadoObj = null;
+        if (cursoParam) {
+            cursoSelecionadoObj =
+                cursosBase.find((c) => c.slug === cursoParam)
+                || cursosBase.find((c) => c.nome.toLowerCase() === cursoParam.toLowerCase());
+        } else if (cursoIdLegado) {
+            cursoSelecionadoObj = cursosBase.find((c) => String(c.id) === cursoIdLegado);
+        }
+
+        if (cursoSelecionadoObj && unidadeSelecionada && !cursosDisponiveisIds.has(cursoSelecionadoObj.id)) {
+            cursoSelecionadoObj = null;
+        }
+
+        if (!unidadeSelecionada) {
+            cursoSelecionadoObj = null;
+        }
+
+        const cursoSelecionadoSlug = cursoSelecionadoObj ? cursoSelecionadoObj.slug : '';
+        const cursoSelecionadoId = cursoSelecionadoObj ? cursoSelecionadoObj.id : null;
+
         let cursoDetalhes = null;
-        if (curso_id) {
-            cursoDetalhes = (await db.query('SELECT * FROM cursos WHERE id = $1', [curso_id])).rows[0];
+        if (cursoSelecionadoId) {
+            cursoDetalhes = (await db.query('SELECT * FROM cursos WHERE id = $1', [cursoSelecionadoId])).rows[0];
+        }
+
+        // Canonicaliza URL pública para parâmetros amigáveis e sem ids numéricos
+        const precisaRedirecionar =
+            Boolean(cursoIdLegado)
+            || Boolean(unidadeParam && !unidadeSelecionadaObj)
+            || Boolean(unidadeParam && unidadeSelecionadaObj && unidadeParam !== unidadeSelecionadaSlug)
+            || Boolean(cursoParam && cursoParam !== cursoSelecionadoSlug)
+            || Boolean(cursoParam && !unidadeSelecionada);
+
+        if (precisaRedirecionar) {
+            return res.redirect(buildPublicUrl(unidadeSelecionadaSlug, cursoSelecionadoSlug));
+        }
+
+        const filtrosCompletos = Boolean(cursoSelecionadoId && unidadeSelecionada);
+
+        if (!filtrosCompletos) {
+            return res.render('public/index', {
+                turnos: [],
+                cursos: cursosFiltrados,
+                unidades: unidadesBase,
+                turmas: [],
+                cursoSelecionado: cursoSelecionadoSlug || '',
+                unidadeSelecionada: unidadeSelecionada || '',
+                unidadeSelecionadaSlug: unidadeSelecionadaSlug || '',
+                cursoDetalhes: cursoDetalhes,
+                deveSelecionarFiltros: true
+            });
         }
 
         // 2. QUERY PRINCIPAL
-        let queryText = `
+        const params = [];
+        let where = 'WHERE 1=1';
+
+        if (cursoSelecionadoId) {
+            params.push(cursoSelecionadoId);
+            where += ` AND t.curso_id = $${params.length}`;
+        }
+
+        if (unidadeSelecionada) {
+            params.push(unidadeSelecionada);
+            where += ` AND t.unidade = $${params.length}`;
+        }
+
+        const queryText = `
             SELECT 
                 t.id as turma_id, t.nome as turma_nome, t.semestre_ref, t.unidade,
                 tu.slug as turno_slug, tu.id as turno_id,
@@ -26,14 +158,7 @@ exports.getGradePage = async (req, res) => {
             LEFT JOIN grade g ON g.turma_id = t.id
             LEFT JOIN disciplinas d ON g.disciplina_id = d.id
             LEFT JOIN professores p ON g.professor_id = p.id
-            WHERE 1=1
-        `;
-        
-        if (curso_id) queryText += ` AND t.curso_id = ${curso_id}`;
-        if (unidade) queryText += ` AND t.unidade = '${unidade}'`;
-        
-        // Ordenação
-        queryText += ` 
+            ${where}
             ORDER BY 
                 CAST(SUBSTRING(t.semestre_ref FROM '^[0-9]+') AS INTEGER) ASC, 
                 t.nome ASC,
@@ -44,7 +169,7 @@ exports.getGradePage = async (req, res) => {
                 g.id ASC
         `;
 
-        const gradeRes = await db.query(queryText);
+        const gradeRes = await db.query(queryText, params);
 
         // 3. Processamento (AGRUPAMENTO POR DIA)
         const turmasMap = new Map();
@@ -95,18 +220,18 @@ exports.getGradePage = async (req, res) => {
         });
 
         const todosTurnos = (await db.query('SELECT * FROM turnos ORDER BY ordem ASC')).rows;
-        const turnosFiltrados = todosTurnos.filter(t => 
-            turnosComAula.has(t.slug) || (!curso_id && !unidade && turnosComAula.size === 0)
-        );
+        const turnosFiltrados = todosTurnos.filter(t => turnosComAula.has(t.slug));
 
         res.render('public/index', {
             turnos: turnosFiltrados.length > 0 ? turnosFiltrados : todosTurnos,
-            cursos: cursosRes.rows,
-            unidades: unidadesRes.rows,
+            cursos: cursosFiltrados,
+            unidades: unidadesBase,
             turmas: turmasFinais,
-            cursoSelecionado: curso_id,
-            unidadeSelecionada: unidade,
-            cursoDetalhes: cursoDetalhes
+            cursoSelecionado: cursoSelecionadoSlug,
+            unidadeSelecionada: unidadeSelecionada,
+            unidadeSelecionadaSlug: unidadeSelecionadaSlug,
+            cursoDetalhes: cursoDetalhes,
+            deveSelecionarFiltros: false
         });
 
     } catch (err) {

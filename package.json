@@ -20,6 +20,7 @@
   "homepage": "https://github.com/oliverhenrique04/Sistema_Grade_Horaria#readme",
   "dependencies": {
     "body-parser": "^2.2.2",
+    "dotenv": "^17.2.4",
     "ejs": "^4.0.1",
     "express": "^5.2.1",
     "pg": "^8.18.0"

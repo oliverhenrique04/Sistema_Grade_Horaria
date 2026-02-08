@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 const express = require('express');
 const app = express();
 const path = require('path');
@@ -44,9 +46,9 @@ app.use('/admin', async (req, res, next) => {
 app.use('/', routes);
 
 // Iniciar Servidor
-const PORT = 3000;
+const PORT = Number(process.env.PORT) || 3000;
 app.listen(PORT, () => {
     console.log(`Servidor rodando na porta ${PORT}`);
     console.log(`Acesse Público: http://localhost:${PORT}`);
-    console.log(`Acesse Admin:   http://localhost:${PORT}/admin?token=master123`);
+    console.log(`Acesse Admin:   http://localhost:${PORT}/admin?token=SEU_TOKEN`);
 });

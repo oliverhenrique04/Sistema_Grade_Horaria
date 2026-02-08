@@ -7,7 +7,7 @@ const adminController = require('../controllers/adminController');
 router.get('/', publicController.getGradePage);
 
 // --- ÁREA ADMIN ---
-router.get('/admin', (req, res) => res.render('admin/dashboard'));
+router.get('/admin', adminController.dashboard);
 
 // Listagem (Com filtros no controller)
 router.get('/admin/:entidade', adminController.listar);
@@ -26,6 +26,7 @@ router.post('/admin/:entidade/excluir/:id', adminController.excluir);
 // --- ROTAS DA GRADE ---
 router.get('/admin/turmas/:id/grade', adminController.montarGrade);
 router.post('/admin/turmas/:id/grade/salvar', adminController.adicionarItemGrade);
+router.post('/admin/turmas/:id/grade/atualizar', adminController.atualizarGradeEmLote);
 router.get('/admin/turmas/:id/grade/remover/:id_item', adminController.removerItemGrade);
 
 // ROTA ESPECIAL NAP (Salvar Sala)

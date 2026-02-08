@@ -5,14 +5,16 @@
     <title><%= typeof item !== 'undefined' ? 'Editar' : 'Novo' %> Registro</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
-<body class="bg-light d-flex align-items-center justify-content-center" style="min-height: 100vh;">
+<body class="bg-light d-flex align-items-center justify-content-center py-4" style="min-height: 100vh;">
     
-    <div class="card shadow-sm p-4" style="width: 100%; max-width: 500px;">
+    <div class="card shadow-sm p-4" style="width: 100%; max-width: 620px;">
         <h2 class="mb-4 text-capitalize"><%= typeof item !== 'undefined' ? 'Editar' : 'Novo' %> em <%= tabela %></h2>
         
         <% const actionUrl = typeof item !== 'undefined' ? '/admin/' + tabela + '/atualizar/' + item.id : '/admin/' + tabela + '/salvar'; %>
+        <% const returnPath = (typeof returnTo !== 'undefined' && returnTo) ? returnTo : ('/admin/' + tabela + '?token=' + token); %>
+        <% const returnToEncoded = encodeURIComponent(returnPath); %>
         
-        <form action="<%= actionUrl %>?token=<%= token %>" method="POST">
+        <form action="<%= actionUrl %>?token=<%= token %>&return_to=<%= returnToEncoded %>" method="POST">
             
             <div class="mb-3">
                 <label class="form-label">Nome / Descrição</label>
@@ -27,7 +29,10 @@
                 </div>
                 <div class="mb-3">
                     <label class="form-label">Senha</label>
-                    <input type="text" name="senha" class="form-control" required value="<%= typeof item !== 'undefined' ? item.senha : '' %>">
+                    <input type="password" name="senha" class="form-control" <%= typeof item === 'undefined' ? 'required' : '' %> value="">
+                    <% if (typeof item !== 'undefined') { %>
+                        <small class="text-muted">Deixe em branco para manter a senha atual.</small>
+                    <% } %>
                 </div>
                 <div class="row">
                     <div class="col-md-6 mb-3">
@@ -106,7 +111,7 @@
 
             <div class="d-grid gap-2 mt-4">
                 <button type="submit" class="btn btn-success">Salvar</button>
-                <a href="/admin/<%= tabela %>?token=<%= token %>" class="btn btn-link text-secondary text-center">Cancelar</a>
+                <a href="<%= returnPath %>" class="btn btn-link text-secondary text-center">Cancelar</a>
             </div>
         </form>
     </div>
