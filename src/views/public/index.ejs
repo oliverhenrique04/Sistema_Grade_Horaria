@@ -159,7 +159,7 @@
                                                                     <% if(aula.prof) { %>
                                                                         <% const cleanName = aula.prof.replace(/(Prof\.|Profa\.|Dr\.|Dra\.|Me\.|Ma\.)\s*/gi, '').trim(); %>
                                                                         <i class="fa-solid fa-chalkboard-user" style="opacity: 0.8;"></i> 
-                                                                        <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><%= cleanName.split(' ').slice(0, 2).join(' ') %></span>
+                                                                        <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><%= cleanName %></span>
                                                                     <% } else { %>
                                                                         <span style="opacity:0.5;">-</span>
                                                                     <% } %>
