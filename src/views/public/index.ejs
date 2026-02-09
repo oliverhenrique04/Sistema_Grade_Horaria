@@ -7,7 +7,7 @@
     
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="<%= withBase('/css/style.css') %>">
 
     <style>
         .shift-btn.active-int { background: rgba(6, 182, 212, 0.2); border-color: rgba(6, 182, 212, 0.5); color: #fff; box-shadow: 0 0 15px rgba(6, 182, 212, 0.3); }
@@ -28,7 +28,7 @@
         <header class="hero glass">
             <div class="hero-top">
                 <div class="hero-title">
-                    <img src="/logo_unieuro.png" alt="Logo do Unieuro" class="hero-logo">
+                    <img src="<%= withBase('/logo_unieuro.png') %>" alt="Logo do Unieuro" class="hero-logo">
                     <div>
                         <h1>Grade Horária dos Cursos</h1>
                         <div class="meta">
@@ -40,7 +40,7 @@
                 </div>
             </div>
 
-            <form action="/" method="GET" style="margin-top: 20px;">
+            <form action="<%= withBase('/') %>" method="GET" style="margin-top: 20px;">
                 <div class="glass-soft" style="padding: 15px; display: inline-flex; flex-wrap: wrap; gap: 15px; align-items: center; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">
                     <div class="d-flex flex-column">
                         <label style="color: rgba(255,255,255,0.8); font-size: 0.75rem; margin-bottom: 4px; text-transform: uppercase;">Unidade</label>
@@ -195,13 +195,12 @@
             <div class="footer-grid">
                 <div>
                     <div class="footer-brand-row">
-                        <img src="/logo_nuted.png" alt="Logo do NUTED" class="footer-logo">
+                        <img src="<%= withBase('/logo_nuted.png') %>" alt="Logo do NUTED" class="footer-logo">
+                        <div class="footer-title"><i class="fa-solid fa-graduation-cap"></i> Grade Horária - Unieuro</div>
                     </div>
                     <div class="footer-small">
                         Este material é informativo e pode sofrer ajustes conforme calendário acadêmico e alocação docente.
                     </div>
-                    <div class="footer-small">
-<div class="footer-title"><i class="fa-solid fa-graduation-cap"></i> Grade Horária - Unieuro</div>                    </div>
                 </div>
             </div>
         </footer>
@@ -227,22 +226,44 @@
         (function initParallaxBackground() {
             const root = document.documentElement;
             const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+            const coarsePointer = window.matchMedia("(pointer: coarse)").matches;
+            const saveData = navigator.connection && navigator.connection.saveData;
+            const lowCpu = navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4;
 
             if (media.matches) {
                 return;
             }
 
+            if (coarsePointer || saveData || lowCpu) {
+                root.classList.add("parallax-lite");
+            }
+
             let ticking = false;
             let pointerX = 0;
+            let lastY = -1;
+            let lastPX = 999;
 
             const update = () => {
                 const scrollY = window.scrollY || window.pageYOffset || 0;
-                root.style.setProperty("--p1", `${-scrollY}px`);
-                root.style.setProperty("--p2", `${-scrollY}px`);
-                root.style.setProperty("--p3", `${-scrollY}px`);
-                root.style.setProperty("--p1x", `${pointerX * 8}px`);
-                root.style.setProperty("--p2x", `${pointerX * 12}px`);
-                root.style.setProperty("--p3x", `${pointerX * 16}px`);
+                const cappedY = Math.min(scrollY, 1800);
+                const py = Math.round(cappedY * -0.6);
+
+                if (py !== lastY) {
+                    root.style.setProperty("--p1", `${py}px`);
+                    root.style.setProperty("--p2", `${py}px`);
+                    root.style.setProperty("--p3", `${py}px`);
+                    lastY = py;
+                }
+
+                if (!root.classList.contains("parallax-lite")) {
+                    const px = Math.round(pointerX * 8);
+                    if (px !== lastPX) {
+                        root.style.setProperty("--p1x", `${px}px`);
+                        root.style.setProperty("--p2x", `${Math.round(px * 1.2)}px`);
+                        root.style.setProperty("--p3x", `${Math.round(px * 1.4)}px`);
+                        lastPX = px;
+                    }
+                }
                 ticking = false;
             };
 
@@ -259,11 +280,9 @@
             };
 
             window.addEventListener("scroll", requestUpdate, { passive: true });
-            window.addEventListener("mousemove", onPointerMove, { passive: true });
-            window.addEventListener("touchmove", (event) => {
-                if (!event.touches || !event.touches[0]) return;
-                onPointerMove(event.touches[0]);
-            }, { passive: true });
+            if (!root.classList.contains("parallax-lite")) {
+                window.addEventListener("mousemove", onPointerMove, { passive: true });
+            }
 
             update();
         })();

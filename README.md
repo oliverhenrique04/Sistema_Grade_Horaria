@@ -118,9 +118,16 @@ Sistema_Grade_Horaria/
 
 ---
 
-## Acesso ao Admin
+## Acesso em Produção (NUTED)
 
-Para acessar o painel administrativo, vá para `/admin?token=SEU_TOKEN`.
+Implantação com Nginx em:
+
+- Público: `https://nuted.unieuro.edu.br/grades/`
+- Admin: `https://nuted.unieuro.edu.br/grades/admin?token=SEU_TOKEN`
+
+## Acesso ao Admin (Ambiente Local)
+
+Para acessar localmente, vá para `/admin?token=SEU_TOKEN`.
 
 O token deve existir na tabela `usuarios.token_acesso`.
 

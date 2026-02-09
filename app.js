@@ -6,9 +6,37 @@ const path = require('path');
 const routes = require('./src/routes');
 const db = require('./src/database/db'); // Importante: Conexão com banco
 
+const normalizeBasePath = (value = '') => {
+    const raw = String(value || '').trim();
+    if (!raw || raw === '/') return '';
+    const prefixed = raw.startsWith('/') ? raw : `/${raw}`;
+    return prefixed.replace(/\/+$/, '');
+};
+
+const configuredBasePath = normalizeBasePath(process.env.BASE_PATH || '');
+
 // Configurações
+app.set('trust proxy', true);
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'src/views'));
+
+app.use((req, res, next) => {
+    const headerPrefix = String(req.headers['x-forwarded-prefix'] || '')
+        .split(',')[0]
+        .trim();
+    const basePath = configuredBasePath || normalizeBasePath(headerPrefix);
+
+    req.basePathPrefix = basePath;
+    res.locals.basePath = basePath;
+    res.locals.withBase = (target = '/') => {
+        const pathTarget = String(target || '/');
+        const normalizedTarget = pathTarget.startsWith('/') ? pathTarget : `/${pathTarget}`;
+        return `${basePath}${normalizedTarget}`;
+    };
+
+    next();
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.urlencoded({ extended: true }));
 
@@ -18,7 +46,7 @@ app.use('/admin', async (req, res, next) => {
 
     // Se não tiver token, manda para a Home pública
     if (!tokenUrl) {
-        return res.redirect('/'); 
+        return res.redirect(res.locals.withBase('/'));
     }
 
     try {
@@ -28,7 +56,7 @@ app.use('/admin', async (req, res, next) => {
 
         // Se o token não existir no banco, nega acesso
         if (!usuario) {
-            return res.redirect('/');
+            return res.redirect(res.locals.withBase('/'));
         }
 
         // SALVA O USUÁRIO NA SESSÃO (para usar nos controllers e views)
@@ -38,7 +66,7 @@ app.use('/admin', async (req, res, next) => {
         next();
     } catch (err) {
         console.error("Erro na autenticação:", err);
-        res.redirect('/');
+        res.redirect(res.locals.withBase('/'));
     }
 });
 

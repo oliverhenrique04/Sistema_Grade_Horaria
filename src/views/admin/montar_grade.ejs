@@ -8,7 +8,7 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
 </head>
 <body class="bg-light p-4">
-    <% const returnPath = (typeof returnTo !== 'undefined' && returnTo) ? returnTo : ('/admin/turmas?token=' + token); %>
+    <% const returnPath = (typeof returnTo !== 'undefined' && returnTo) ? returnTo : withBase('/admin/turmas?token=' + token); %>
     <% const returnToEncoded = encodeURIComponent(returnPath); %>
     <div class="container bg-white p-4 p-md-5 rounded shadow">
         <div class="d-flex justify-content-between align-items-center mb-4">
@@ -31,7 +31,7 @@
                     <div class="card bg-light border-0">
                         <div class="card-body">
                             <h5 class="card-title mb-3">Adicionar Aula</h5>
-                            <form action="/admin/turmas/<%= turma.id %>/grade/salvar?token=<%= token %>&return_to=<%= returnToEncoded %>" method="POST">
+                            <form action="<%= withBase('/admin/turmas/' + turma.id + '/grade/salvar?token=' + token + '&return_to=' + returnToEncoded) %>" method="POST">
                                 <div class="mb-3">
                                     <label class="fw-bold">Dia</label>
                                     <select name="dia_semana" class="form-select" required>
@@ -70,7 +70,7 @@
             <% } %>
 
             <div class="<%= usuarioLogado.tipo === 'nap' ? 'col-12' : 'col-lg-8' %>">
-                <form action="/admin/turmas/<%= turma.id %>/grade/atualizar?token=<%= token %>&return_to=<%= returnToEncoded %>" method="POST">
+                <form action="<%= withBase('/admin/turmas/' + turma.id + '/grade/atualizar?token=' + token + '&return_to=' + returnToEncoded) %>" method="POST">
                     <div class="d-flex justify-content-between align-items-center mb-2">
                         <h5 class="mb-0">Aulas da Turma</h5>
                         <button type="submit" class="btn btn-primary btn-sm">

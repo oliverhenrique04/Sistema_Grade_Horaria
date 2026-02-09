@@ -10,8 +10,8 @@
     <div class="card shadow-sm p-4" style="width: 100%; max-width: 620px;">
         <h2 class="mb-4 text-capitalize"><%= typeof item !== 'undefined' ? 'Editar' : 'Novo' %> em <%= tabela %></h2>
         
-        <% const actionUrl = typeof item !== 'undefined' ? '/admin/' + tabela + '/atualizar/' + item.id : '/admin/' + tabela + '/salvar'; %>
-        <% const returnPath = (typeof returnTo !== 'undefined' && returnTo) ? returnTo : ('/admin/' + tabela + '?token=' + token); %>
+        <% const actionUrl = typeof item !== 'undefined' ? withBase('/admin/' + tabela + '/atualizar/' + item.id) : withBase('/admin/' + tabela + '/salvar'); %>
+        <% const returnPath = (typeof returnTo !== 'undefined' && returnTo) ? returnTo : withBase('/admin/' + tabela + '?token=' + token); %>
         <% const returnToEncoded = encodeURIComponent(returnPath); %>
         
         <form action="<%= actionUrl %>?token=<%= token %>&return_to=<%= returnToEncoded %>" method="POST">

@@ -22,6 +22,14 @@ const parseIntSeguro = (valor, fallback) => {
     return Number.isNaN(n) ? fallback : n;
 };
 
+const withBase = (req, target = '/') => {
+    const base = req.basePathPrefix || '';
+    const normalizedTarget = String(target || '/').startsWith('/')
+        ? String(target || '/')
+        : `/${String(target || '/')}`;
+    return `${base}${normalizedTarget}`;
+};
+
 const usuarioPodeAcessarEntidade = (usuario, entidade) => {
     const permissoes = PERMISSOES_POR_TIPO[usuario.tipo] || [];
     return permissoes.includes(entidade);
@@ -109,7 +117,11 @@ const obterReturnToSeguro = (req) => {
     if (!raw) return '';
 
     // Evita redirect externo e mantém navegação apenas no painel
-    if (!raw.startsWith('/admin/')) {
+    const base = req.basePathPrefix || '';
+    const adminLocal = '/admin/';
+    const adminComBase = `${base}${adminLocal}`;
+
+    if (!(raw.startsWith(adminLocal) || raw.startsWith(adminComBase))) {
         return '';
     }
 
@@ -463,7 +475,7 @@ exports.salvar = async (req, res) => {
         } else {
             await db.query(`INSERT INTO ${tabela} (nome) VALUES ($1)`, [dados.nome]);
         }
-        res.redirect(returnTo || `/admin/${tabela}?token=${token}`);
+        res.redirect(returnTo || withBase(req, `/admin/${tabela}?token=${token}`));
     } catch (err) {
         res.status(500).send("Erro ao salvar: " + err.message);
     }
@@ -510,7 +522,7 @@ exports.atualizar = async (req, res) => {
         } else {
             await db.query(`UPDATE ${entidade} SET nome=$1 WHERE id=$2`, [dados.nome, id]);
         }
-        res.redirect(returnTo || `/admin/${entidade}?token=${token}`);
+        res.redirect(returnTo || withBase(req, `/admin/${entidade}?token=${token}`));
     } catch (err) {
         res.status(500).send("Erro ao atualizar: " + err.message);
     }
@@ -532,7 +544,7 @@ exports.excluir = async (req, res) => {
     
     try {
         await db.query(`DELETE FROM ${tabela} WHERE id = $1`, [id]);
-        res.redirect(returnTo || `/admin/${tabela}?token=${token}`);
+        res.redirect(returnTo || withBase(req, `/admin/${tabela}?token=${token}`));
     } catch (err) {
         if (err.code === '23503') res.status(400).send("Erro: Dependências encontradas.");
         else res.status(500).send("Erro: " + err.message);
@@ -582,7 +594,7 @@ exports.montarGrade = async (req, res) => {
         `, [id]);
         const profs = await db.query('SELECT * FROM professores ORDER BY nome');
         const disc = await db.query('SELECT * FROM disciplinas ORDER BY nome');
-        const returnTo = obterReturnToSeguro(req) || `/admin/turmas?token=${token}`;
+        const returnTo = obterReturnToSeguro(req) || withBase(req, `/admin/turmas?token=${token}`);
         res.render('admin/montar_grade', { turma, grade: grade.rows, professores: profs.rows, disciplinas: disc.rows, returnTo });
     } catch (err) { res.status(500).send(err.message); }
 };
@@ -658,7 +670,7 @@ exports.atualizarGradeEmLote = async (req, res) => {
         }
 
         await client.query('COMMIT');
-        res.redirect(anexarReturnTo(`/admin/turmas/${id}/grade?token=${token}`, returnTo));
+        res.redirect(anexarReturnTo(withBase(req, `/admin/turmas/${id}/grade?token=${token}`), returnTo));
     } catch (err) {
         await client.query('ROLLBACK');
         res.status(500).send('Erro ao atualizar grade: ' + err.message);
@@ -686,7 +698,7 @@ exports.adicionarItemGrade = async (req, res) => {
             VALUES ($1, $2, $3, $4, $5)
         `, [id, dia_semana, disciplina_id, professor_id, sala]);
 
-        res.redirect(anexarReturnTo(`/admin/turmas/${id}/grade?token=${token}`, returnTo));
+        res.redirect(anexarReturnTo(withBase(req, `/admin/turmas/${id}/grade?token=${token}`), returnTo));
     } catch (err) {
         res.status(500).send("Erro ao adicionar: " + err.message);
     }
@@ -700,7 +712,7 @@ exports.removerItemGrade = async (req, res) => {
     if (usuario.tipo === 'nap') return res.status(403).send("NAP não remove.");
 
     await db.query('DELETE FROM grade WHERE id = $1', [id_item]);
-    res.redirect(anexarReturnTo(`/admin/turmas/${id}/grade?token=${token}`, returnTo));
+    res.redirect(anexarReturnTo(withBase(req, `/admin/turmas/${id}/grade?token=${token}`), returnTo));
 };
 
 exports.atualizarSalaGrade = async (req, res) => {
@@ -709,5 +721,5 @@ exports.atualizarSalaGrade = async (req, res) => {
     const token = req.query.token;
     const returnTo = obterReturnToSeguro(req);
     await db.query('UPDATE grade SET sala = $1 WHERE id = $2', [sala, id_item]);
-    res.redirect(anexarReturnTo(`/admin/turmas/${id}/grade?token=${token}`, returnTo));
+    res.redirect(anexarReturnTo(withBase(req, `/admin/turmas/${id}/grade?token=${token}`), returnTo));
 };

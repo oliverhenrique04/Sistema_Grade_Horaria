@@ -8,7 +8,7 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
 </head>
 <body class="bg-light">
-    <% const returnToEncoded = encodeURIComponent(returnToAtual || ('/admin/' + tabela + '?token=' + token)); %>
+    <% const returnToEncoded = encodeURIComponent(returnToAtual || withBase('/admin/' + tabela + '?token=' + token)); %>
     <main class="container py-4 py-md-5">
         <div class="card border-0 shadow-sm">
             <div class="card-body p-3 p-md-4">
@@ -22,18 +22,18 @@
                         </p>
                     </div>
                     <div class="d-flex flex-wrap gap-2">
-                        <a href="/admin?token=<%= token %>" class="btn btn-outline-secondary">
+                        <a href="<%= withBase('/admin?token=' + token) %>" class="btn btn-outline-secondary">
                             <i class="fa-solid fa-arrow-left me-1"></i>Voltar
                         </a>
                         <% if (usuarioLogado.tipo !== 'nap') { %>
-                            <a href="/admin/<%= tabela %>/novo?token=<%= token %>&return_to=<%= returnToEncoded %>" class="btn btn-primary">
+                            <a href="<%= withBase('/admin/' + tabela + '/novo?token=' + token + '&return_to=' + returnToEncoded) %>" class="btn btn-primary">
                                 <i class="fa-solid fa-plus me-1"></i>Novo Registro
                             </a>
                         <% } %>
                     </div>
                 </div>
 
-                <form action="/admin/<%= tabela %>" method="GET" class="row g-2 g-md-3 mb-4">
+                <form action="<%= withBase('/admin/' + tabela) %>" method="GET" class="row g-2 g-md-3 mb-4">
                     <input type="hidden" name="token" value="<%= token %>">
 
                     <div class="col-12 col-md-4">
@@ -90,7 +90,7 @@
                         <button type="submit" class="btn btn-primary">
                             <i class="fa-solid fa-filter me-1"></i>Aplicar
                         </button>
-                        <a href="/admin/<%= tabela %>?token=<%= token %>" class="btn btn-outline-secondary">
+                        <a href="<%= withBase('/admin/' + tabela + '?token=' + token) %>" class="btn btn-outline-secondary">
                             <i class="fa-solid fa-rotate-left me-1"></i>Limpar
                         </a>
                     </div>
@@ -147,15 +147,15 @@
                                         </td>
                                         <td class="text-end">
                                             <% if (tabela === 'turmas') { %>
-                                                <a href="/admin/turmas/<%= item.id %>/grade?token=<%= token %>&return_to=<%= returnToEncoded %>" class="btn btn-sm btn-warning me-1">
+                                                <a href="<%= withBase('/admin/turmas/' + item.id + '/grade?token=' + token + '&return_to=' + returnToEncoded) %>" class="btn btn-sm btn-warning me-1">
                                                     <i class="fa-solid fa-table me-1"></i><%= usuarioLogado.tipo === 'nap' ? 'Salas' : 'Grade' %>
                                                 </a>
                                             <% } %>
                                             <% if (usuarioLogado.tipo !== 'nap') { %>
-                                                <a href="/admin/<%= tabela %>/editar/<%= item.id %>?token=<%= token %>&return_to=<%= returnToEncoded %>" class="btn btn-sm btn-info text-white me-1">
+                                                <a href="<%= withBase('/admin/' + tabela + '/editar/' + item.id + '?token=' + token + '&return_to=' + returnToEncoded) %>" class="btn btn-sm btn-info text-white me-1">
                                                     <i class="fa-solid fa-pen"></i>
                                                 </a>
-                                                <form action="/admin/<%= tabela %>/excluir/<%= item.id %>?token=<%= token %>&return_to=<%= returnToEncoded %>" method="POST" class="d-inline" onsubmit="return confirm('Excluir este registro?');">
+                                                <form action="<%= withBase('/admin/' + tabela + '/excluir/' + item.id + '?token=' + token + '&return_to=' + returnToEncoded) %>" method="POST" class="d-inline" onsubmit="return confirm('Excluir este registro?');">
                                                     <button type="submit" class="btn btn-sm btn-outline-danger">
                                                         <i class="fa-solid fa-trash"></i>
                                                     </button>
@@ -173,7 +173,7 @@
                     <nav class="mt-4" aria-label="Paginação">
                         <ul class="pagination justify-content-center mb-0">
                             <li class="page-item <%= paginacao.paginaAtual === 1 ? 'disabled' : '' %>">
-                                <a class="page-link" href="/admin/<%= tabela %>?<%= queryBase %>&page=<%= paginacao.paginaAtual - 1 %>">Anterior</a>
+                                <a class="page-link" href="<%= withBase('/admin/' + tabela + '?' + queryBase + '&page=' + (paginacao.paginaAtual - 1)) %>">Anterior</a>
                             </li>
 
                             <% 
@@ -182,12 +182,12 @@
                                 for(let p = inicio; p <= fim; p++) { 
                             %>
                                 <li class="page-item <%= p === paginacao.paginaAtual ? 'active' : '' %>">
-                                    <a class="page-link" href="/admin/<%= tabela %>?<%= queryBase %>&page=<%= p %>"><%= p %></a>
+                                    <a class="page-link" href="<%= withBase('/admin/' + tabela + '?' + queryBase + '&page=' + p) %>"><%= p %></a>
                                 </li>
                             <% } %>
 
                             <li class="page-item <%= paginacao.paginaAtual === paginacao.totalPaginas ? 'disabled' : '' %>">
-                                <a class="page-link" href="/admin/<%= tabela %>?<%= queryBase %>&page=<%= paginacao.paginaAtual + 1 %>">Próxima</a>
+                                <a class="page-link" href="<%= withBase('/admin/' + tabela + '?' + queryBase + '&page=' + (paginacao.paginaAtual + 1)) %>">Próxima</a>
                             </li>
                         </ul>
                     </nav>

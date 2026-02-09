@@ -15,7 +15,7 @@
             </span>
             <div class="d-flex align-items-center gap-2">
                 <span class="badge text-bg-secondary text-uppercase"><%= usuarioLogado.tipo %></span>
-                <a href="/" class="btn btn-outline-light btn-sm">Ver Site Público</a>
+                <a href="<%= withBase('/') %>" class="btn btn-outline-light btn-sm">Ver Site Público</a>
             </div>
         </div>
     </nav>
@@ -95,7 +95,7 @@
         <div class="row g-3">
             <% if (usuarioLogado.tipo !== 'nap') { %>
                 <div class="col-12 col-md-6 col-xl-4">
-                    <a href="/admin/cursos?token=<%= token %>" class="card border-0 shadow-sm h-100 text-decoration-none">
+                    <a href="<%= withBase('/admin/cursos?token=' + token) %>" class="card border-0 shadow-sm h-100 text-decoration-none">
                         <div class="card-body d-flex align-items-center gap-3">
                             <i class="fa-solid fa-book fa-xl text-primary"></i>
                             <div>
@@ -106,7 +106,7 @@
                     </a>
                 </div>
                 <div class="col-12 col-md-6 col-xl-4">
-                    <a href="/admin/professores?token=<%= token %>" class="card border-0 shadow-sm h-100 text-decoration-none">
+                    <a href="<%= withBase('/admin/professores?token=' + token) %>" class="card border-0 shadow-sm h-100 text-decoration-none">
                         <div class="card-body d-flex align-items-center gap-3">
                             <i class="fa-solid fa-chalkboard-user fa-xl text-success"></i>
                             <div>
@@ -117,7 +117,7 @@
                     </a>
                 </div>
                 <div class="col-12 col-md-6 col-xl-4">
-                    <a href="/admin/disciplinas?token=<%= token %>" class="card border-0 shadow-sm h-100 text-decoration-none">
+                    <a href="<%= withBase('/admin/disciplinas?token=' + token) %>" class="card border-0 shadow-sm h-100 text-decoration-none">
                         <div class="card-body d-flex align-items-center gap-3">
                             <i class="fa-solid fa-list-check fa-xl text-warning"></i>
                             <div>
@@ -130,7 +130,7 @@
             <% } %>
 
             <div class="col-12 col-md-6 col-xl-4">
-                <a href="/admin/turmas?token=<%= token %>" class="card border-0 shadow-sm h-100 text-decoration-none">
+                <a href="<%= withBase('/admin/turmas?token=' + token) %>" class="card border-0 shadow-sm h-100 text-decoration-none">
                     <div class="card-body d-flex align-items-center gap-3">
                         <i class="fa-solid fa-users-rectangle fa-xl text-danger"></i>
                         <div>
@@ -143,7 +143,7 @@
 
             <% if (usuarioLogado.tipo === 'admin') { %>
                 <div class="col-12 col-md-6 col-xl-4">
-                    <a href="/admin/turnos?token=<%= token %>" class="card border-0 shadow-sm h-100 text-decoration-none">
+                    <a href="<%= withBase('/admin/turnos?token=' + token) %>" class="card border-0 shadow-sm h-100 text-decoration-none">
                         <div class="card-body d-flex align-items-center gap-3">
                             <i class="fa-solid fa-clock fa-xl text-info"></i>
                             <div>
@@ -154,7 +154,7 @@
                     </a>
                 </div>
                 <div class="col-12 col-md-6 col-xl-4">
-                    <a href="/admin/usuarios?token=<%= token %>" class="card border-0 shadow-sm h-100 text-decoration-none">
+                    <a href="<%= withBase('/admin/usuarios?token=' + token) %>" class="card border-0 shadow-sm h-100 text-decoration-none">
                         <div class="card-body d-flex align-items-center gap-3">
                             <i class="fa-solid fa-user-gear fa-xl text-secondary"></i>
                             <div>

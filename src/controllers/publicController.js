@@ -26,14 +26,23 @@ const addFriendlySlug = (rows, labelKey) => {
     });
 };
 
-const buildPublicUrl = (unidadeSlug, cursoSlug) => {
+const withBase = (req, target = '/') => {
+    const base = req.basePathPrefix || '';
+    const normalizedTarget = String(target || '/').startsWith('/')
+        ? String(target || '/')
+        : `/${String(target || '/')}`;
+    return `${base}${normalizedTarget}`;
+};
+
+const buildPublicUrl = (req, unidadeSlug, cursoSlug) => {
     const params = new URLSearchParams();
 
     if (unidadeSlug) params.set('unidade', unidadeSlug);
     if (unidadeSlug && cursoSlug) params.set('curso', cursoSlug);
 
     const query = params.toString();
-    return query ? `/?${query}` : '/';
+    const relative = query ? `/?${query}` : '/';
+    return withBase(req, relative);
 };
 
 exports.getGradePage = async (req, res) => {
@@ -113,7 +122,7 @@ exports.getGradePage = async (req, res) => {
             || Boolean(cursoParam && !unidadeSelecionada);
 
         if (precisaRedirecionar) {
-            return res.redirect(buildPublicUrl(unidadeSelecionadaSlug, cursoSelecionadoSlug));
+            return res.redirect(buildPublicUrl(req, unidadeSelecionadaSlug, cursoSelecionadoSlug));
         }
 
         const filtrosCompletos = Boolean(cursoSelecionadoId && unidadeSelecionada);

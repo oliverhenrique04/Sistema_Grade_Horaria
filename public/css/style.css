@@ -862,6 +862,7 @@
 .parallax {
     perspective: 1px;
     isolation: isolate;
+    contain: paint;
 }
 
 .parallax::before,
@@ -876,9 +877,9 @@
     background:
         radial-gradient(900px 520px at 50% 10%, rgba(255, 255, 255, .08), transparent 62%),
         conic-gradient(from 140deg at 20% 20%, rgba(249, 115, 22, .10), rgba(99, 102, 241, .10), rgba(234, 179, 8, .08), rgba(249, 115, 22, .10));
-    transform: translate3d(calc(var(--p1x) * .12), calc(var(--p1) * .12), 0);
-    filter: blur(24px) saturate(115%);
-    opacity: .42;
+    transform: translate3d(calc(var(--p1x) * .06), calc(var(--p1) * .08), 0);
+    filter: blur(12px);
+    opacity: .2;
     mix-blend-mode: screen;
 }
 
@@ -887,8 +888,8 @@
         linear-gradient(rgba(255, 255, 255, .045) 1px, transparent 1px),
         linear-gradient(90deg, rgba(255, 255, 255, .03) 1px, transparent 1px);
     background-size: 22px 22px, 22px 22px;
-    transform: translate3d(calc(var(--p3x) * .08), calc(var(--p3) * .1), 0);
-    opacity: .16;
+    transform: translate3d(calc(var(--p3x) * .04), calc(var(--p3) * .05), 0);
+    opacity: .08;
     mask-image: radial-gradient(circle at 50% 28%, black 42%, transparent 88%);
 }
 
@@ -901,9 +902,9 @@
         radial-gradient(42vmax 26vmax at 12% 12%, rgba(249, 115, 22, .34), transparent 64%),
         radial-gradient(48vmax 32vmax at 86% 24%, rgba(99, 102, 241, .30), transparent 68%),
         radial-gradient(28vmax 20vmax at 50% 92%, rgba(6, 182, 212, .16), transparent 70%);
-    transform: translate3d(calc(var(--p1x) * .38), calc(var(--p1) * .26), 0) scale(1.06);
+    transform: translate3d(calc(var(--p1x) * .2), calc(var(--p1) * .16), 0) scale(1.03);
     filter: blur(2px);
-    animation: parallaxDriftA 20s ease-in-out infinite alternate;
+    animation: none;
 }
 
 .parallax .l2 {
@@ -911,29 +912,30 @@
         radial-gradient(24vmax 18vmax at 22% 80%, rgba(251, 191, 36, .22), transparent 68%),
         radial-gradient(28vmax 22vmax at 76% 74%, rgba(168, 85, 247, .20), transparent 72%),
         radial-gradient(16vmax 12vmax at 52% 40%, rgba(255, 255, 255, .08), transparent 72%);
-    transform: translate3d(calc(var(--p2x) * .52), calc(var(--p2) * .42), 0) scale(1.04);
-    filter: blur(7px);
-    opacity: .78;
-    animation: parallaxDriftB 26s ease-in-out infinite alternate;
+    transform: translate3d(calc(var(--p2x) * .24), calc(var(--p2) * .24), 0) scale(1.02);
+    filter: blur(4px);
+    opacity: .62;
+    animation: none;
 }
 
 .parallax .l3 {
     background:
         radial-gradient(78vmax 42vmax at 50% 52%, rgba(255, 255, 255, .07), transparent 62%),
         radial-gradient(22vmax 14vmax at 68% 18%, rgba(255, 255, 255, .05), transparent 74%);
-    transform: translate3d(calc(var(--p3x) * .68), calc(var(--p3) * .58), 0) scale(1.03);
-    filter: blur(12px);
-    opacity: .5;
+    transform: translate3d(calc(var(--p3x) * .28), calc(var(--p3) * .3), 0) scale(1.01);
+    filter: blur(7px);
+    opacity: .36;
 }
 
-@keyframes parallaxDriftA {
-    from { transform: translate3d(calc(var(--p1x) * .34), calc(var(--p1) * .24), 0) scale(1.05); }
-    to { transform: translate3d(calc(var(--p1x) * .42), calc(var(--p1) * .28), 0) scale(1.08); }
+.parallax-lite .parallax::before,
+.parallax-lite .parallax::after,
+.parallax-lite .parallax .l2,
+.parallax-lite .parallax .l3 {
+    display: none;
 }
 
-@keyframes parallaxDriftB {
-    from { transform: translate3d(calc(var(--p2x) * .48), calc(var(--p2) * .40), 0) scale(1.03); }
-    to { transform: translate3d(calc(var(--p2x) * .56), calc(var(--p2) * .44), 0) scale(1.06); }
+.parallax-lite .grain {
+    opacity: .05;
 }
 
     @media (max-width: 679px) {
@@ -1034,6 +1036,13 @@
     .footer-logo {
         height: 32px;
     }
+
+    .parallax::before,
+    .parallax::after,
+    .parallax .l2,
+    .parallax .l3 {
+        display: none;
+    }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1042,8 +1051,16 @@
         transform: none !important;
     }
 
-    .parallax .l1,
-    .parallax .l2 {
-        animation: none !important;
+    .parallax .layer,
+    .parallax::before,
+    .parallax::after {
+        transform: none !important;
+    }
+
+    .parallax .l2,
+    .parallax .l3,
+    .parallax::before,
+    .parallax::after {
+        display: none !important;
     }
 }
