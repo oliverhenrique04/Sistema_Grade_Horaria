@@ -125,6 +125,10 @@ const obterReturnToSeguro = (req) => {
         return '';
     }
 
+    if (base && raw.startsWith(adminLocal) && !raw.startsWith(adminComBase)) {
+        return `${base}${raw}`;
+    }
+
     return raw;
 };
 
