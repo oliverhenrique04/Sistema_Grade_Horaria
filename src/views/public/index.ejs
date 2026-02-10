@@ -167,8 +167,8 @@
 
                                                                 <% if (aula.sala) { %>
                                                                     <div class="info-badge" style="background: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255, 255, 255, 0.1); color: #f1f5f9; padding: 5px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; min-width: fit-content;">
-                                                                        <% if (aula.sala === 'EAD') { %>
-                                                                            <i class="fa-solid fa-wifi" style="opacity: 0.8;"></i> EAD
+                                                                        <% if (aula.sala.includes('EAD')) { %>
+                                                                            <i class="fa-solid fa-wifi" style="opacity: 0.8;"></i> <%= aula.sala %>
                                                                         <% } else { %>
                                                                             <i class="fa-solid fa-door-open" style="opacity: 0.8;"></i> <%= aula.sala %>
                                                                         <% } %>
