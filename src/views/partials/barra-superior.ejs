@@ -1,0 +1,47 @@
+<header class="painel-topo">
+    <button type="button" class="btn btn-outline-secondary btn-sm d-lg-none" data-abrir-menu aria-label="Abrir menu" aria-controls="menu-lateral">
+        <i class="fa-solid fa-bars" aria-hidden="true"></i>
+    </button>
+
+    <div class="painel-topo-titulo">
+        <h1 class="h5 mb-0"><%= tituloPagina %></h1>
+        <% if (typeof subtitulo !== 'undefined' && subtitulo) { %>
+            <p class="painel-topo-subtitulo mb-0"><%= subtitulo %></p>
+        <% } %>
+    </div>
+
+    <div class="painel-topo-acoes">
+        <% if (typeof periodoAtual !== 'undefined' && periodoAtual) { %>
+            <span class="badge text-bg-light border"
+                  aria-label="Período letivo atual: <%= periodoAtual.codigo %>">
+                <i class="fa-solid fa-calendar-check" aria-hidden="true"></i>
+                <span aria-hidden="true"><%= periodoAtual.codigo %></span>
+            </span>
+        <% } %>
+
+        <div class="dropdown">
+            <button class="btn btn-sm btn-light border dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="fa-solid fa-user" aria-hidden="true"></i>
+                <span class="d-none d-sm-inline"><%= usuarioLogado ? usuarioLogado.nome : '' %></span>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li class="dropdown-header">
+                    <div class="fw-semibold"><%= usuarioLogado ? usuarioLogado.nome : '' %></div>
+                    <div class="small text-muted"><%= usuarioLogado ? usuarioLogado.email : '' %></div>
+                    <span class="badge text-bg-secondary mt-1">
+                        <%= usuarioLogado ? formatadores.perfilRotulo(usuarioLogado.perfil) : '' %>
+                    </span>
+                </li>
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                    <form action="<%= withBase('/logout') %>" method="POST" class="px-3 py-1">
+                        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                        <button type="submit" class="btn btn-sm btn-outline-danger w-100">
+                            <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i> Sair
+                        </button>
+                    </form>
+                </li>
+            </ul>
+        </div>
+    </div>
+</header>

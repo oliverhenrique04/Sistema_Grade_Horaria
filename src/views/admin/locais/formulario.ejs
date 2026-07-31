@@ -1,0 +1,121 @@
+<%- include('../../layouts/admin-inicio') %>
+
+<%
+/*
+ * Formulario de local.
+ * A lista de campus ja vem restrita ao escopo do usuario (o perfil `nap` so
+ * enxerga os campus vinculados a ele).
+ */
+%>
+
+<section class="painel-cartao" aria-labelledby="titulo-formulario-local">
+    <div class="painel-cartao-cabecalho">
+        <h2 class="h6 mb-0" id="titulo-formulario-local">
+            <%= edicao ? 'Editar local' : 'Novo local' %>
+        </h2>
+    </div>
+
+    <% if (mensagemErro) { %>
+        <div class="alert alert-danger" role="alert">
+            <i class="fa-solid fa-circle-exclamation me-2" aria-hidden="true"></i>
+            <%= mensagemErro %>
+        </div>
+    <% } %>
+
+    <% if (campus.length === 0) { %>
+        <div class="alert alert-warning" role="alert">
+            <i class="fa-solid fa-triangle-exclamation me-2" aria-hidden="true"></i>
+            Nenhum campus disponível para o seu perfil. Um local sempre pertence a um campus.
+        </div>
+    <% } %>
+
+    <form method="POST" action="<%= acao %>" novalidate>
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+        <div class="row g-3">
+            <div class="col-12 col-lg-5">
+                <label class="form-label" for="campo-campus">Campus <span aria-hidden="true">*</span></label>
+                <select class="form-select <%= erros.campus_id ? 'is-invalid' : '' %>"
+                        id="campo-campus" name="campus_id" required
+                        <%= erros.campus_id ? 'aria-describedby="erro-campus_id" aria-invalid="true"' : '' %>>
+                    <option value="">Selecione o campus</option>
+                    <% campus.forEach((unidade) => { %>
+                        <option value="<%= unidade.id %>" <%= valores.campus_id === String(unidade.id) ? 'selected' : '' %>>
+                            <%= unidade.nome %><%= unidade.ativo ? '' : ' (inativo)' %>
+                        </option>
+                    <% }) %>
+                </select>
+                <%- include('../../partials/campo-erro', { erros: erros, campo: 'campus_id' }) %>
+            </div>
+
+            <div class="col-12 col-lg-7">
+                <label class="form-label" for="campo-nome">Nome <span aria-hidden="true">*</span></label>
+                <input type="text" class="form-control <%= erros.nome ? 'is-invalid' : '' %>"
+                       id="campo-nome" name="nome" value="<%= valores.nome %>" maxlength="120" required
+                       placeholder="Sala 101"
+                       <%= erros.nome ? 'aria-describedby="erro-nome" aria-invalid="true"' : '' %>>
+                <div class="form-text">Único dentro do campus.</div>
+                <%- include('../../partials/campo-erro', { erros: erros, campo: 'nome' }) %>
+            </div>
+
+            <div class="col-12 col-lg-4">
+                <label class="form-label" for="campo-codigo">Código</label>
+                <input type="text" class="form-control <%= erros.codigo ? 'is-invalid' : '' %>"
+                       id="campo-codigo" name="codigo" value="<%= valores.codigo %>" maxlength="40"
+                       <%= erros.codigo ? 'aria-describedby="erro-codigo" aria-invalid="true"' : '' %>>
+                <div class="form-text">Opcional.</div>
+                <%- include('../../partials/campo-erro', { erros: erros, campo: 'codigo' }) %>
+            </div>
+
+            <div class="col-12 col-lg-4">
+                <label class="form-label" for="campo-tipo">Tipo</label>
+                <select class="form-select <%= erros.tipo ? 'is-invalid' : '' %>"
+                        id="campo-tipo" name="tipo"
+                        <%= erros.tipo ? 'aria-describedby="erro-tipo" aria-invalid="true"' : '' %>>
+                    <% tipos.forEach((tipo) => { %>
+                        <option value="<%= tipo.valor %>" <%= valores.tipo === tipo.valor ? 'selected' : '' %>>
+                            <%= tipo.rotulo %>
+                        </option>
+                    <% }) %>
+                </select>
+                <%- include('../../partials/campo-erro', { erros: erros, campo: 'tipo' }) %>
+            </div>
+
+            <div class="col-6 col-lg-2">
+                <label class="form-label" for="campo-capacidade">Capacidade</label>
+                <input type="number" class="form-control <%= erros.capacidade ? 'is-invalid' : '' %>"
+                       id="campo-capacidade" name="capacidade" value="<%= valores.capacidade %>"
+                       min="0" max="100000"
+                       <%= erros.capacidade ? 'aria-describedby="erro-capacidade" aria-invalid="true"' : '' %>>
+                <div class="form-text">Opcional.</div>
+                <%- include('../../partials/campo-erro', { erros: erros, campo: 'capacidade' }) %>
+            </div>
+
+            <div class="col-6 col-lg-2">
+                <label class="form-label" for="campo-ativo">Situação</label>
+                <select class="form-select" id="campo-ativo" name="ativo">
+                    <option value="1" <%= valores.ativo ? 'selected' : '' %>>Ativo</option>
+                    <option value="0" <%= valores.ativo ? '' : 'selected' %>>Inativo</option>
+                </select>
+                <%- include('../../partials/campo-erro', { erros: erros, campo: 'ativo' }) %>
+            </div>
+        </div>
+
+        <% if (edicao && registro.total_aulas > 0) { %>
+            <p class="painel-indicador-nota mt-3 mb-0">
+                Este local é usado em <%= registro.total_aulas %> aula(s): só pode ser inativado,
+                nunca excluído.
+            </p>
+        <% } %>
+
+        <div class="d-flex gap-2 mt-4">
+            <button type="submit" class="btn btn-primary" <%= campus.length === 0 ? 'disabled' : '' %>>
+                <i class="fa-solid fa-floppy-disk" aria-hidden="true"></i>
+                <%= edicao ? 'Salvar alterações' : 'Cadastrar local' %>
+            </button>
+            <a class="btn btn-outline-secondary" href="<%= voltarUrl %>">Cancelar</a>
+        </div>
+    </form>
+</section>
+
+<%- include('../../layouts/admin-fim') %>

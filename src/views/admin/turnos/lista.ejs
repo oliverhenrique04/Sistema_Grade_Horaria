@@ -1,0 +1,167 @@
+<%- include('../../layouts/admin-inicio') %>
+
+<%
+/*
+ * Lista de turnos. A coluna "Horários" sempre vem do banco (total_horarios):
+ * a quantidade de periodos de um turno e livre e configuravel.
+ */
+%>
+
+<section class="painel-cartao" aria-labelledby="titulo-turnos">
+    <div class="painel-cartao-cabecalho">
+        <div>
+            <h2 class="h6 mb-1" id="titulo-turnos">Turnos</h2>
+            <p class="painel-indicador-nota mb-0">
+                Cada turno tem a própria quantidade de horários, definida em
+                “Horários dos turnos”.
+            </p>
+        </div>
+
+        <% if (podeVer('turnos', 'criar')) { %>
+            <a class="btn btn-primary btn-sm" href="<%= withBase('/admin/turnos/novo') %>">
+                <i class="fa-solid fa-plus" aria-hidden="true"></i> Novo turno
+            </a>
+        <% } %>
+    </div>
+
+    <form method="GET" action="<%= withBase('/admin/turnos') %>" class="painel-filtros" role="search">
+        <div class="painel-filtros-campo">
+            <label class="form-label" for="filtro-busca">Buscar</label>
+            <input type="search" class="form-control form-control-sm" id="filtro-busca"
+                   name="busca" value="<%= filtros.busca %>" placeholder="Nome ou identificador"
+                   maxlength="120">
+        </div>
+
+        <div class="painel-filtros-campo">
+            <label class="form-label" for="filtro-situacao">Situação</label>
+            <select class="form-select form-select-sm" id="filtro-situacao" name="ativo"
+                    data-submete-ao-mudar>
+                <option value="" <%= filtros.ativo === '' ? 'selected' : '' %>>Todos</option>
+                <option value="1" <%= filtros.ativo === '1' ? 'selected' : '' %>>Ativos</option>
+                <option value="0" <%= filtros.ativo === '0' ? 'selected' : '' %>>Inativos</option>
+            </select>
+        </div>
+
+        <div class="painel-filtros-campo">
+            <label class="form-label" for="filtro-por-pagina">Por página</label>
+            <select class="form-select form-select-sm" id="filtro-por-pagina" name="por_pagina"
+                    data-submete-ao-mudar>
+                <% paginacao.tamanhos.forEach((tamanho) => { %>
+                    <option value="<%= tamanho %>" <%= paginacao.porPagina === tamanho ? 'selected' : '' %>>
+                        <%= tamanho %>
+                    </option>
+                <% }) %>
+            </select>
+        </div>
+
+        <div>
+            <button type="submit" class="btn btn-sm btn-outline-secondary">
+                <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i> Filtrar
+            </button>
+            <a class="btn btn-sm btn-link" href="<%= withBase('/admin/turnos') %>">Limpar</a>
+        </div>
+    </form>
+
+    <% if (itens.length === 0) { %>
+        <%- include('../../partials/estado-vazio', {
+            icone: 'fa-clock',
+            titulo: 'Nenhum turno encontrado',
+            descricao: filtros.busca || filtros.ativo !== ''
+                ? 'Nenhum turno corresponde aos filtros aplicados.'
+                : 'Cadastre o primeiro turno da instituição.',
+            acaoUrl: podeVer('turnos', 'criar') ? withBase('/admin/turnos/novo') : null,
+            acaoTexto: 'Novo turno'
+        }) %>
+    <% } else { %>
+        <div class="table-responsive">
+            <table class="table painel-tabela align-middle">
+                <thead>
+                    <tr>
+                        <th scope="col" class="text-end">Ordem</th>
+                        <th scope="col">Turno</th>
+                        <th scope="col">Identificador</th>
+                        <th scope="col" class="text-end">Horários</th>
+                        <th scope="col" class="text-end">Turmas</th>
+                        <th scope="col">Situação</th>
+                        <th scope="col"><span class="visually-hidden">Ações</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% itens.forEach((item) => { %>
+                        <% const semVinculos = item.total_horarios === 0 && item.total_turmas === 0; %>
+                        <tr>
+                            <td class="text-end"><%= item.ordem %></td>
+                            <th scope="row" class="fw-semibold">
+                                <i class="fa-solid <%= item.icone || 'fa-clock' %>" aria-hidden="true"></i>
+                                <%= item.nome %>
+                            </th>
+                            <td><code><%= item.slug %></code></td>
+                            <td class="text-end">
+                                <% if (podeVer('horarios')) { %>
+                                    <a href="<%= withBase('/admin/horarios?turno_id=' + item.id) %>"
+                                       title="Gerenciar horários de <%= item.nome %>">
+                                        <%= item.total_horarios %>
+                                    </a>
+                                <% } else { %>
+                                    <%= item.total_horarios %>
+                                <% } %>
+                            </td>
+                            <td class="text-end"><%= item.total_turmas %></td>
+                            <td><%- include('../../partials/status-badge', { ativo: item.ativo }) %></td>
+                            <td>
+                                <div class="painel-tabela-acoes">
+                                    <% if (podeVer('horarios')) { %>
+                                        <a class="btn btn-sm btn-outline-secondary"
+                                           href="<%= withBase('/admin/horarios?turno_id=' + item.id) %>">
+                                            <i class="fa-solid fa-hourglass-half" aria-hidden="true"></i>
+                                            <span class="visually-hidden">Horários de <%= item.nome %></span>
+                                        </a>
+                                    <% } %>
+
+                                    <% if (podeVer('turnos', 'editar')) { %>
+                                        <a class="btn btn-sm btn-outline-secondary"
+                                           href="<%= withBase('/admin/turnos/' + item.id + '/editar') %>">
+                                            <i class="fa-solid fa-pen" aria-hidden="true"></i>
+                                            <span class="visually-hidden">Editar <%= item.nome %></span>
+                                        </a>
+                                    <% } %>
+
+                                    <% if (podeVer('turnos', 'inativar')) { %>
+                                        <form method="POST"
+                                              action="<%= withBase('/admin/turnos/' + item.id + '/situacao') %>"
+                                              data-confirmar="<%= item.ativo ? 'Inativar o turno ' + item.nome + '?' : 'Reativar o turno ' + item.nome + '?' %>">
+                                            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                                            <input type="hidden" name="ativo" value="<%= item.ativo ? '0' : '1' %>">
+                                            <button type="submit" class="btn btn-sm btn-outline-secondary">
+                                                <i class="fa-solid <%= item.ativo ? 'fa-toggle-off' : 'fa-toggle-on' %>" aria-hidden="true"></i>
+                                                <span class="visually-hidden">
+                                                    <%= item.ativo ? 'Inativar' : 'Reativar' %> <%= item.nome %>
+                                                </span>
+                                            </button>
+                                        </form>
+
+                                        <% if (semVinculos) { %>
+                                            <form method="POST"
+                                                  action="<%= withBase('/admin/turnos/' + item.id + '/excluir') %>"
+                                                  data-confirmar="Excluir definitivamente o turno <%= item.nome %>?">
+                                                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                    <i class="fa-solid fa-trash" aria-hidden="true"></i>
+                                                    <span class="visually-hidden">Excluir <%= item.nome %></span>
+                                                </button>
+                                            </form>
+                                        <% } %>
+                                    <% } %>
+                                </div>
+                            </td>
+                        </tr>
+                    <% }) %>
+                </tbody>
+            </table>
+        </div>
+
+        <%- include('../../partials/paginacao', { paginacao: paginacao, urlBase: urlBase }) %>
+    <% } %>
+</section>
+
+<%- include('../../layouts/admin-fim') %>

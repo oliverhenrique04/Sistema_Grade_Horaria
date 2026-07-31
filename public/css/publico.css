@@ -1,0 +1,1132 @@
+/* ==========================================================================
+   Área pública da grade horária — Unieuro / NUTED
+
+   Identidade preservada da versão anterior (tema escuro, efeito glass,
+   camadas de parallax, cores por turno) com três acréscimos:
+
+   1. Acessibilidade: foco sempre visível, alvos de toque de 44px, contraste
+      alto e nenhuma informação transmitida apenas por cor.
+   2. Mobile-first de verdade: em telas pequenas a tabela vira lista
+      cronológica por dia; a matriz larga só aparece a partir de 768px.
+   3. Impressão: `@media print` remove filtros, fundos e efeitos e entrega
+      uma grade legível em papel branco.
+
+   Carregado DEPOIS do Bootstrap: as regras daqui têm a palavra final.
+   ========================================================================== */
+
+:root {
+    /* Cores por turno (mesmas da versão anterior) */
+    --mat-accent: #f97316;
+    --mat-gradient: linear-gradient(135deg, #f97316, #fbbf24);
+    --vesp-accent: #eab308;
+    --vesp-gradient: linear-gradient(135deg, #facc15, #f59e0b);
+    --int-accent: #06b6d4;
+    --int-gradient: linear-gradient(135deg, #06b6d4, #3b82f6);
+    --not-accent: #6366f1;
+    --not-gradient: linear-gradient(135deg, #6366f1, #a855f7);
+
+    /* Turno genérico (fallback para turnos cadastrados sem tema) */
+    --turno-accent: #94a3b8;
+    --turno-gradient: linear-gradient(135deg, #64748b, #94a3b8);
+
+    /* Base */
+    --bg: #0b1220;
+    --bg-soft: #0f172a;
+    --texto: #e5e7eb;
+    --texto-forte: #ffffff;
+    --texto-suave: rgba(226, 232, 240, 0.82);
+    --borda: rgba(255, 255, 255, 0.14);
+    --foco: #fbbf24;
+
+    --radius: 18px;
+    --radius-sm: 14px;
+    --blur: 14px;
+    --sombra: 0 10px 30px rgba(0, 0, 0, 0.22);
+    --transicao: all 0.24s ease;
+    --max: 1180px;
+
+    /* Camadas de parallax */
+    --p1: 0px;
+    --p2: 0px;
+    --p3: 0px;
+}
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    color: var(--texto);
+    font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+    background:
+        radial-gradient(1200px 600px at 20% -10%, rgba(99, 102, 241, 0.35), transparent 60%),
+        radial-gradient(1000px 700px at 100% 10%, rgba(249, 115, 22, 0.28), transparent 55%),
+        linear-gradient(180deg, var(--bg), var(--bg-soft));
+    background-attachment: fixed;
+    overflow-x: hidden;
+}
+
+/* --------------------------------------------------------------------------
+   Acessibilidade
+   -------------------------------------------------------------------------- */
+
+.apenas-leitor {
+    position: absolute !important;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.atalho-conteudo {
+    position: absolute;
+    left: -9999px;
+    top: 0;
+    z-index: 100;
+    padding: 12px 18px;
+    border-radius: 0 0 12px 0;
+    background: #111827;
+    color: #ffffff;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.atalho-conteudo:focus {
+    left: 0;
+}
+
+:focus-visible {
+    outline: 3px solid var(--foco);
+    outline-offset: 2px;
+    border-radius: 6px;
+}
+
+#conteudo-principal:focus {
+    outline: none;
+}
+
+/* --------------------------------------------------------------------------
+   Fundo decorativo
+   -------------------------------------------------------------------------- */
+
+.parallax {
+    position: fixed;
+    inset: 0;
+    z-index: -2;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.parallax .layer {
+    position: absolute;
+    inset: -18%;
+    opacity: 0.9;
+}
+
+.parallax .l1 {
+    background:
+        radial-gradient(42vmax 26vmax at 12% 12%, rgba(249, 115, 22, 0.34), transparent 64%),
+        radial-gradient(48vmax 32vmax at 86% 24%, rgba(99, 102, 241, 0.3), transparent 68%),
+        radial-gradient(28vmax 20vmax at 50% 92%, rgba(6, 182, 212, 0.16), transparent 70%);
+    filter: blur(2px);
+}
+
+.parallax .l2 {
+    background:
+        radial-gradient(24vmax 18vmax at 22% 80%, rgba(251, 191, 36, 0.22), transparent 68%),
+        radial-gradient(28vmax 22vmax at 76% 74%, rgba(168, 85, 247, 0.2), transparent 72%);
+    filter: blur(4px);
+    opacity: 0.62;
+}
+
+.parallax .l3 {
+    background: radial-gradient(78vmax 42vmax at 50% 52%, rgba(255, 255, 255, 0.07), transparent 62%);
+    filter: blur(7px);
+    opacity: 0.36;
+}
+
+.grain {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    opacity: 0.08;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='260' height='260' filter='url(%23n)' opacity='.55'/%3E%3C/svg%3E");
+    background-size: 260px 260px;
+    mix-blend-mode: overlay;
+}
+
+/* --------------------------------------------------------------------------
+   Estrutura
+   -------------------------------------------------------------------------- */
+
+.wrap {
+    width: min(var(--max), 100%);
+    margin-inline: auto;
+    padding: 14px 12px 24px;
+}
+
+.glass {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.13);
+    backdrop-filter: blur(var(--blur));
+    -webkit-backdrop-filter: blur(var(--blur));
+    box-shadow: var(--sombra);
+    border-radius: var(--radius);
+}
+
+.glass-soft {
+    background: rgba(2, 6, 23, 0.42);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    backdrop-filter: blur(calc(var(--blur) - 4px));
+    -webkit-backdrop-filter: blur(calc(var(--blur) - 4px));
+    border-radius: var(--radius-sm);
+}
+
+.conteudo {
+    display: block;
+}
+
+/* --------------------------------------------------------------------------
+   Cabeçalho
+   -------------------------------------------------------------------------- */
+
+.hero {
+    position: relative;
+    overflow: hidden;
+    padding: 16px 14px;
+}
+
+.hero::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    z-index: -1;
+    background:
+        radial-gradient(600px 260px at 0% 0%, rgba(249, 115, 22, 0.26), transparent 62%),
+        radial-gradient(700px 340px at 100% 0%, rgba(99, 102, 241, 0.24), transparent 64%);
+}
+
+.hero-top {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    align-items: flex-start;
+    justify-content: space-between;
+}
+
+.hero-title {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    min-width: 0;
+}
+
+.hero-logo {
+    height: 3.6rem;
+    width: auto;
+    flex: 0 0 auto;
+    object-fit: contain;
+    filter: brightness(0) invert(1);
+}
+
+.hero h1 {
+    margin: 0;
+    font-size: 1.35rem;
+    font-weight: 800;
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+    color: var(--texto-forte);
+}
+
+.subtitle {
+    margin: 6px 0 0;
+    font-size: 0.92rem;
+    color: var(--texto-suave);
+}
+
+.meta {
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 12px 0 0;
+    padding: 0;
+}
+
+.pill {
+    display: inline-flex;
+    gap: 8px;
+    align-items: center;
+    padding: 7px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--borda);
+    background: rgba(2, 6, 23, 0.45);
+    color: var(--texto);
+    font-size: 0.82rem;
+}
+
+.pill strong {
+    color: var(--texto-forte);
+}
+
+.hero-acoes {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+/* --------------------------------------------------------------------------
+   Botões
+   -------------------------------------------------------------------------- */
+
+.botao {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 44px;
+    padding: 10px 18px;
+    border-radius: 12px;
+    border: 1px solid var(--borda);
+    font-weight: 700;
+    font-size: 0.92rem;
+    text-decoration: none;
+    cursor: pointer;
+    transition: var(--transicao);
+}
+
+.botao-primario {
+    background: linear-gradient(135deg, #f97316, #fbbf24);
+    border-color: rgba(249, 115, 22, 0.6);
+    color: #1f1300;
+}
+
+.botao-secundario {
+    background: rgba(2, 6, 23, 0.5);
+    color: var(--texto-forte);
+}
+
+.botao:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 12px 26px rgba(0, 0, 0, 0.28);
+}
+
+/* --------------------------------------------------------------------------
+   Filtros
+   -------------------------------------------------------------------------- */
+
+.filtros {
+    margin-top: 16px;
+    padding: 14px;
+}
+
+.filtros-titulo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 12px;
+    font-size: 0.85rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--texto-suave);
+}
+
+.filtros-grade {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+}
+
+.campo {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+}
+
+.campo-rotulo {
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--texto-suave);
+}
+
+.obrigatorio {
+    text-transform: none;
+    letter-spacing: 0;
+    font-weight: 600;
+    color: #fbbf24;
+}
+
+.campo-controle {
+    width: 100%;
+    min-height: 44px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    background: #f8fafc;
+    color: #0f172a;
+    font-size: 0.95rem;
+    font-weight: 600;
+}
+
+.campo-ajuda {
+    margin: 0;
+    font-size: 0.78rem;
+    color: var(--texto-suave);
+}
+
+.filtros-acoes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 14px;
+}
+
+/* --------------------------------------------------------------------------
+   Resultado
+   -------------------------------------------------------------------------- */
+
+.resumo-consulta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 18px 2px 4px;
+    font-size: 0.9rem;
+    color: var(--texto-suave);
+}
+
+.turno {
+    margin-top: 18px;
+}
+
+.turno-titulo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0 0 10px;
+    padding: 10px 14px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--borda);
+    border-left: 6px solid var(--turno-accent);
+    background: rgba(2, 6, 23, 0.42);
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: var(--texto-forte);
+}
+
+/* Cores por turno: sempre acompanhadas do nome do turno em texto, nunca
+   como único portador da informação. */
+.matutino-theme .turno-titulo {
+    border-left-color: var(--mat-accent);
+}
+.matutino-theme .turma-icone {
+    background: var(--mat-gradient);
+}
+.matutino-theme .turma {
+    border-top: 4px solid rgba(249, 115, 22, 0.9);
+}
+
+.vespertino-theme .turno-titulo {
+    border-left-color: var(--vesp-accent);
+}
+.vespertino-theme .turma-icone {
+    background: var(--vesp-gradient);
+}
+.vespertino-theme .turma {
+    border-top: 4px solid rgba(234, 179, 8, 0.9);
+}
+
+.integral-theme .turno-titulo {
+    border-left-color: var(--int-accent);
+}
+.integral-theme .turma-icone {
+    background: var(--int-gradient);
+}
+.integral-theme .turma {
+    border-top: 4px solid rgba(6, 182, 212, 0.9);
+}
+
+.noturno-theme .turno-titulo {
+    border-left-color: var(--not-accent);
+}
+.noturno-theme .turma-icone {
+    background: var(--not-gradient);
+}
+.noturno-theme .turma {
+    border-top: 4px solid rgba(99, 102, 241, 0.92);
+}
+
+/* --------------------------------------------------------------------------
+   Cartão da turma
+   -------------------------------------------------------------------------- */
+
+.turma {
+    padding: 14px;
+    margin-bottom: 14px;
+    border-top: 4px solid rgba(148, 163, 184, 0.9);
+    overflow: hidden;
+}
+
+.turma-cabecalho {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.turma-icone {
+    width: 44px;
+    height: 44px;
+    flex: 0 0 auto;
+    display: grid;
+    place-items: center;
+    border-radius: 14px;
+    background: var(--turno-gradient);
+    color: #0b1220;
+    font-size: 1.05rem;
+}
+
+.turma-titulo {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: var(--texto-forte);
+    letter-spacing: -0.01em;
+}
+
+.turma-codigo {
+    display: inline-block;
+    margin-left: 8px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    border: 1px solid var(--borda);
+    background: rgba(2, 6, 23, 0.45);
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--texto-suave);
+    vertical-align: middle;
+}
+
+.turma-detalhes {
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 14px;
+    margin: 8px 0 0;
+    padding: 0;
+    font-size: 0.84rem;
+    color: var(--texto-suave);
+}
+
+.turma-detalhes li {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.aviso {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin: 12px 0 0;
+    padding: 12px 14px;
+    border-radius: 12px;
+    border: 1px solid rgba(251, 191, 36, 0.45);
+    background: rgba(251, 191, 36, 0.12);
+    color: #fef3c7;
+    font-size: 0.88rem;
+}
+
+/* --------------------------------------------------------------------------
+   Tabelas da grade — mobile-first: listas empilhadas por dia
+   -------------------------------------------------------------------------- */
+
+.tabela-rolagem {
+    margin-top: 12px;
+    overflow-x: auto;
+}
+
+.tabela-grade {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.88rem;
+    color: var(--texto);
+}
+
+.tabela-grade caption {
+    caption-side: top;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    border-radius: 10px;
+    border: 1px dashed rgba(251, 191, 36, 0.5);
+    background: rgba(251, 191, 36, 0.1);
+    color: #fef3c7;
+    font-size: 0.84rem;
+    font-weight: 600;
+    text-align: left;
+}
+
+.tabela-grade thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+}
+
+.tabela-grade tbody {
+    display: block;
+    margin-bottom: 10px;
+}
+
+.tabela-grade tr {
+    display: block;
+    padding: 10px 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.05);
+    margin-bottom: 8px;
+}
+
+.tabela-grade .linha-dia {
+    padding: 0;
+    border: 0;
+    background: none;
+    margin-bottom: 6px;
+}
+
+.tabela-grade .linha-dia th {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 10px;
+    background: rgba(2, 6, 23, 0.5);
+    border: 1px solid var(--borda);
+    color: var(--texto-forte);
+    font-size: 0.8rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    text-align: left;
+}
+
+.tabela-grade th,
+.tabela-grade td {
+    display: block;
+    padding: 3px 0;
+    text-align: left;
+    vertical-align: top;
+}
+
+.tabela-grade tbody th[data-rotulo],
+.tabela-grade td[data-rotulo] {
+    display: flex;
+    gap: 10px;
+    align-items: baseline;
+    font-weight: 400;
+}
+
+.tabela-grade tbody th[data-rotulo]::before,
+.tabela-grade td[data-rotulo]::before {
+    content: attr(data-rotulo);
+    flex: 0 0 92px;
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--texto-suave);
+}
+
+.hora {
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    color: var(--texto-forte);
+}
+
+.celula-disciplina {
+    font-weight: 700;
+    color: var(--texto-forte);
+}
+
+.ausente {
+    color: var(--texto-suave);
+    font-style: italic;
+}
+
+.etiqueta {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--borda);
+    background: rgba(2, 6, 23, 0.5);
+    font-size: 0.76rem;
+    font-weight: 700;
+    color: var(--texto);
+}
+
+.etiqueta-presencial {
+    border-color: rgba(148, 163, 184, 0.55);
+}
+
+.etiqueta-ead {
+    border-color: rgba(96, 165, 250, 0.65);
+    background: rgba(37, 99, 235, 0.28);
+    color: #dbeafe;
+}
+
+.etiqueta-hibrido {
+    border-color: rgba(52, 211, 153, 0.6);
+    background: rgba(16, 185, 129, 0.22);
+    color: #d1fae5;
+}
+
+.bloco-pendente {
+    margin-top: 16px;
+}
+
+/* --------------------------------------------------------------------------
+   Orientação e estados vazios
+   -------------------------------------------------------------------------- */
+
+.orientacao {
+    margin-top: 18px;
+    padding: 24px 18px;
+    text-align: center;
+}
+
+.orientacao-icone {
+    width: 56px;
+    height: 56px;
+    margin: 0 auto 14px;
+    display: grid;
+    place-items: center;
+    border-radius: 16px;
+    background: linear-gradient(135deg, rgba(249, 115, 22, 0.95), rgba(99, 102, 241, 0.95));
+    color: #ffffff;
+    font-size: 1.4rem;
+}
+
+.orientacao h2 {
+    margin: 0 0 10px;
+    font-size: 1.2rem;
+    font-weight: 800;
+    color: var(--texto-forte);
+}
+
+.orientacao p {
+    margin: 0 auto 10px;
+    max-width: 60ch;
+    color: var(--texto-suave);
+    line-height: 1.55;
+}
+
+.orientacao-passos {
+    list-style: none;
+    display: inline-flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 14px 0 0;
+    padding: 0;
+    text-align: left;
+}
+
+.orientacao-passos li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border-radius: 12px;
+    border: 1px solid var(--borda);
+    background: rgba(2, 6, 23, 0.42);
+    color: var(--texto);
+    font-size: 0.9rem;
+}
+
+.orientacao-passos .passo-ok {
+    border-color: rgba(52, 211, 153, 0.55);
+    background: rgba(16, 185, 129, 0.16);
+}
+
+.orientacao .aviso {
+    text-align: left;
+    max-width: 60ch;
+    margin-inline: auto;
+}
+
+/* --------------------------------------------------------------------------
+   Rodapé
+   -------------------------------------------------------------------------- */
+
+.rodape {
+    margin-top: 20px;
+    padding: 16px;
+}
+
+.rodape-marca {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+}
+
+.rodape-logo {
+    height: 34px;
+    width: auto;
+    object-fit: contain;
+    filter: brightness(0) invert(1);
+}
+
+.rodape-titulo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    font-weight: 800;
+    color: var(--texto-forte);
+}
+
+.rodape-aviso {
+    margin: 0 0 4px;
+    font-size: 0.84rem;
+    line-height: 1.4;
+    color: var(--texto-suave);
+}
+
+/* --------------------------------------------------------------------------
+   Telas médias e grandes
+   -------------------------------------------------------------------------- */
+
+@media (min-width: 600px) {
+    .wrap {
+        padding: 20px 18px 28px;
+    }
+
+    .hero {
+        padding: 20px 18px;
+    }
+
+    .hero h1 {
+        font-size: 1.7rem;
+    }
+
+    .hero-logo {
+        height: 4.4rem;
+    }
+
+    .filtros-grade {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (min-width: 992px) {
+    .hero h1 {
+        font-size: 1.95rem;
+    }
+
+    .filtros-grade {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .turma {
+        padding: 18px;
+    }
+
+    /* A partir daqui a tabela volta a ser tabela de verdade. */
+    .tabela-grade {
+        display: table;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+
+    .tabela-grade thead {
+        position: static;
+        width: auto;
+        height: auto;
+        margin: 0;
+        clip: auto;
+        overflow: visible;
+        white-space: normal;
+        display: table-header-group;
+    }
+
+    .tabela-grade tbody {
+        display: table-row-group;
+        margin: 0;
+    }
+
+    .tabela-grade tr {
+        display: table-row;
+        padding: 0;
+        border: 0;
+        background: none;
+        margin: 0;
+    }
+
+    .tabela-grade thead th {
+        display: table-cell;
+        padding: 10px 12px;
+        border-bottom: 2px solid rgba(255, 255, 255, 0.22);
+        color: var(--texto-suave);
+        font-size: 0.74rem;
+        font-weight: 800;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        text-align: left;
+    }
+
+    /* O seletor repete `[data-rotulo]` de proposito: sem ele a regra de
+       empilhamento (mais especifica) continuaria valendo no desktop. */
+    .tabela-grade tbody th,
+    .tabela-grade tbody td,
+    .tabela-grade tbody th[data-rotulo],
+    .tabela-grade tbody td[data-rotulo] {
+        display: table-cell;
+        padding: 9px 12px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+        font-weight: 400;
+    }
+
+    .tabela-grade tbody th[data-rotulo]::before,
+    .tabela-grade td[data-rotulo]::before {
+        content: none;
+    }
+
+    .tabela-grade .linha-dia th {
+        display: table-cell;
+        border-radius: 0;
+        border: 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+        background: rgba(2, 6, 23, 0.55);
+    }
+
+    .tabela-grade tbody tr:hover td,
+    .tabela-grade tbody tr:hover th {
+        background: rgba(255, 255, 255, 0.05);
+    }
+}
+
+/* --------------------------------------------------------------------------
+   Preferência por menos movimento
+   -------------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+    html {
+        scroll-behavior: auto;
+    }
+
+    * {
+        transition: none !important;
+        animation: none !important;
+    }
+
+    .parallax .l2,
+    .parallax .l3 {
+        display: none;
+    }
+}
+
+/* --------------------------------------------------------------------------
+   Impressão — papel branco, sem filtros nem efeitos
+   -------------------------------------------------------------------------- */
+
+@media print {
+    @page {
+        margin: 12mm;
+    }
+
+    html,
+    body {
+        background: #ffffff !important;
+        color: #000000 !important;
+    }
+
+    .parallax,
+    .grain,
+    .filtros,
+    .hero-acoes,
+    .atalho-conteudo,
+    .resumo-consulta,
+    .orientacao-icone {
+        display: none !important;
+    }
+
+    .wrap {
+        width: 100%;
+        max-width: none;
+        padding: 0;
+    }
+
+    .glass,
+    .glass-soft,
+    .hero,
+    .turma,
+    .rodape,
+    .orientacao {
+        background: #ffffff !important;
+        border: 1px solid #999999 !important;
+        box-shadow: none !important;
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+        border-radius: 0 !important;
+    }
+
+    .hero::before {
+        display: none !important;
+    }
+
+    /* O logo do Unieuro e branco (usado sobre o tema escuro): em papel branco
+       ele precisa virar preto, senao some. O do NUTED ja e escuro. */
+    .hero-logo {
+        filter: brightness(0) !important;
+        height: 2.4rem;
+    }
+
+    .rodape-logo {
+        filter: none !important;
+        height: 2.4rem;
+    }
+
+    .hero h1 {
+        color: #000000 !important;
+        font-size: 1.4rem;
+    }
+
+    /* Textos em destaque usam branco no tema escuro: no papel viram preto. */
+    strong,
+    .pill strong,
+    .turma-titulo,
+    .celula-disciplina,
+    .hora,
+    .orientacao h2,
+    .rodape-titulo {
+        color: #000000 !important;
+    }
+
+    .subtitle,
+    .campo-ajuda,
+    .rodape-aviso,
+    .turma-detalhes,
+    .ausente {
+        color: #333333 !important;
+    }
+
+    .pill,
+    .turma-codigo,
+    .etiqueta {
+        border: 1px solid #666666 !important;
+        background: #ffffff !important;
+        color: #000000 !important;
+    }
+
+    .turno {
+        break-inside: auto;
+    }
+
+    .turno-titulo {
+        background: #ffffff !important;
+        border: 1px solid #666666 !important;
+        border-left: 6px solid #333333 !important;
+        color: #000000 !important;
+        break-after: avoid;
+        page-break-after: avoid;
+    }
+
+    .turma {
+        break-inside: avoid;
+        page-break-inside: avoid;
+        margin-bottom: 10px;
+    }
+
+    /* Em papel a matriz completa cabe: volta ao formato de tabela. */
+    .tabela-rolagem {
+        overflow: visible;
+    }
+
+    .tabela-grade {
+        display: table !important;
+        width: 100%;
+        border-collapse: collapse !important;
+        font-size: 10pt;
+        color: #000000 !important;
+    }
+
+    .tabela-grade caption {
+        border: 0 !important;
+        background: none !important;
+        color: #000000 !important;
+        padding: 4px 0;
+        font-weight: 700;
+    }
+
+    .tabela-grade thead {
+        position: static !important;
+        width: auto !important;
+        height: auto !important;
+        margin: 0 !important;
+        clip: auto !important;
+        overflow: visible !important;
+        white-space: normal !important;
+        display: table-header-group !important;
+    }
+
+    .tabela-grade tbody {
+        display: table-row-group !important;
+        margin: 0 !important;
+    }
+
+    .tabela-grade tr {
+        display: table-row !important;
+        padding: 0 !important;
+        border: 0 !important;
+        background: none !important;
+        margin: 0 !important;
+    }
+
+    .tabela-grade th,
+    .tabela-grade td {
+        display: table-cell !important;
+        padding: 4px 6px !important;
+        border: 1px solid #666666 !important;
+        color: #000000 !important;
+        background: #ffffff !important;
+        text-align: left;
+    }
+
+    .tabela-grade tbody th[data-rotulo]::before,
+    .tabela-grade td[data-rotulo]::before {
+        content: none !important;
+    }
+
+    .tabela-grade .linha-dia th {
+        background: #eeeeee !important;
+        font-weight: 800;
+    }
+
+    .aviso {
+        border: 1px solid #666666 !important;
+        background: #ffffff !important;
+        color: #000000 !important;
+    }
+}

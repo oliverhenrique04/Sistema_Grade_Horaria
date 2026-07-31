@@ -1,35 +1,19 @@
 const express = require('express');
+
+const rotasPublicas = require('./publico');
+const rotasAutenticacao = require('./autenticacao');
+const rotasAdmin = require('./admin');
+const { exigirLogin } = require('../middlewares/autenticacao');
+
 const router = express.Router();
-const publicController = require('../controllers/publicController');
-const adminController = require('../controllers/adminController');
 
-// --- ÁREA PÚBLICA ---
-router.get('/', publicController.getGradePage);
+// Login e logout ficam na raiz (GET /login, POST /login, POST /logout).
+router.use('/', rotasAutenticacao);
 
-// --- ÁREA ADMIN ---
-router.get('/admin', adminController.dashboard);
+// Painel administrativo: toda a arvore exige sessao autenticada.
+router.use('/admin', exigirLogin, rotasAdmin);
 
-// Listagem (Com filtros no controller)
-router.get('/admin/:entidade', adminController.listar);
-
-// Criação
-router.get('/admin/:entidade/novo', adminController.formCriar);
-router.post('/admin/:entidade/salvar', adminController.salvar);
-
-// Edição
-router.get('/admin/:entidade/editar/:id', adminController.formEditar);
-router.post('/admin/:entidade/atualizar/:id', adminController.atualizar);
-
-// Exclusão
-router.post('/admin/:entidade/excluir/:id', adminController.excluir);
-
-// --- ROTAS DA GRADE ---
-router.get('/admin/turmas/:id/grade', adminController.montarGrade);
-router.post('/admin/turmas/:id/grade/salvar', adminController.adicionarItemGrade);
-router.post('/admin/turmas/:id/grade/atualizar', adminController.atualizarGradeEmLote);
-router.get('/admin/turmas/:id/grade/remover/:id_item', adminController.removerItemGrade);
-
-// ROTA ESPECIAL NAP (Salvar Sala)
-router.post('/admin/turmas/:id/grade/item/:id_item/sala', adminController.atualizarSalaGrade);
+// Consulta publica da grade horaria.
+router.use('/', rotasPublicas);
 
 module.exports = router;

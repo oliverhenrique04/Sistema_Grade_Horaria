@@ -1,0 +1,38 @@
+<nav class="painel-menu" id="menu-lateral" aria-label="Menu principal">
+    <div class="painel-menu-topo">
+        <a class="painel-marca" href="<%= withBase('/admin') %>">
+            <i class="fa-solid fa-graduation-cap" aria-hidden="true"></i>
+            <span>Grade Horária</span>
+        </a>
+        <button type="button" class="btn btn-sm btn-link painel-menu-fechar d-lg-none" data-fechar-menu aria-label="Fechar menu">
+            <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+        </button>
+    </div>
+
+    <div class="painel-menu-corpo">
+        <% (menu || []).forEach((grupo) => { %>
+            <div class="painel-menu-grupo">
+                <p class="painel-menu-titulo"><%= grupo.titulo %></p>
+                <ul class="painel-menu-lista">
+                    <% grupo.itens.forEach((item) => { %>
+                        <li>
+                            <a href="<%= withBase(item.url) %>"
+                               class="painel-menu-item <%= (typeof menuAtivo !== 'undefined' && menuAtivo === item.chave) ? 'ativo' : '' %>"
+                               <%= (typeof menuAtivo !== 'undefined' && menuAtivo === item.chave) ? 'aria-current="page"' : '' %>>
+                                <i class="fa-solid <%= item.icone %>" aria-hidden="true"></i>
+                                <span><%= item.rotulo %></span>
+                            </a>
+                        </li>
+                    <% }) %>
+                </ul>
+            </div>
+        <% }) %>
+    </div>
+
+    <div class="painel-menu-rodape">
+        <a class="painel-menu-item" href="<%= withBase('/') %>" target="_blank" rel="noopener">
+            <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i>
+            <span>Ver área pública</span>
+        </a>
+    </div>
+</nav>

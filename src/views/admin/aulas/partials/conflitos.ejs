@@ -1,0 +1,63 @@
+<%
+/*
+ * Painel de conflitos do montador.
+ *
+ * E o mesmo lugar usado em tres situacoes:
+ *  1. gravacao recusada (ErroConflito) — todas as mensagens de `erro.detalhes`;
+ *  2. pre-visualizacao sem JavaScript (botao "Verificar conflitos");
+ *  3. pre-visualizacao com JavaScript, que injeta o resultado de
+ *     POST /admin/aulas/prever dentro de `#lista-conflitos`.
+ *
+ * Espera: conflitos, mensagemErro e previsao.
+ */
+const semNada = conflitos.length === 0 && !mensagemErro && !previsao;
+
+const ROTULOS = {
+    turma: 'Turma',
+    professor: 'Professor',
+    local: 'Local',
+    turno: 'Turno',
+    campus: 'Campus',
+    inativo: 'Registro inativo',
+    dia: 'Dia da semana',
+};
+%>
+
+<section class="painel-cartao montador-conflitos"
+         id="painel-conflitos"
+         aria-labelledby="titulo-conflitos"
+         tabindex="-1"
+         <%= semNada ? 'hidden' : '' %>>
+
+    <h2 class="h6 mb-2" id="titulo-conflitos">
+        <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+        Verificação de conflitos
+    </h2>
+
+    <% if (mensagemErro) { %>
+        <p class="montador-conflitos-resumo mb-2"><%= mensagemErro %></p>
+    <% } %>
+
+    <div id="lista-conflitos" role="status" aria-live="polite">
+        <% if (conflitos.length > 0) { %>
+            <ul class="montador-conflitos-lista">
+                <% conflitos.forEach((conflito) => { %>
+                    <li class="montador-conflito">
+                        <span class="badge text-bg-danger-subtle text-danger-emphasis border border-danger-subtle">
+                            <%= ROTULOS[conflito.tipo] || 'Conflito' %>
+                        </span>
+                        <span><%= conflito.mensagem %></span>
+                        <% if (conflito.indice !== undefined) { %>
+                            <span class="text-body-secondary">(período <%= conflito.indice + 1 %> da seleção)</span>
+                        <% } %>
+                    </li>
+                <% }) %>
+            </ul>
+        <% } else if (previsao) { %>
+            <p class="montador-conflitos-ok mb-0">
+                <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+                Nenhum conflito encontrado para esta aula.
+            </p>
+        <% } %>
+    </div>
+</section>

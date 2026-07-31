@@ -1,0 +1,486 @@
+<%- include('../../layouts/admin-inicio') %>
+
+<%
+/*
+ * Montador da grade horaria: matriz dias (colunas) x horarios do turno (linhas).
+ *
+ * DECISAO SOBRE O CSS: o layout `admin-inicio` nao aceita CSS extra por variavel
+ * e esta view nao pode alterar o <head>. O <link> abaixo fica no corpo do
+ * documento — e valido em HTML5, o navegador aplica normalmente e a CSP do
+ * projeto libera `style-src 'self'`. A alternativa (injetar o CSS por
+ * JavaScript) deixaria a pagina sem estilo quando o JS estiver desligado, e este
+ * modulo precisa funcionar sem JavaScript.
+ *
+ * O JavaScript (`/js/montador.js`) e apenas enriquecimento: abrir o formulario
+ * sem recarregar, pre-visualizar conflitos e ajudar na selecao de periodos
+ * consecutivos. Sem ele, tudo continua funcionando por links e formularios.
+ */
+const estrutura = !somenteAlocacao;
+const podeCriar = podeVer('aulas', 'criar') && estrutura;
+const podeEditar = podeVer('aulas', 'editar');
+const podeInativar = podeVer('aulas', 'inativar') && estrutura;
+const podeMover = podeVer('aulas', 'editar') && estrutura;
+
+const mostrarFormularioAula =
+    (acao === 'nova' && podeCriar) || (acao === 'editar' && podeEditar);
+const mostrarFormularioDestino =
+    (acao === 'mover' || acao === 'copiar') && podeCriar && aulaSelecionada;
+
+const diasVisiveis = diaVisivel ? dias.filter((dia) => dia.valor === diaVisivel) : dias;
+%>
+
+<link rel="stylesheet" href="<%= asset('/css/montador.css') %>">
+
+<section class="painel-cartao montador-resumo-turma" aria-labelledby="titulo-turma">
+    <div class="painel-cartao-cabecalho">
+        <div>
+            <h2 class="h6 mb-1" id="titulo-turma">
+                <%= turma.nome %>
+                <% if (turma.codigo) { %><code class="ms-1"><%= turma.codigo %></code><% } %>
+                <%- include('../../partials/status-badge', { ativo: turma.ativo }) %>
+            </h2>
+            <% if (turma.gerencial) { %>
+                <span class="badge text-bg-info-subtle text-info-emphasis border border-info-subtle">
+                    Turma gerencial
+                </span>
+            <% } %>
+            <p class="painel-indicador-nota mb-0">
+                <%= turma.curso_nome %> · <%= turma.campus_nome %> ·
+                <%= turma.turno_nome %> ·
+                <% if (turma.semestre_curricular) { %>
+                    <%= formatadores.ordinal(turma.semestre_curricular) %> semestre ·
+                <% } else if (turma.gerencial) { %>
+                    disciplinas compartilhadas ·
+                <% } %>
+                período <%= turma.periodo_codigo %>
+            </p>
+        </div>
+
+        <div class="montador-acoes-topo">
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-imprimir hidden>
+                <i class="fa-solid fa-print" aria-hidden="true"></i> Imprimir grade
+            </button>
+
+            <% if (podeCriar) { %>
+                <a class="btn btn-sm btn-primary"
+                   href="<%= urlBaseMontador %>?acao=nova#formulario-aula">
+                    <i class="fa-solid fa-plus" aria-hidden="true"></i> Nova aula
+                </a>
+            <% } %>
+
+            <a class="btn btn-sm btn-outline-secondary" href="<%= withBase('/admin/aulas/turma') %>">
+                <i class="fa-solid fa-arrow-left" aria-hidden="true"></i> Trocar de turma
+            </a>
+        </div>
+    </div>
+
+    <% if (turma.gerencial && atendidas.length > 0) { %>
+        <%
+        /* Composicao do grupo: as turmas que estudam juntas nesta turma gerencial.
+           Todas cursam todas as disciplinas dela — e isso que define o grupo —,
+           entao a lista identifica quem recebe a grade e leva direto para ela. */
+        const semestresDoGrupo = [
+            ...new Set(atendidas.map((item) => item.semestre).filter((item) => item)),
+        ];
+        %>
+        <div class="montador-atendidas">
+            <div class="montador-atendidas-cabecalho">
+                <p class="mb-0">
+                    <i class="fa-solid fa-diagram-project" aria-hidden="true"></i>
+                    Estas <strong><%= atendidas.length %></strong>
+                    turma<%= atendidas.length === 1 ? '' : 's' %>
+                    cursa<%= atendidas.length === 1 ? '' : 'm' %> juntas as disciplinas abaixo<%
+                    %><% if (semestresDoGrupo.length > 0) { %>
+                        (<%= semestresDoGrupo.map((item) => item + 'º').join(' e ') %>
+                        semestre<%= semestresDoGrupo.length > 1 ? 's' : '' %>)<%
+                    %><% } %>.
+                </p>
+            </div>
+
+            <ul class="montador-atendidas-lista">
+                <% atendidas.forEach((item) => { %>
+                    <li>
+                        <a class="montador-atendida"
+                           href="<%= withBase('/admin/aulas/turma/' + item.id) %>"
+                           title="Abrir a grade completa de <%= item.codigo || item.nome %>">
+                            <span class="montador-atendida-codigo"><%= item.codigo || item.nome %></span>
+                            <span class="montador-atendida-semestre">
+                                <%= item.semestre ? formatadores.ordinal(item.semestre) + ' sem' : 'sem semestre' %>
+                            </span>
+                        </a>
+                    </li>
+                <% }) %>
+            </ul>
+
+            <p class="montador-atendidas-nota mb-0">
+                Cada disciplina fica registrada uma única vez aqui e aparece na grade de todas elas.
+                Editar por lá não é possível: a alteração vale para o grupo inteiro e é feita nesta tela.
+            </p>
+        </div>
+    <% } %>
+
+    <div class="montador-indicadores">
+        <p class="montador-indicador"><span><%= totais.aulas %></span> aulas ativas</p>
+        <p class="montador-indicador"><span><%= totais.comLocal %></span> com local</p>
+        <p class="montador-indicador <%= totais.semLocal > 0 ? 'montador-indicador-alerta' : '' %>">
+            <span><%= totais.semLocal %></span> sem local
+        </p>
+        <p class="montador-indicador <%= totais.semProfessor > 0 ? 'montador-indicador-alerta' : '' %>">
+            <span><%= totais.semProfessor %></span> sem professor
+        </p>
+        <p class="montador-indicador <%= pendentes.length > 0 ? 'montador-indicador-alerta' : '' %>">
+            <span><%= pendentes.length %></span> sem horário
+        </p>
+    </div>
+</section>
+
+<%- include('partials/conflitos', { conflitos: conflitos, mensagemErro: mensagemErro, previsao: previsao }) %>
+
+<%
+/*
+ * Alocacao de sala em lote.
+ *
+ * A carga do TOTVS nao traz sala: a turma chega com dezenas de aulas sem local.
+ * Aqui o operador escolhe a sala uma vez e aplica a todas — ou so as de uma
+ * disciplina, quando a turma se divide entre laboratorio e sala comum.
+ *
+ * Fica visivel tambem para o NAP: alocar sala e exatamente o trabalho dele.
+ */
+const porDisciplina = new Map();
+Object.values(celulas)
+    .flat()
+    .concat(pendentes)
+    .forEach((aula) => {
+        if (!aula || aula.propria === false) return;
+        const atual = porDisciplina.get(aula.disciplina_id) || {
+            id: aula.disciplina_id,
+            nome: aula.disciplina_nome,
+            total: 0,
+            semLocal: 0,
+        };
+        atual.total += 1;
+        if (!aula.local_id) atual.semLocal += 1;
+        porDisciplina.set(aula.disciplina_id, atual);
+    });
+
+const disciplinasDaGrade = [...porDisciplina.values()].sort((a, b) =>
+    a.nome.localeCompare(b.nome, 'pt-BR')
+);
+
+/*
+ * Quantas aulas proprias existem em cada periodo do turno, e quantas delas
+ * ainda estao sem local. O operador precisa disso para escolher: marcar o "3o
+ * horario" sem saber que ele tem duas aulas e uma ja alocada seria adivinhar.
+ */
+const aulasPorHorario = new Map();
+horarios.forEach((horario) => aulasPorHorario.set(horario.id, { total: 0, semLocal: 0 }));
+
+Object.values(celulas)
+    .flat()
+    .forEach((aula) => {
+        if (!aula || aula.propria === false) return;
+        const contagem = aulasPorHorario.get(aula.horario_turno_id);
+        if (!contagem) return;
+        contagem.total += 1;
+        if (!aula.local_id) contagem.semLocal += 1;
+    });
+
+const horariosComAula = horarios.filter((horario) => aulasPorHorario.get(horario.id).total > 0);
+%>
+
+<% if (podeEditar && disciplinasDaGrade.length > 0) { %>
+    <%
+    /*
+     * Alocacao de sala em lote.
+     *
+     * O cubo do TOTVS nao exporta sala: a turma chega da importacao com dezenas
+     * de aulas sem local, e o caminho aula a aula nao e praticavel.
+     *
+     * DESENHO
+     *  - o caso dominante e "toda a turma nesta sala": duas decisoes, uma linha;
+     *  - os tres eixos de recorte ficam recolhidos, cada um numa tabela com
+     *    cabecalho — e o cabecalho que diz o que a coluna de numeros significa;
+     *  - o botao anuncia quantas aulas serao alteradas. `montador.js` recalcula
+     *    esse numero a cada marcacao; sem JavaScript ele diz apenas "Aplicar".
+     */
+    const aulasDaTurma = Object.values(celulas)
+        .flat()
+        .filter((aula) => aula && aula.propria !== false);
+
+    const aulasPorDia = new Map();
+    aulasDaTurma.forEach((aula) => {
+        const atual = aulasPorDia.get(aula.dia_semana) || { total: 0 };
+        atual.total += 1;
+        aulasPorDia.set(aula.dia_semana, atual);
+    });
+
+    const diasComAula = dias.filter((dia) => aulasPorDia.has(dia.valor));
+    const totalEixos = disciplinasDaGrade.length + diasComAula.length + horariosComAula.length;
+
+    /* Retrato de cada aula para o contador do lado do cliente. */
+    const retratoDasAulas = aulasDaTurma.map((aula) => ({
+        d: Number(aula.disciplina_id),
+        s: Number(aula.dia_semana),
+        h: Number(aula.horario_turno_id),
+        v: !aula.local_id,
+    }));
+    %>
+
+    <section class="painel-cartao montador-alocacao" aria-labelledby="titulo-alocacao">
+        <header class="montador-alocacao-topo">
+            <h2 class="h6 mb-0" id="titulo-alocacao">Alocar sala em lote</h2>
+            <% if (totais.semLocal > 0) { %>
+                <span class="montador-alocacao-saldo"><%= totais.semLocal %> sem local</span>
+            <% } %>
+        </header>
+
+        <form method="POST" action="<%= withBase('/admin/aulas/turma/' + turma.id + '/local') %>"
+              id="form-alocacao" data-alocacao
+              data-confirmar="Aplicar este local às aulas selecionadas de <%= turma.nome %>?">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <input type="hidden" name="voltar" value="<%= voltar %>">
+
+            <div class="montador-alocacao-acao">
+                <div class="montador-alocacao-campo">
+                    <label class="form-label" for="alocacao-local">Local</label>
+                    <select class="form-select" id="alocacao-local" name="local_id" data-buscavel="locais">
+                        <option value="">Nenhum — limpar a alocação</option>
+                        <% opcoes.locais.forEach((local) => { %>
+                            <option value="<%= local.id %>">
+                                <%= formatadores.tipoLocalRotulo(local.tipo) %> <%= local.nome %><%
+                                %><%= local.ativo === false ? ' (inativo)' : '' %>
+                            </option>
+                        <% }) %>
+                    </select>
+                </div>
+
+                <div class="form-check montador-alocacao-escopo">
+                    <input class="form-check-input" type="checkbox" id="alocacao-vazias"
+                           name="apenas_sem_local" value="1" checked data-alocacao-filtro="vazias">
+                    <label class="form-check-label" for="alocacao-vazias">
+                        Só as aulas sem local
+                    </label>
+                </div>
+
+                <button type="submit" class="btn btn-primary montador-alocacao-enviar"
+                        data-alocacao-enviar>
+                    Aplicar
+                </button>
+            </div>
+
+            <% if (totalEixos > 0) { %>
+                <details class="montador-alocacao-refino">
+                    <summary>
+                        <span class="montador-alocacao-refino-titulo">Refinar seleção</span>
+                        <span class="montador-alocacao-refino-nota">
+                            por disciplina, dia ou horário
+                        </span>
+                    </summary>
+
+                    <div class="montador-alocacao-eixos">
+                        <%
+                        const eixos = [
+                            {
+                                chave: 'disciplinas',
+                                titulo: 'Disciplinas',
+                                campo: 'disciplina_ids',
+                                filtro: 'disciplina',
+                                itens: disciplinasDaGrade.map((item) => ({
+                                    valor: item.id,
+                                    rotulo: item.nome,
+                                    total: item.total,
+                                })),
+                            },
+                            {
+                                chave: 'dias',
+                                titulo: 'Dias',
+                                campo: 'dia_semanas',
+                                filtro: 'dia',
+                                itens: diasComAula.map((dia) => ({
+                                    valor: dia.valor,
+                                    rotulo: dia.curto,
+                                    total: aulasPorDia.get(dia.valor).total,
+                                })),
+                            },
+                            {
+                                chave: 'horarios',
+                                titulo: 'Horários',
+                                campo: 'horario_turno_ids',
+                                filtro: 'horario',
+                                itens: horariosComAula.map((horario) => ({
+                                    valor: horario.id,
+                                    rotulo: horario.faixa,
+                                    total: aulasPorHorario.get(horario.id).total,
+                                })),
+                            },
+                        ].filter((eixo) => eixo.itens.length > 0);
+                        %>
+
+                        <% eixos.forEach((eixo) => { %>
+                            <section class="montador-eixo" aria-labelledby="eixo-<%= eixo.chave %>">
+                                <header class="montador-eixo-topo">
+                                    <h3 class="montador-eixo-titulo" id="eixo-<%= eixo.chave %>">
+                                        <%= eixo.titulo %>
+                                    </h3>
+                                    <span class="montador-eixo-unidade" aria-hidden="true">aulas</span>
+                                </header>
+
+                                <ul class="montador-eixo-lista">
+                                    <% eixo.itens.forEach((item) => { %>
+                                        <li class="montador-eixo-item">
+                                            <input class="form-check-input" type="checkbox"
+                                                   id="alocar-<%= eixo.filtro %>-<%= item.valor %>"
+                                                   name="<%= eixo.campo %>" value="<%= item.valor %>"
+                                                   data-alocacao-filtro="<%= eixo.filtro %>">
+                                            <label for="alocar-<%= eixo.filtro %>-<%= item.valor %>">
+                                                <span class="montador-eixo-rotulo"><%= item.rotulo %></span>
+                                                <span class="montador-eixo-total">
+                                                    <%= item.total %>
+                                                    <span class="visually-hidden">
+                                                        aula<%= item.total === 1 ? '' : 's' %>
+                                                    </span>
+                                                </span>
+                                            </label>
+                                        </li>
+                                    <% }) %>
+                                </ul>
+                            </section>
+                        <% }) %>
+                    </div>
+
+                    <p class="montador-alocacao-ajuda mb-0">
+                        Sem nada marcado, o local vale para todas as aulas da turma. Aulas que
+                        gerariam choque de sala ficam como estão e são listadas depois.
+                    </p>
+                </details>
+            <% } %>
+        </form>
+
+        <script type="application/json" id="dados-alocacao">
+            <%- JSON.stringify(retratoDasAulas) %>
+        </script>
+    </section>
+<% } %>
+
+<% if (mostrarFormularioAula) { %>
+    <%- include('partials/formulario-aula') %>
+<% } else if (mostrarFormularioDestino) { %>
+    <%- include('partials/formulario-destino') %>
+<% } %>
+
+<section class="painel-cartao montador-secao-grade" aria-labelledby="titulo-grade">
+    <div class="painel-cartao-cabecalho">
+        <div>
+            <h2 class="h6 mb-1" id="titulo-grade">Grade da turma</h2>
+            <p class="painel-indicador-nota mb-0">
+                Cada célula vazia é um alvo para criar uma aula naquele dia e horário.
+            </p>
+        </div>
+
+        <% if (horarios.length > 0) { %>
+            <form method="GET" action="<%= urlBaseMontador %>" class="montador-seletor-dia">
+                <label class="form-label mb-0" for="seletor-dia">Dia</label>
+                <select class="form-select form-select-sm" id="seletor-dia" name="dia" data-submete-ao-mudar>
+                    <option value="" <%= diaVisivel ? '' : 'selected' %>>Todos os dias</option>
+                    <% dias.forEach((dia) => { %>
+                        <option value="<%= dia.valor %>" <%= diaVisivel === dia.valor ? 'selected' : '' %>>
+                            <%= dia.nome %>
+                        </option>
+                    <% }) %>
+                </select>
+                <button type="submit" class="btn btn-sm btn-outline-secondary">Ver</button>
+            </form>
+        <% } %>
+    </div>
+
+    <% if (horarios.length === 0) { %>
+        <%- include('../../partials/estado-vazio', {
+            icone: 'fa-hourglass-half',
+            titulo: 'O turno desta turma não tem horários cadastrados',
+            descricao: 'Cadastre os períodos do turno ' + turma.turno_nome + ' para montar a grade.',
+            acaoUrl: podeVer('horarios') ? withBase('/admin/horarios?turno_id=' + turma.turno_id) : null,
+            acaoTexto: 'Horários dos turnos'
+        }) %>
+    <% } else { %>
+        <%
+        /* Telas largas (e impressao): a matriz completa. */
+        %>
+        <div class="montador-grade-rolagem montador-somente-largo">
+            <table class="montador-grade">
+                <caption class="visually-hidden">
+                    Grade de <%= turma.nome %>: cada linha é um horário do turno
+                    <%= turma.turno_nome %> e cada coluna é um dia da semana, de segunda-feira a sábado.
+                </caption>
+                <thead>
+                    <tr>
+                        <th scope="col" class="montador-coluna-horario">Horário</th>
+                        <% dias.forEach((dia) => { %>
+                            <th scope="col"><%= dia.curto %></th>
+                        <% }) %>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% horarios.forEach((horario) => { %>
+                        <tr>
+                            <th scope="row" class="montador-coluna-horario">
+                                <span class="montador-horario-nome"><%= horario.nome %></span>
+                                <span class="montador-horario-faixa"><%= horario.faixa %></span>
+                            </th>
+                            <% dias.forEach((dia) => { %>
+                                <td>
+                                    <%- include('partials/celula', {
+                                        dia: dia,
+                                        horario: horario,
+                                        aulas: celulas[dia.valor + ':' + horario.id] || [],
+                                        podeCriar: podeCriar,
+                                        podeEditar: podeEditar,
+                                        podeInativar: podeInativar
+                                    }) %>
+                                </td>
+                            <% }) %>
+                        </tr>
+                    <% }) %>
+                </tbody>
+            </table>
+        </div>
+
+        <%
+        /* Telas estreitas: a mesma grade em ordem cronologica, um dia por bloco.
+           Nada de matriz espremida em 6 colunas. */
+        %>
+        <div class="montador-cronologico montador-somente-estreito">
+            <% diasVisiveis.forEach((dia) => { %>
+                <article class="montador-dia" aria-labelledby="dia-<%= dia.valor %>">
+                    <h3 class="h6 montador-dia-titulo" id="dia-<%= dia.valor %>"><%= dia.nome %></h3>
+
+                    <ul class="montador-dia-lista">
+                        <% horarios.forEach((horario) => { %>
+                            <li class="montador-dia-item">
+                                <p class="montador-horario-nome mb-0"><%= horario.nome %></p>
+                                <p class="montador-horario-faixa mb-2"><%= horario.faixa %></p>
+                                <%- include('partials/celula', {
+                                    dia: dia,
+                                    horario: horario,
+                                    aulas: celulas[dia.valor + ':' + horario.id] || [],
+                                    podeCriar: podeCriar,
+                                    podeEditar: podeEditar,
+                                    podeInativar: podeInativar
+                                }) %>
+                            </li>
+                        <% }) %>
+                    </ul>
+                </article>
+            <% }) %>
+        </div>
+    <% } %>
+</section>
+
+<% if (pendentes.length > 0) { %>
+    <%- include('partials/pendencias', {
+        pendentes: pendentes,
+        podeMover: podeMover,
+        podeEditar: podeEditar
+    }) %>
+<% } %>
+
+<%- include('../../layouts/admin-fim') %>

@@ -1,0 +1,195 @@
+<%
+/*
+ * Relatorio de uma carga do cubo, usado tanto na conferencia (simulacao) quanto
+ * no resultado final. Espera: relatorio e nivel (nivel do heading das secoes).
+ */
+const nivelSecao = typeof nivel !== 'undefined' ? Number(nivel) : 2;
+const contagens = relatorio.contagens || {};
+const totais = relatorio.totais || {};
+const aulas = relatorio.aulas || {};
+
+const numero = (valor) => Number(valor || 0).toLocaleString('pt-BR');
+
+/* Contagens de cadastro: so aparecem as que realmente tiveram movimento. */
+const cadastros = [
+    { chave: 'campusCriados', rotulo: 'campus criados', icone: 'fa-building-columns' },
+    { chave: 'campusVinculados', rotulo: 'campus reconhecidos', icone: 'fa-link' },
+    { chave: 'cursosCriados', rotulo: 'cursos criados', icone: 'fa-graduation-cap' },
+    { chave: 'cursosVinculados', rotulo: 'cursos reconhecidos', icone: 'fa-link' },
+    { chave: 'disciplinasCriadas', rotulo: 'disciplinas criadas', icone: 'fa-book' },
+    { chave: 'disciplinasAtualizadas', rotulo: 'disciplinas atualizadas', icone: 'fa-pen' },
+    { chave: 'professoresCriados', rotulo: 'professores criados', icone: 'fa-chalkboard-user' },
+    { chave: 'professoresVinculados', rotulo: 'professores reconhecidos', icone: 'fa-link' },
+    { chave: 'turmasCriadas', rotulo: 'turmas criadas', icone: 'fa-users-rectangle' },
+    { chave: 'turmasAtualizadas', rotulo: 'turmas atualizadas', icone: 'fa-pen' },
+    { chave: 'turmasVinculadas', rotulo: 'vínculos com turma gerencial', icone: 'fa-diagram-project' },
+    { chave: 'turmasPorAula', rotulo: 'turmas que recebem aula compartilhada', icone: 'fa-share-nodes' },
+    { chave: 'horariosCriados', rotulo: 'períodos criados nos turnos', icone: 'fa-hourglass-half' },
+    { chave: 'periodosCriados', rotulo: 'período letivo criado', icone: 'fa-calendar-check' },
+    { chave: 'cursoCampusCriados', rotulo: 'ofertas curso × campus', icone: 'fa-map-pin' },
+    { chave: 'cursoDisciplinasCriados', rotulo: 'vínculos curso × disciplina', icone: 'fa-sitemap' },
+].filter((item) => Number(contagens[item.chave] || 0) > 0);
+
+const ESTILO_AVISO = {
+    aula_recusada: 'danger',
+    disciplinas_simultaneas: 'info',
+    aula_sem_turma_atendida: 'warning',
+    turma_sem_semestre: 'warning',
+    linha_invalida: 'warning',
+    turma_sem_curso: 'warning',
+    aula_sem_horario: 'warning',
+    horario_ajustado: 'info',
+    horario_criado: 'info',
+    aula_sem_professor: 'info',
+    disciplina_sem_codigo: 'info',
+};
+%>
+
+<section class="painel-cartao" aria-labelledby="titulo-leitura">
+    <div class="painel-cartao-cabecalho">
+        <div>
+            <h<%= nivelSecao %> class="h6 mb-1" id="titulo-leitura">O que a planilha traz</h<%= nivelSecao %>>
+            <p class="painel-indicador-nota mb-0">
+                Linhas espelho são as repetições que o cubo gera para cada turma atendida por uma
+                turma gerencial. Elas não viram aula: a disciplina fica só na turma que a oferta.
+            </p>
+        </div>
+        <span class="badge text-bg-light border">
+            <i class="fa-solid fa-calendar-check" aria-hidden="true"></i>
+            período <%= relatorio.periodo.codigo %><%= relatorio.periodo.criado ? ' (novo)' : '' %>
+        </span>
+    </div>
+
+    <div class="importacao-numeros">
+        <p class="painel-indicador">
+            <span class="painel-indicador-valor"><%= numero(totais.linhasLidas) %></span>
+            <span class="painel-indicador-rotulo">linhas lidas</span>
+        </p>
+        <p class="painel-indicador">
+            <span class="painel-indicador-valor"><%= numero(totais.linhasEspelho) %></span>
+            <span class="painel-indicador-rotulo">linhas espelho (ignoradas)</span>
+        </p>
+        <p class="painel-indicador">
+            <span class="painel-indicador-valor"><%= numero(totais.linhasConsideradas) %></span>
+            <span class="painel-indicador-rotulo">linhas consideradas</span>
+        </p>
+        <p class="painel-indicador">
+            <span class="painel-indicador-valor"><%= numero(totais.turmas) %></span>
+            <span class="painel-indicador-rotulo">
+                turmas · <%= numero(totais.turmasGerenciais) %> gerenciais
+            </span>
+        </p>
+        <p class="painel-indicador">
+            <span class="painel-indicador-valor"><%= numero(totais.disciplinas) %></span>
+            <span class="painel-indicador-rotulo">disciplinas</span>
+        </p>
+        <p class="painel-indicador">
+            <span class="painel-indicador-valor"><%= numero(totais.professores) %></span>
+            <span class="painel-indicador-rotulo">professores</span>
+        </p>
+    </div>
+</section>
+
+<section class="painel-cartao" aria-labelledby="titulo-aulas">
+    <div class="painel-cartao-cabecalho">
+        <div>
+            <h<%= nivelSecao %> class="h6 mb-1" id="titulo-aulas">
+                <%= relatorio.simulacao ? 'O que será feito nas aulas' : 'O que foi feito nas aulas' %>
+            </h<%= nivelSecao %>>
+            <p class="painel-indicador-nota mb-0">
+                Aulas já importadas antes são reconhecidas pela identidade que vêm do TOTVS e
+                atualizadas no lugar — recarregar a mesma planilha não duplica nada.
+            </p>
+        </div>
+    </div>
+
+    <div class="importacao-numeros">
+        <p class="painel-indicador importacao-destaque">
+            <span class="painel-indicador-valor"><%= numero(aulas.novas) %></span>
+            <span class="painel-indicador-rotulo">
+                aula<%= aulas.novas === 1 ? '' : 's' %> nova<%= aulas.novas === 1 ? '' : 's' %>
+            </span>
+        </p>
+        <p class="painel-indicador">
+            <span class="painel-indicador-valor"><%= numero(aulas.atualizadas) %></span>
+            <span class="painel-indicador-rotulo">atualizadas</span>
+        </p>
+        <% if (aulas.inativadas > 0) { %>
+            <p class="painel-indicador importacao-indicador-alerta">
+                <span class="painel-indicador-valor"><%= numero(aulas.inativadas) %></span>
+                <span class="painel-indicador-rotulo">inativadas (saíram da planilha)</span>
+            </p>
+        <% } %>
+        <% if (aulas.semHorario > 0) { %>
+            <p class="painel-indicador importacao-indicador-alerta">
+                <span class="painel-indicador-valor"><%= numero(aulas.semHorario) %></span>
+                <span class="painel-indicador-rotulo">sem horário compatível</span>
+            </p>
+        <% } %>
+        <% if (aulas.recusadas > 0) { %>
+            <p class="painel-indicador importacao-indicador-erro">
+                <span class="painel-indicador-valor"><%= numero(aulas.recusadas) %></span>
+                <span class="painel-indicador-rotulo">recusadas</span>
+            </p>
+        <% } %>
+        <p class="painel-indicador importacao-indicador-alerta">
+            <span class="painel-indicador-valor"><%= numero(aulas.semLocal) %></span>
+            <span class="painel-indicador-rotulo">sem local (a planilha não traz sala)</span>
+        </p>
+    </div>
+</section>
+
+<% if (cadastros.length > 0) { %>
+    <section class="painel-cartao" aria-labelledby="titulo-cadastros">
+        <div class="painel-cartao-cabecalho">
+            <div>
+                <h<%= nivelSecao %> class="h6 mb-1" id="titulo-cadastros">Cadastros de apoio</h<%= nivelSecao %>>
+                <p class="painel-indicador-nota mb-0">
+                    Só entra o que ainda não existia. Registros reconhecidos são os que já estavam
+                    cadastrados e passaram a carregar o código do TOTVS.
+                </p>
+            </div>
+        </div>
+
+        <ul class="importacao-lista-cadastros">
+            <% cadastros.forEach((item) => { %>
+                <li>
+                    <i class="fa-solid <%= item.icone %>" aria-hidden="true"></i>
+                    <strong><%= numero(contagens[item.chave]) %></strong> <%= item.rotulo %>
+                </li>
+            <% }) %>
+        </ul>
+    </section>
+<% } %>
+
+<% if (relatorio.avisos && relatorio.avisos.length > 0) { %>
+    <section class="painel-cartao" aria-labelledby="titulo-avisos">
+        <div class="painel-cartao-cabecalho">
+            <div>
+                <h<%= nivelSecao %> class="h6 mb-1" id="titulo-avisos">
+                    Avisos <span class="badge text-bg-secondary"><%= relatorio.avisos.length %></span>
+                </h<%= nivelSecao %>>
+                <p class="painel-indicador-nota mb-0">
+                    Situações que a planilha traz e que merecem conferência depois da carga.
+                </p>
+            </div>
+        </div>
+
+        <div class="importacao-avisos">
+            <% relatorio.avisos.forEach((aviso) => { %>
+                <div class="alert alert-<%= ESTILO_AVISO[aviso.tipo] || 'secondary' %> mb-0" role="note">
+                    <p class="mb-<%= aviso.detalhe && aviso.detalhe.length ? '2' : '0' %>">
+                        <%= aviso.mensagem %>
+                    </p>
+                    <% if (aviso.detalhe && aviso.detalhe.length > 0) { %>
+                        <ul class="importacao-aviso-detalhe mb-0">
+                            <% aviso.detalhe.forEach((item) => { %>
+                                <li><%= item %></li>
+                            <% }) %>
+                        </ul>
+                    <% } %>
+                </div>
+            <% }) %>
+        </div>
+    </section>
+<% } %>

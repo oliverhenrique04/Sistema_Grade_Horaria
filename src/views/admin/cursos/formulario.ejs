@@ -1,0 +1,122 @@
+<%- include('../../layouts/admin-inicio') %>
+
+<%
+/*
+ * Formulario de curso (criacao e edicao). Recebe do controller: modo, curso,
+ * campus, valores, erros, acaoFormulario e urlCancelar.
+ *
+ * `valores` sempre traz o que deve aparecer nos campos: os dados gravados na
+ * abertura da tela ou o que o usuario digitou quando a validacao falha.
+ */
+const edicao = modo === 'edicao';
+%>
+
+<div class="painel-cartao">
+    <form method="POST" action="<%= acaoFormulario %>" novalidate>
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+        <div class="row g-3">
+            <div class="col-md-7">
+                <label class="form-label" for="nome">Nome do curso <span class="text-danger" aria-hidden="true">*</span></label>
+                <input type="text" class="form-control <%= erros.nome ? 'is-invalid' : '' %>"
+                       id="nome" name="nome" value="<%= valores.nome %>" maxlength="120" required
+                       <%= erros.nome ? 'aria-describedby="erro-nome"' : '' %>>
+                <%- include('../../partials/campo-erro', { erros: erros, campo: 'nome' }) %>
+            </div>
+
+            <div class="col-md-2">
+                <label class="form-label" for="sigla">Sigla</label>
+                <input type="text" class="form-control <%= erros.sigla ? 'is-invalid' : '' %>"
+                       id="sigla" name="sigla" value="<%= valores.sigla %>" maxlength="20">
+                <%- include('../../partials/campo-erro', { erros: erros, campo: 'sigla' }) %>
+            </div>
+
+            <div class="col-md-3">
+                <label class="form-label" for="semestresTotal">Semestres</label>
+                <input type="number" class="form-control <%= erros.semestresTotal ? 'is-invalid' : '' %>"
+                       id="semestresTotal" name="semestresTotal" value="<%= valores.semestresTotal %>"
+                       min="1" max="20" step="1">
+                <div class="form-text">Duração prevista do curso (1 a 20).</div>
+                <%- include('../../partials/campo-erro', { erros: erros, campo: 'semestresTotal' }) %>
+            </div>
+
+            <div class="col-md-7">
+                <label class="form-label" for="coordenador">Coordenador</label>
+                <input type="text" class="form-control <%= erros.coordenador ? 'is-invalid' : '' %>"
+                       id="coordenador" name="coordenador" value="<%= valores.coordenador %>" maxlength="120">
+                <div class="form-text">Nome exibido na consulta pública da grade.</div>
+                <%- include('../../partials/campo-erro', { erros: erros, campo: 'coordenador' }) %>
+            </div>
+
+            <div class="col-md-5 d-flex align-items-center">
+                <div>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" role="switch"
+                               id="ativo" name="ativo" value="1" <%= valores.ativo ? 'checked' : '' %>>
+                        <label class="form-check-label" for="ativo">Curso ativo</label>
+                    </div>
+                    <div class="form-text">Cursos inativos não aceitam novas turmas.</div>
+                    <%- include('../../partials/campo-erro', { erros: erros, campo: 'ativo' }) %>
+                </div>
+            </div>
+        </div>
+
+        <hr class="my-4">
+
+        <fieldset>
+            <legend class="h6">Campus onde o curso é ofertado</legend>
+
+            <% if (campus.length === 0) { %>
+                <p class="text-muted small mb-0">
+                    Nenhum campus cadastrado. Cadastre um campus antes de vincular o curso.
+                </p>
+            <% } else { %>
+                <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-2">
+                    <% campus.forEach((item) => { %>
+                        <div class="col">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="campusIds"
+                                       value="<%= item.id %>" id="campus-<%= item.id %>"
+                                       <%= valores.campusIds.includes(item.id) ? 'checked' : '' %>>
+                                <label class="form-check-label" for="campus-<%= item.id %>">
+                                    <%= item.nome %><% if (item.sigla) { %> <span class="text-muted">(<%= item.sigla %>)</span><% } %>
+                                    <% if (!item.ativo) { %>
+                                        <span class="badge text-bg-secondary-subtle text-secondary-emphasis">inativo</span>
+                                    <% } %>
+                                </label>
+                            </div>
+                        </div>
+                    <% }) %>
+                </div>
+            <% } %>
+
+            <%- include('../../partials/campo-erro', { erros: erros, campo: 'campusIds' }) %>
+        </fieldset>
+
+        <div class="d-flex gap-2 mt-4">
+            <button type="submit" class="btn btn-primary">
+                <i class="fa-solid fa-floppy-disk" aria-hidden="true"></i>
+                <%= edicao ? 'Salvar alterações' : 'Cadastrar curso' %>
+            </button>
+            <a href="<%= urlCancelar %>" class="btn btn-outline-secondary">Cancelar</a>
+        </div>
+    </form>
+</div>
+
+<% if (edicao) { %>
+    <div class="painel-cartao">
+        <h2 class="h6">Informações do cadastro</h2>
+        <dl class="row mb-0 small">
+            <dt class="col-sm-3">Turmas vinculadas</dt>
+            <dd class="col-sm-9"><%= curso.total_turmas %> (<%= curso.turmas_ativas %> ativa<%= curso.turmas_ativas === 1 ? '' : 's' %>)</dd>
+
+            <dt class="col-sm-3">Criado em</dt>
+            <dd class="col-sm-9"><%= formatadores.dataBr(curso.criado_em) %></dd>
+
+            <dt class="col-sm-3">Última alteração</dt>
+            <dd class="col-sm-9"><%= formatadores.dataBr(curso.atualizado_em) %></dd>
+        </dl>
+    </div>
+<% } %>
+
+<%- include('../../layouts/admin-fim') %>

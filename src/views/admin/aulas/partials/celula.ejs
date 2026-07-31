@@ -1,0 +1,212 @@
+<%
+/*
+ * Uma celula da matriz (um dia x um horario).
+ *
+ * Espera: dia, horario, aulas (array, possivelmente vazio), turma, podeCriar,
+ * podeEditar, podeInativar, urlBaseMontador, voltar e modalidades.
+ *
+ * POR QUE UMA LISTA E NAO UMA AULA: turma gerencial oferta disciplinas
+ * distintas no mesmo dia e horario — cada uma atendendo um conjunto diferente
+ * de turmas regulares. Nas demais turmas a lista tem no maximo um item, e o
+ * `conflitoService` continua impedindo que isso mude.
+ *
+ * Acessibilidade: a celula sempre carrega um rotulo completo
+ * ("Segunda-feira, 1º horário, 08:00 às 08:50 — vazio" ou
+ * "... — Cálculo I, Prof. João Silva, sala 201 C, presencial"), e todas as
+ * acoes sao links ou botoes reais — nada depende de arrastar e soltar.
+ */
+const lista = Array.isArray(aulas) ? aulas : [];
+const contexto = `${dia.nome}, ${horario.nome}, ${horario.faixa}`;
+
+const rotuloLocal = (item) =>
+    item.local_nome
+        ? `${formatadores.tipoLocalRotulo(item.local_tipo)} ${item.local_nome}`
+        : 'Sem local definido';
+
+const equipeExtra = (item) => Math.max(0, Number(item.total_professores || 0) - 1);
+
+/*
+ * Semestres que cursam a aula. Na turma gerencial e a informacao que faltava:
+ * as quatro disciplinas das 08:50 sao de semestres diferentes, e sem isso nao
+ * da para montar a grade com seguranca.
+ */
+const atendidasDa = (item) => (Array.isArray(item.turmas_atendidas) ? item.turmas_atendidas : []);
+
+const semestresDe = (item) => [
+    ...new Set(
+        atendidasDa(item)
+            .map((turma) => turma.semestre)
+            .filter((semestre) => semestre !== null && semestre !== undefined)
+    ),
+];
+
+const rotuloSemestres = (item) => {
+    const semestres = semestresDe(item);
+    if (semestres.length === 0) return '';
+    return semestres.map((semestre) => `${semestre}º`).join(' · ');
+};
+
+const rotuloTurmasAtendidas = (item) =>
+    atendidasDa(item)
+        .map((turma) => `${turma.codigo || turma.nome}${turma.semestre ? ` (${turma.semestre}º)` : ''}`)
+        .join(', ');
+
+const rotuloProfessor = (item) => {
+    if (!item.professor_nome) return 'Sem professor definido';
+    const extras = equipeExtra(item);
+    return extras > 0
+        ? `Prof. ${item.professor_nome} e mais ${extras}`
+        : `Prof. ${item.professor_nome}`;
+};
+
+const descreve = (item) => {
+    const turmasAtendidas = rotuloTurmasAtendidas(item);
+    return (
+        `${contexto} — ${item.disciplina_nome}, ${rotuloProfessor(item)}, ${rotuloLocal(item)}, ` +
+        `${formatadores.modalidadeRotulo(item.modalidade)}` +
+        (turmasAtendidas ? `, turmas ${turmasAtendidas}` : '')
+    );
+};
+
+const descricaoVazia = `${contexto} — vazio`;
+const urlNova = `${urlBaseMontador}?acao=nova&dia_semana=${dia.valor}&horario_turno_id=${horario.id}#formulario-aula`;
+const iconeModalidade = (item) =>
+    (modalidades.find((opcao) => opcao.valor === item.modalidade) || {}).icone || 'fa-chalkboard';
+%>
+
+<% if (lista.length === 0) { %>
+    <% if (podeCriar) { %>
+        <a class="montador-celula montador-celula-vazia"
+           href="<%= urlNova %>"
+           aria-label="<%= descricaoVazia %>. Adicionar aula."
+           data-celula-vazia
+           data-dia="<%= dia.valor %>"
+           data-horario="<%= horario.id %>"
+           data-descricao="<%= contexto %>">
+            <i class="fa-solid fa-plus" aria-hidden="true"></i>
+            <span class="montador-celula-acao-texto" aria-hidden="true">Adicionar</span>
+        </a>
+    <% } else { %>
+        <div class="montador-celula montador-celula-vazia montador-celula-inerte"
+             role="note" aria-label="<%= descricaoVazia %>">
+            <span aria-hidden="true">—</span>
+        </div>
+    <% } %>
+<% } else { %>
+    <div class="montador-celula-pilha<%= lista.length > 1 ? ' montador-celula-paralelas' : '' %>">
+        <% if (lista.length > 1) { %>
+            <p class="montador-celula-aviso mb-0">
+                <i class="fa-solid fa-layer-group" aria-hidden="true"></i>
+                <%= lista.length %> disciplinas em paralelo
+            </p>
+        <% } %>
+
+        <% lista.forEach((aula) => { %>
+            <%
+            const extras = equipeExtra(aula);
+            /* A turma apenas assiste esta aula: ela e exibida por inteiro, mas
+               editar pertence a turma que a oferta — alterar aqui mudaria a
+               aula de todas as outras turmas que a cursam. */
+            const assistida = aula.propria === false;
+            %>
+            <div class="montador-celula montador-celula-ocupada modalidade-<%= aula.modalidade %><%= assistida ? ' montador-celula-assistida' : '' %>"
+                 role="group" aria-label="<%= descreve(aula) %><%= assistida ? '. Aula de outra turma; edite na turma de origem.' : '' %>">
+
+                <p class="montador-celula-disciplina mb-1"><%= aula.disciplina_nome %></p>
+
+                <% const semestres = rotuloSemestres(aula); %>
+                <% if (semestres) { %>
+                    <p class="montador-celula-semestres mb-1">
+                        <span class="montador-selo-semestre" title="Turmas: <%= rotuloTurmasAtendidas(aula) %>">
+                            <i class="fa-solid fa-layer-group" aria-hidden="true"></i>
+                            <%= semestres %> semestre<%= semestresDe(aula).length > 1 ? 's' : '' %>
+                        </span>
+                    </p>
+                <% } %>
+
+                <p class="montador-celula-linha mb-1">
+                    <i class="fa-solid fa-chalkboard-user" aria-hidden="true"></i>
+                    <span>
+                        <%= aula.professor_nome || 'Sem professor' %><% if (extras > 0) { %><span
+                            class="montador-celula-equipe"
+                            title="Também nesta aula: <%= aula.outros_professores || '' %>">+<%= extras %></span><% } %>
+                    </span>
+                </p>
+
+                <p class="montador-celula-linha mb-1">
+                    <i class="fa-solid fa-door-open" aria-hidden="true"></i>
+                    <span><%= aula.local_nome ? formatadores.tipoLocalRotulo(aula.local_tipo) + ' ' + aula.local_nome : 'Sem local' %></span>
+                </p>
+
+                <p class="montador-celula-linha mb-2">
+                    <i class="fa-solid <%= iconeModalidade(aula) %>" aria-hidden="true"></i>
+                    <span><%= formatadores.modalidadeRotulo(aula.modalidade) %></span>
+                </p>
+
+                <div class="montador-celula-acoes">
+                    <% if (assistida) { %>
+                        <span class="montador-celula-marca"
+                              title="Esta aula pertence a outra turma. Para alterá-la, abra a grade da turma de origem.">
+                            <i class="fa-solid fa-link" aria-hidden="true"></i>
+                        </span>
+                    <% } %>
+
+                    <% if (podeEditar && !assistida) { %>
+                        <a class="btn btn-sm btn-outline-secondary"
+                           href="<%= urlBaseMontador %>?acao=editar&aula=<%= aula.id %>#formulario-aula"
+                           title="Editar aula">
+                            <i class="fa-solid fa-pen" aria-hidden="true"></i>
+                            <span class="visually-hidden">Editar <%= aula.disciplina_nome %> — <%= contexto %></span>
+                        </a>
+                    <% } %>
+
+                    <% if (podeCriar && !assistida) { %>
+                        <a class="btn btn-sm btn-outline-secondary"
+                           href="<%= urlBaseMontador %>?acao=mover&aula=<%= aula.id %>#formulario-destino"
+                           title="Mover aula">
+                            <i class="fa-solid fa-arrows-up-down-left-right" aria-hidden="true"></i>
+                            <span class="visually-hidden">Mover <%= aula.disciplina_nome %> — <%= contexto %></span>
+                        </a>
+
+                        <a class="btn btn-sm btn-outline-secondary"
+                           href="<%= urlBaseMontador %>?acao=copiar&aula=<%= aula.id %>#formulario-destino"
+                           title="Copiar aula">
+                            <i class="fa-solid fa-copy" aria-hidden="true"></i>
+                            <span class="visually-hidden">Copiar <%= aula.disciplina_nome %> — <%= contexto %></span>
+                        </a>
+                    <% } %>
+
+                    <% if (podeInativar && !assistida) { %>
+                        <form method="POST" action="<%= withBase('/admin/aulas/' + aula.id + '/inativar') %>"
+                              data-confirmar="Inativar a aula de <%= aula.disciplina_nome %> (<%= contexto %>)?">
+                            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                            <input type="hidden" name="voltar" value="<%= voltar %>">
+                            <button type="submit" class="btn btn-sm btn-outline-secondary" title="Inativar aula">
+                                <i class="fa-solid fa-toggle-off" aria-hidden="true"></i>
+                                <span class="visually-hidden">Inativar <%= aula.disciplina_nome %> — <%= contexto %></span>
+                            </button>
+                        </form>
+
+                        <form method="POST" action="<%= withBase('/admin/aulas/' + aula.id + '/remover') %>"
+                              data-confirmar="Remover definitivamente a aula de <%= aula.disciplina_nome %> (<%= contexto %>)?">
+                            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                            <input type="hidden" name="voltar" value="<%= voltar %>">
+                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Remover aula">
+                                <i class="fa-solid fa-trash" aria-hidden="true"></i>
+                                <span class="visually-hidden">Remover <%= aula.disciplina_nome %> — <%= contexto %></span>
+                            </button>
+                        </form>
+                    <% } %>
+                </div>
+            </div>
+        <% }) %>
+
+        <% if (podeCriar && lista.length > 1) { %>
+            <a class="montador-celula-adicionar" href="<%= urlNova %>"
+               aria-label="<%= contexto %>. Adicionar outra aula neste horário.">
+                <i class="fa-solid fa-plus" aria-hidden="true"></i>
+                <span>Adicionar</span>
+            </a>
+        <% } %>
+    </div>
+<% } %>

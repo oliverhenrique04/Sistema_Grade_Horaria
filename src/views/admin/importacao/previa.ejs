@@ -1,0 +1,63 @@
+<%
+/*
+ * Conferencia da carga (nada gravado ainda).
+ * Espera: relatorio, arquivo, opcoes, acao, acaoCancelar.
+ */
+const temErro = relatorio.aulas.recusadas > 0;
+const tamanhoKb = Math.max(1, Math.round(arquivo.tamanho / 1024));
+%>
+<%- include('../../layouts/admin-inicio') %>
+
+<link rel="stylesheet" href="<%= asset('/css/importacao.css') %>">
+
+<div class="alert alert-<%= temErro ? 'warning' : 'info' %> importacao-faixa" role="status">
+    <i class="fa-solid fa-<%= temErro ? 'triangle-exclamation' : 'circle-info' %>" aria-hidden="true"></i>
+    <div>
+        <p class="mb-1 fw-semibold">Nada foi gravado ainda.</p>
+        <p class="mb-0">
+            A carga inteira foi executada em modo de teste, com as mesmas validações da gravação
+            real, e depois desfeita. Os números abaixo são o que vai acontecer quando você confirmar.
+        </p>
+    </div>
+</div>
+
+<%- include('partials/relatorio', { relatorio: relatorio, nivel: 2 }) %>
+
+<section class="painel-cartao importacao-confirmacao" aria-labelledby="titulo-confirmar">
+    <div class="painel-cartao-cabecalho">
+        <div>
+            <h2 class="h6 mb-1" id="titulo-confirmar">Confirmar importação</h2>
+            <p class="painel-indicador-nota mb-0">
+                <i class="fa-solid fa-file-excel" aria-hidden="true"></i>
+                <%= arquivo.nome %> · <%= tamanhoKb.toLocaleString('pt-BR') %> KB ·
+                destino <strong><%= relatorio.periodo.codigo %></strong>
+                <% if (opcoes.inativarAusentes) { %>
+                    · <span class="text-warning-emphasis">inativando aulas ausentes</span>
+                <% } %>
+            </p>
+        </div>
+    </div>
+
+    <div class="importacao-confirmacao-acoes">
+        <form method="POST" action="<%= withBase(acao) %>">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <input type="hidden" name="periodoLetivoId" value="<%= relatorio.periodo.id %>">
+            <% if (opcoes.inativarAusentes) { %>
+                <input type="hidden" name="inativarAusentes" value="1">
+            <% } %>
+            <button type="submit" class="btn btn-primary">
+                <i class="fa-solid fa-database" aria-hidden="true"></i>
+                Importar <%= Number(relatorio.aulas.gravadas || 0).toLocaleString('pt-BR') %> aulas
+            </button>
+        </form>
+
+        <form method="POST" action="<%= withBase(acaoCancelar) %>">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <button type="submit" class="btn btn-outline-secondary">
+                <i class="fa-solid fa-xmark" aria-hidden="true"></i> Cancelar
+            </button>
+        </form>
+    </div>
+</section>
+
+<%- include('../../layouts/admin-fim') %>

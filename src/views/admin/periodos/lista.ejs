@@ -1,0 +1,175 @@
+<%- include('../../layouts/admin-inicio') %>
+
+<%
+/*
+ * Listagem de periodos letivos. Recebe do controller: itens, anos, filtros,
+ * paginacao, urlBase, urlNovo, urlLimpar e retorno.
+ */
+const statusSelecionado = filtros.status === true ? 'ativos' : filtros.status === false ? 'inativos' : '';
+%>
+
+<div class="painel-cartao">
+    <div class="painel-cartao-cabecalho">
+        <div>
+            <h2 class="h6 mb-1">Períodos letivos</h2>
+            <p class="text-muted small mb-0">
+                Apenas um período pode ser o atual; ele é usado como padrão em todo o sistema.
+            </p>
+        </div>
+
+        <% if (podeVer('periodos', 'criar')) { %>
+            <a href="<%= urlNovo %>" class="btn btn-primary btn-sm">
+                <i class="fa-solid fa-plus" aria-hidden="true"></i> Novo período
+            </a>
+        <% } %>
+    </div>
+
+    <form method="GET" action="<%= urlLimpar %>" class="painel-filtros" role="search">
+        <div class="painel-filtros-campo">
+            <label class="form-label" for="filtro-busca">Buscar</label>
+            <input type="search" class="form-control form-control-sm" id="filtro-busca" name="busca"
+                   value="<%= filtros.busca || '' %>" maxlength="120" placeholder="Código (ex.: 2026.1)">
+        </div>
+
+        <div class="painel-filtros-campo">
+            <label class="form-label" for="filtro-ano">Ano</label>
+            <select class="form-select form-select-sm" id="filtro-ano" name="ano" data-submete-ao-mudar>
+                <option value="">Todos</option>
+                <% anos.forEach((ano) => { %>
+                    <option value="<%= ano %>" <%= filtros.ano === ano ? 'selected' : '' %>><%= ano %></option>
+                <% }) %>
+            </select>
+        </div>
+
+        <div class="painel-filtros-campo">
+            <label class="form-label" for="filtro-status">Situação</label>
+            <select class="form-select form-select-sm" id="filtro-status" name="status" data-submete-ao-mudar>
+                <option value="">Todas</option>
+                <option value="ativos" <%= statusSelecionado === 'ativos' ? 'selected' : '' %>>Somente ativos</option>
+                <option value="inativos" <%= statusSelecionado === 'inativos' ? 'selected' : '' %>>Somente inativos</option>
+            </select>
+        </div>
+
+        <div class="painel-filtros-campo">
+            <label class="form-label" for="filtro-por-pagina">Por página</label>
+            <select class="form-select form-select-sm" id="filtro-por-pagina" name="por_pagina" data-submete-ao-mudar>
+                <% paginacao.tamanhos.forEach((tamanho) => { %>
+                    <option value="<%= tamanho %>" <%= paginacao.porPagina === tamanho ? 'selected' : '' %>><%= tamanho %></option>
+                <% }) %>
+            </select>
+        </div>
+
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-sm btn-outline-primary">
+                <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i> Filtrar
+            </button>
+            <a href="<%= urlLimpar %>" class="btn btn-sm btn-outline-secondary">Limpar</a>
+        </div>
+    </form>
+
+    <% if (itens.length === 0) { %>
+        <%- include('../../partials/estado-vazio', {
+            icone: 'fa-calendar-check',
+            titulo: 'Nenhum período letivo encontrado',
+            descricao: 'Ajuste os filtros ou cadastre o primeiro período.',
+            acaoUrl: podeVer('periodos', 'criar') ? urlNovo : null,
+            acaoTexto: 'Novo período'
+        }) %>
+    <% } else { %>
+        <div class="table-responsive">
+            <table class="table painel-tabela align-middle">
+                <caption class="visually-hidden">Lista de períodos letivos</caption>
+                <thead>
+                    <tr>
+                        <th scope="col">Código</th>
+                        <th scope="col" class="text-center">Ano</th>
+                        <th scope="col" class="text-center">Semestre</th>
+                        <th scope="col">Vigência</th>
+                        <th scope="col" class="text-center">Turmas</th>
+                        <th scope="col">Situação</th>
+                        <th scope="col" class="text-end">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% itens.forEach((item) => { %>
+                        <tr>
+                            <td>
+                                <span class="fw-semibold"><%= item.codigo %></span>
+                                <% if (item.atual) { %>
+                                    <span class="badge text-bg-primary-subtle text-primary-emphasis border border-primary-subtle">atual</span>
+                                <% } %>
+                            </td>
+                            <td class="text-center"><%= item.ano %></td>
+                            <td class="text-center"><%= formatadores.ordinal(item.semestre) %></td>
+                            <td class="small">
+                                <% if (item.data_inicio || item.data_fim) { %>
+                                    <%= formatadores.dataBr(item.data_inicio) || '—' %>
+                                    a
+                                    <%= formatadores.dataBr(item.data_fim) || '—' %>
+                                <% } else { %>
+                                    —
+                                <% } %>
+                            </td>
+                            <td class="text-center"><%= item.total_turmas %></td>
+                            <td><%- include('../../partials/status-badge', { ativo: item.ativo }) %></td>
+                            <td>
+                                <div class="painel-tabela-acoes">
+                                    <% if (!item.atual && podeVer('periodos', 'editar')) { %>
+                                        <form method="POST" action="<%= withBase('/admin/periodos/' + item.id + '/atual') %>"
+                                              data-confirmar="Definir <%= item.codigo %> como período letivo atual?">
+                                            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                                            <input type="hidden" name="retorno" value="<%= retorno %>">
+                                            <button type="submit" class="btn btn-sm btn-outline-primary"
+                                                    title="Definir <%= item.codigo %> como período atual">
+                                                <i class="fa-solid fa-calendar-check" aria-hidden="true"></i>
+                                                <span class="d-none d-xl-inline">Definir como atual</span>
+                                                <span class="d-xl-none visually-hidden">Definir como atual</span>
+                                            </button>
+                                        </form>
+                                    <% } %>
+
+                                    <% if (podeVer('periodos', 'editar')) { %>
+                                        <a class="btn btn-sm btn-outline-secondary"
+                                           href="<%= withBase('/admin/periodos/' + item.id + '/editar') %>"
+                                           title="Editar <%= item.codigo %>">
+                                            <i class="fa-solid fa-pen" aria-hidden="true"></i>
+                                            <span class="visually-hidden">Editar</span>
+                                        </a>
+                                    <% } %>
+
+                                    <% if (podeVer('periodos', 'inativar')) { %>
+                                        <form method="POST" action="<%= withBase('/admin/periodos/' + item.id + '/status') %>"
+                                              data-confirmar="<%= item.ativo ? 'Inativar o período ' + item.codigo + '?' : 'Reativar o período ' + item.codigo + '?' %>">
+                                            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                                            <input type="hidden" name="ativo" value="<%= item.ativo ? '0' : '1' %>">
+                                            <input type="hidden" name="retorno" value="<%= retorno %>">
+                                            <button type="submit" class="btn btn-sm btn-outline-secondary"
+                                                    title="<%= item.ativo ? 'Inativar' : 'Reativar' %> <%= item.codigo %>">
+                                                <i class="fa-solid <%= item.ativo ? 'fa-ban' : 'fa-rotate-left' %>" aria-hidden="true"></i>
+                                                <span class="visually-hidden"><%= item.ativo ? 'Inativar' : 'Reativar' %></span>
+                                            </button>
+                                        </form>
+
+                                        <form method="POST" action="<%= withBase('/admin/periodos/' + item.id + '/excluir') %>"
+                                              data-confirmar="Excluir definitivamente o período <%= item.codigo %>? Esta ação não pode ser desfeita.">
+                                            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                                            <input type="hidden" name="retorno" value="<%= retorno %>">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Excluir <%= item.codigo %>">
+                                                <i class="fa-solid fa-trash" aria-hidden="true"></i>
+                                                <span class="visually-hidden">Excluir</span>
+                                            </button>
+                                        </form>
+                                    <% } %>
+                                </div>
+                            </td>
+                        </tr>
+                    <% }) %>
+                </tbody>
+            </table>
+        </div>
+
+        <%- include('../../partials/paginacao') %>
+    <% } %>
+</div>
+
+<%- include('../../layouts/admin-fim') %>

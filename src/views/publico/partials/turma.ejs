@@ -1,0 +1,164 @@
+<%
+    // `turma` chega pronta do servico: dias ordenados, aulas formatadas e as
+    // aulas sem horario ja separadas em `pendentes`.
+    //
+    // Os `role` explicitos (table/rowgroup/row/columnheader/cell) sao
+    // redundantes no desktop, mas preservam a semantica de tabela quando o CSS
+    // troca `display` para empilhar as linhas em telas pequenas.
+    const identificacao = turma.curso.nome + ' · ' + turma.semestreRotulo + ' semestre · '
+        + turma.campus.nome + ' · turno ' + turma.turno.nome;
+%>
+<%
+    /*
+     * O titulo do cartao e o SEMESTRE, nao o codigo da turma.
+     *
+     * Quem consulta e o aluno, e ele sabe em que semestre esta — "DIR01M1" e
+     * nomenclatura interna. O codigo continua no selo ao lado, que e como a
+     * turma se identifica na secretaria; para todas as turmas publicas o nome e
+     * igual ao codigo, entao nada se perde.
+     *
+     * Turma especial (DIRESPM1) atravessa semestres e nao tem numero: nesse
+     * caso o titulo volta a ser o nome, porque "— semestre" nao diria nada.
+     */
+    const tituloDaTurma = turma.semestre ? turma.semestreRotulo + ' semestre' : turma.nome;
+%>
+<article class="turma glass" id="turma-<%= turma.id %>">
+    <header class="turma-cabecalho">
+        <span class="turma-icone" aria-hidden="true"><i class="fa-solid fa-graduation-cap"></i></span>
+        <div>
+            <h3 class="turma-titulo">
+                <%= tituloDaTurma %>
+                <% if (turma.codigo && turma.codigo !== tituloDaTurma) { %><%
+                    /* Na turma especial o titulo ja E o codigo; repeti-lo ao lado
+                       nao acrescenta nada. */
+                %><span class="turma-codigo"><%= turma.codigo %></span><% } %>
+            </h3>
+            <ul class="turma-detalhes">
+                <li><i class="fa-solid fa-book" aria-hidden="true"></i> <%= turma.curso.nome %></li>
+                <li><i class="fa-solid fa-location-dot" aria-hidden="true"></i> <%= turma.campus.nome %></li>
+                <li><i class="fa-solid <%= turma.turno.icone %>" aria-hidden="true"></i> <%= turma.turno.nome %></li>
+            </ul>
+        </div>
+    </header>
+
+    <% if (turma.totalAulas === 0) { %>
+        <p class="aviso">
+            <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+            Nenhuma aula publicada para esta turma até o momento.
+        </p>
+    <% } %>
+
+    <% if (turma.dias.length > 0) { %>
+        <div class="tabela-rolagem" role="region" tabindex="0"
+             aria-label="Grade horária da turma <%= turma.nome %>">
+            <table class="tabela-grade" role="table">
+                <caption class="apenas-leitor">
+                    Grade horária da turma <%= turma.nome %> — <%= identificacao %>.
+                    As aulas estão agrupadas por dia da semana, em ordem cronológica.
+                </caption>
+                <thead role="rowgroup">
+                    <tr role="row">
+                        <th role="columnheader" scope="col">Horário</th>
+                        <th role="columnheader" scope="col">Disciplina</th>
+                        <th role="columnheader" scope="col">Professor</th>
+                        <th role="columnheader" scope="col">Local</th>
+                        <th role="columnheader" scope="col">Modalidade</th>
+                    </tr>
+                </thead>
+                <% turma.dias.forEach(function (dia) { %>
+                    <tbody role="rowgroup">
+                        <tr class="linha-dia" role="row">
+                            <th role="columnheader" scope="colgroup" colspan="5">
+                                <i class="fa-solid fa-calendar-day" aria-hidden="true"></i> <%= dia.nome %>
+                            </th>
+                        </tr>
+                        <% dia.aulas.forEach(function (aula) { %>
+                            <tr role="row">
+                                <th role="rowheader" scope="row" data-rotulo="Horário">
+                                    <span class="hora"><%= aula.faixaHoraria %></span>
+                                </th>
+                                <td role="cell" data-rotulo="Disciplina" class="celula-disciplina"><%= aula.disciplina %></td>
+                                <td role="cell" data-rotulo="Professor">
+                                    <% if (aula.professor) { %>
+                                        <%= aula.professor %>
+                                    <% } else { %>
+                                        <span class="ausente">A definir</span>
+                                    <% } %>
+                                </td>
+                                <td role="cell" data-rotulo="Local">
+                                    <% if (aula.local) { %>
+                                        <%= aula.local %>
+                                    <% } else if (aula.modalidade === 'ead') { %>
+                                        <span class="ausente">Ambiente virtual</span>
+                                    <% } else { %>
+                                        <span class="ausente">A definir</span>
+                                    <% } %>
+                                </td>
+                                <td role="cell" data-rotulo="Modalidade">
+                                    <span class="etiqueta etiqueta-<%= aula.modalidade %>">
+                                        <i class="fa-solid <%= aula.modalidadeIcone %>" aria-hidden="true"></i>
+                                        <%= aula.modalidadeRotulo %>
+                                    </span>
+                                </td>
+                            </tr>
+                        <% }) %>
+                    </tbody>
+                <% }) %>
+            </table>
+        </div>
+    <% } %>
+
+    <% if (turma.pendentes.length > 0) { %>
+        <div class="tabela-rolagem bloco-pendente" role="region" tabindex="0"
+             aria-label="Aulas com horário a definir da turma <%= turma.nome %>">
+            <table class="tabela-grade tabela-pendente" role="table">
+                <caption>
+                    <i class="fa-solid fa-hourglass-half" aria-hidden="true"></i>
+                    Horário a definir — aulas já previstas para a turma <%= turma.nome %>,
+                    ainda sem faixa de horário publicada.
+                </caption>
+                <thead role="rowgroup">
+                    <tr role="row">
+                        <th role="columnheader" scope="col">Dia</th>
+                        <th role="columnheader" scope="col">Disciplina</th>
+                        <th role="columnheader" scope="col">Professor</th>
+                        <th role="columnheader" scope="col">Local</th>
+                        <th role="columnheader" scope="col">Modalidade</th>
+                    </tr>
+                </thead>
+                <tbody role="rowgroup">
+                    <% turma.pendentes.forEach(function (dia) { %>
+                        <% dia.aulas.forEach(function (aula) { %>
+                            <tr role="row">
+                                <th role="rowheader" scope="row" data-rotulo="Dia"><%= aula.diaNome %></th>
+                                <td role="cell" data-rotulo="Disciplina" class="celula-disciplina"><%= aula.disciplina %></td>
+                                <td role="cell" data-rotulo="Professor">
+                                    <% if (aula.professor) { %>
+                                        <%= aula.professor %>
+                                    <% } else { %>
+                                        <span class="ausente">A definir</span>
+                                    <% } %>
+                                </td>
+                                <td role="cell" data-rotulo="Local">
+                                    <% if (aula.local) { %>
+                                        <%= aula.local %>
+                                    <% } else if (aula.modalidade === 'ead') { %>
+                                        <span class="ausente">Ambiente virtual</span>
+                                    <% } else { %>
+                                        <span class="ausente">A definir</span>
+                                    <% } %>
+                                </td>
+                                <td role="cell" data-rotulo="Modalidade">
+                                    <span class="etiqueta etiqueta-<%= aula.modalidade %>">
+                                        <i class="fa-solid <%= aula.modalidadeIcone %>" aria-hidden="true"></i>
+                                        <%= aula.modalidadeRotulo %>
+                                    </span>
+                                </td>
+                            </tr>
+                        <% }) %>
+                    <% }) %>
+                </tbody>
+            </table>
+        </div>
+    <% } %>
+</article>

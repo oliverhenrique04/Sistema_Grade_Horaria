@@ -1,0 +1,296 @@
+<%
+/*
+ * Listagem de turmas.
+ * Espera: turmas, paginacao, integradasOcultas, filtros, opcoes, semestres,
+ * urlBase e urlComFiltros.
+ */
+const podeCriar = podeVer('turmas', 'criar');
+const podeEditar = podeVer('turmas', 'editar');
+const podeInativar = podeVer('turmas', 'inativar');
+const valorFiltro = (valor) => (valor === null || valor === undefined ? '' : valor);
+%>
+<%- include('../../layouts/admin-inicio') %>
+
+<div class="painel-cartao">
+    <%
+    /*
+     * Recorte padrao: turmas em que se monta grade. Uma turma que apenas recebe
+     * disciplina de uma gerencial nao tem grade propria para montar — ela e
+     * montada na gerencial — e so polui a lista. O seletor permite ver todas
+     * quando for preciso editar o cadastro de uma delas.
+     */
+    const verTodas = filtros.exibicao === 'todas';
+    const urlExibicao = (valor) => urlComFiltros({ exibicao: valor });
+    %>
+
+    <div class="turmas-cabecalho">
+        <div class="turmas-cabecalho-titulo">
+            <h2 class="h6 mb-1">Turmas cadastradas</h2>
+            <p class="text-muted small mb-0">
+                Curso, campus, semestre e turno — a base da grade horária.
+            </p>
+        </div>
+
+        <div class="turmas-cabecalho-acoes">
+            <div class="turmas-exibicao" role="group" aria-label="Quais turmas exibir">
+                <a class="turmas-exibicao-opcao <%= verTodas ? '' : 'ativa' %>"
+                   href="<%= urlExibicao('grade') %>" <%= verTodas ? '' : 'aria-current="true"' %>>
+                    <i class="fa-solid fa-table-cells-large" aria-hidden="true"></i>
+                    Com grade própria
+                </a>
+                <a class="turmas-exibicao-opcao <%= verTodas ? 'ativa' : '' %>"
+                   href="<%= urlExibicao('todas') %>" <%= verTodas ? 'aria-current="true"' : '' %>>
+                    <i class="fa-solid fa-list" aria-hidden="true"></i>
+                    Todas
+                </a>
+            </div>
+
+            <% if (podeCriar) { %>
+                <a class="btn btn-primary btn-sm" href="<%= withBase('/admin/turmas/novo') %>">
+                    <i class="fa-solid fa-plus" aria-hidden="true"></i> Nova turma
+                </a>
+            <% } %>
+        </div>
+    </div>
+
+    <% if (!verTodas && integradasOcultas > 0) { %>
+        <p class="turmas-exibicao-nota">
+            <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+            <strong><%= integradasOcultas %></strong>
+            turma<%= integradasOcultas === 1 ? '' : 's' %>
+            fora desta lista recebe<%= integradasOcultas === 1 ? '' : 'm' %> as disciplinas de uma
+            turma gerencial — a grade delas é montada lá.
+        </p>
+    <% } %>
+
+    <form class="painel-filtros" method="GET" action="<%= withBase('/admin/turmas') %>" role="search">
+        <input type="hidden" name="exibicao" value="<%= verTodas ? 'todas' : 'grade' %>">
+        <div class="painel-filtros-campo">
+            <label class="form-label" for="filtro-busca">Buscar</label>
+            <input class="form-control form-control-sm" type="search" id="filtro-busca" name="busca"
+                   value="<%= valorFiltro(filtros.busca) %>" placeholder="Nome ou código" maxlength="120">
+        </div>
+
+        <div class="painel-filtros-campo">
+            <label class="form-label" for="filtro-periodo">Período letivo</label>
+            <select class="form-select form-select-sm" id="filtro-periodo" name="periodoLetivoId">
+                <option value="">Todos</option>
+                <% opcoes.periodos.forEach((periodo) => { %>
+                    <option value="<%= periodo.id %>" <%= filtros.periodoLetivoId === periodo.id ? 'selected' : '' %>>
+                        <%= periodo.codigo %><%= periodo.atual ? ' (atual)' : '' %>
+                    </option>
+                <% }) %>
+            </select>
+        </div>
+
+        <div class="painel-filtros-campo">
+            <label class="form-label" for="filtro-curso">Curso</label>
+            <select class="form-select form-select-sm" id="filtro-curso" name="cursoId">
+                <option value="">Todos</option>
+                <% opcoes.cursos.forEach((curso) => { %>
+                    <option value="<%= curso.id %>" <%= filtros.cursoId === curso.id ? 'selected' : '' %>>
+                        <%= curso.nome %>
+                    </option>
+                <% }) %>
+            </select>
+        </div>
+
+        <div class="painel-filtros-campo">
+            <label class="form-label" for="filtro-campus">Campus</label>
+            <select class="form-select form-select-sm" id="filtro-campus" name="campusId">
+                <option value="">Todos</option>
+                <% opcoes.campus.forEach((campus) => { %>
+                    <option value="<%= campus.id %>" <%= filtros.campusId === campus.id ? 'selected' : '' %>>
+                        <%= campus.nome %>
+                    </option>
+                <% }) %>
+            </select>
+        </div>
+
+        <div class="painel-filtros-campo">
+            <label class="form-label" for="filtro-turno">Turno</label>
+            <select class="form-select form-select-sm" id="filtro-turno" name="turnoId">
+                <option value="">Todos</option>
+                <% opcoes.turnos.forEach((turno) => { %>
+                    <option value="<%= turno.id %>" <%= filtros.turnoId === turno.id ? 'selected' : '' %>>
+                        <%= turno.nome %>
+                    </option>
+                <% }) %>
+            </select>
+        </div>
+
+        <div class="painel-filtros-campo">
+            <label class="form-label" for="filtro-semestre">Semestre</label>
+            <select class="form-select form-select-sm" id="filtro-semestre" name="semestreCurricular">
+                <option value="">Todos</option>
+                <% semestres.forEach((semestre) => { %>
+                    <option value="<%= semestre %>" <%= filtros.semestreCurricular === semestre ? 'selected' : '' %>>
+                        <%= formatadores.ordinal(semestre) %>
+                    </option>
+                <% }) %>
+            </select>
+        </div>
+
+        <div class="painel-filtros-campo" style="flex: 0 1 140px; min-width: 140px;">
+            <label class="form-label" for="filtro-status">Situação</label>
+            <select class="form-select form-select-sm" id="filtro-status" name="ativo">
+                <option value="">Todas</option>
+                <option value="true" <%= filtros.ativo === true ? 'selected' : '' %>>Ativas</option>
+                <option value="false" <%= filtros.ativo === false ? 'selected' : '' %>>Inativas</option>
+            </select>
+        </div>
+
+        <div class="painel-filtros-acoes">
+            <button class="btn btn-outline-primary btn-sm" type="submit">
+                <i class="fa-solid fa-filter" aria-hidden="true"></i> Filtrar
+            </button>
+            <a class="btn btn-outline-secondary btn-sm" href="<%= withBase('/admin/turmas') %>">Limpar</a>
+        </div>
+    </form>
+
+    <% if (turmas.length === 0) { %>
+        <%- include('../../partials/estado-vazio', {
+            icone: 'fa-users-rectangle',
+            titulo: 'Nenhuma turma encontrada',
+            descricao: 'Ajuste os filtros ou cadastre uma nova turma para começar a montar a grade.',
+            acaoUrl: podeCriar ? withBase('/admin/turmas/novo') : null,
+            acaoTexto: 'Nova turma'
+        }) %>
+    <% } else { %>
+        <div class="table-responsive">
+            <table class="table painel-tabela">
+                <thead>
+                    <tr>
+                        <th scope="col">Turma</th>
+                        <th scope="col" class="coluna-texto">Curso</th>
+                        <th scope="col">Campus</th>
+                        <th scope="col">Sem.</th>
+                        <th scope="col">Turno</th>
+                        <th scope="col">Período</th>
+                        <th scope="col" class="text-center">Aulas</th>
+                        <th scope="col">Situação</th>
+                        <th scope="col" class="text-end">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% turmas.forEach((turma) => { %>
+                        <tr>
+                            <%
+                            const grupo = Array.isArray(turma.grupo) ? turma.grupo : [];
+                            const VISIVEIS = 6;
+                            %><%
+                            /*
+                             * Na turma gerencial o nome ja traz a composicao
+                             * ("GPDIRM (DIR01M1 | DIR02M1)") e ela se repetiria
+                             * na linha do grupo, logo abaixo. Aqui fica so o
+                             * rotulo do cubo — a parte do codigo antes do
+                             * primeiro ponto — e o grupo aparece uma vez so,
+                             * com cada turma clicavel.
+                             */
+                            const rotulo =
+                                turma.gerencial && grupo.length > 0
+                                    ? String(turma.codigo || turma.nome).split('.')[0]
+                                    : turma.nome;
+                            const codigoExtra =
+                                !turma.gerencial && turma.codigo && turma.codigo !== turma.nome
+                                    ? turma.codigo
+                                    : null;
+                            %>
+                            <td>
+                                <span class="turmas-nome"><%= rotulo %></span>
+                                <% if (turma.gerencial) { %>
+                                    <span class="turmas-selo"
+                                          title="<%= turma.nome %>">Gerencial</span>
+                                <% } %>
+                                <% if (codigoExtra) { %>
+                                    <div class="turmas-codigo"><%= codigoExtra %></div>
+                                <% } %>
+
+                                <% if (turma.gerencial && grupo.length > 0) { %>
+                                    <p class="turmas-grupo mb-0"
+                                       title="<%= grupo.map((item) => item.codigo + (item.semestre ? ' (' + item.semestre + 'º)' : '')).join(', ') %>">
+                                        <i class="fa-solid fa-diagram-project" aria-hidden="true"></i>
+                                        <% grupo.slice(0, VISIVEIS).forEach((item, indice) => { %><%
+                                            %><% if (indice > 0) { %><span class="turmas-grupo-sep">|</span><% } %><%
+                                            %><a class="turmas-grupo-item"
+                                                 href="<%= withBase('/admin/aulas/turma/' + item.id) %>"
+                                                 title="Abrir a grade de <%= item.codigo %>"><%= item.codigo %></a><%
+                                        %><% }) %><%
+                                        %><% if (grupo.length > VISIVEIS) { %>
+                                            <span class="turmas-grupo-sep">|</span>
+                                            <span class="turmas-grupo-resto">+<%= grupo.length - VISIVEIS %></span>
+                                        <% } %>
+                                    </p>
+                                <% } else if (turma.gerencial) { %>
+                                    <p class="turmas-grupo turmas-grupo-vazio mb-0">
+                                        <i class="fa-solid fa-diagram-project" aria-hidden="true"></i>
+                                        nenhuma turma vinculada
+                                    </p>
+                                <% } %>
+                            </td>
+                            <td class="coluna-texto"><%= turma.curso_nome %></td>
+                            <td><%= turma.campus_nome %></td>
+                            <td><%= formatadores.semestreRotulo(turma.semestre_curricular) %></td>
+                            <td><%= turma.turno_nome %></td>
+                            <td><%= turma.periodo_codigo %></td>
+                            <td class="text-center">
+                                <span class="badge text-bg-light border"><%= turma.total_aulas %></span>
+                            </td>
+                            <td><%- include('../../partials/status-badge', { ativo: turma.ativo }) %></td>
+                            <td>
+                                <div class="painel-tabela-acoes">
+                                    <a class="btn btn-outline-primary btn-sm"
+                                       href="<%= withBase('/admin/aulas/turma/' + turma.id) %>"
+                                       title="Montar grade da turma">
+                                        <i class="fa-solid fa-calendar-days" aria-hidden="true"></i>
+                                        <span class="visually-hidden">Montar grade de <%= turma.nome %></span>
+                                    </a>
+
+                                    <% if (podeEditar) { %>
+                                        <a class="btn btn-outline-secondary btn-sm"
+                                           href="<%= withBase('/admin/turmas/' + turma.id + '/editar') %>"
+                                           title="Editar turma">
+                                            <i class="fa-solid fa-pen" aria-hidden="true"></i>
+                                            <span class="visually-hidden">Editar <%= turma.nome %></span>
+                                        </a>
+                                    <% } %>
+
+                                    <% if (podeInativar) { %>
+                                        <form method="POST"
+                                              action="<%= withBase('/admin/turmas/' + turma.id + '/status') %>"
+                                              data-confirmar="<%= turma.ativo ? 'Inativar a turma ' + turma.nome + '? Ela deixará de aparecer na consulta pública.' : 'Reativar a turma ' + turma.nome + '?' %>">
+                                            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                                            <input type="hidden" name="ativo" value="<%= turma.ativo ? 'false' : 'true' %>">
+                                            <button class="btn btn-outline-<%= turma.ativo ? 'warning' : 'success' %> btn-sm"
+                                                    type="submit"
+                                                    title="<%= turma.ativo ? 'Inativar turma' : 'Reativar turma' %>">
+                                                <i class="fa-solid <%= turma.ativo ? 'fa-ban' : 'fa-rotate-left' %>" aria-hidden="true"></i>
+                                                <span class="visually-hidden"><%= turma.ativo ? 'Inativar' : 'Reativar' %> <%= turma.nome %></span>
+                                            </button>
+                                        </form>
+
+                                        <% if (turma.total_aulas === 0) { %>
+                                            <form method="POST"
+                                                  action="<%= withBase('/admin/turmas/' + turma.id + '/excluir') %>"
+                                                  data-confirmar="Excluir definitivamente a turma <%= turma.nome %>? Esta ação não pode ser desfeita.">
+                                                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                                                <button class="btn btn-outline-danger btn-sm" type="submit" title="Excluir turma">
+                                                    <i class="fa-solid fa-trash" aria-hidden="true"></i>
+                                                    <span class="visually-hidden">Excluir <%= turma.nome %></span>
+                                                </button>
+                                            </form>
+                                        <% } %>
+                                    <% } %>
+                                </div>
+                            </td>
+                        </tr>
+                    <% }) %>
+                </tbody>
+            </table>
+        </div>
+
+        <%- include('../../partials/paginacao', { paginacao: paginacao, urlBase: urlBase }) %>
+    <% } %>
+</div>
+
+<%- include('../../layouts/admin-fim') %>

@@ -1,0 +1,63 @@
+<%
+/*
+ * Paginacao reutilizavel.
+ * Espera: paginacao (objeto de src/utils/paginacao.js#montar) e urlBase
+ * (funcao que recebe o numero da pagina e devolve a URL completa).
+ */
+const total = paginacao.totalRegistros;
+%>
+
+<% if (total > 0) { %>
+    <div class="painel-paginacao">
+        <p class="painel-paginacao-resumo mb-0">
+            Exibindo <strong><%= paginacao.inicio %></strong>–<strong><%= paginacao.fim %></strong>
+            de <strong><%= total %></strong> registro<%= total === 1 ? '' : 's' %>
+        </p>
+
+        <% if (paginacao.totalPaginas > 1) { %>
+            <nav aria-label="Paginação">
+                <ul class="pagination pagination-sm mb-0">
+                    <li class="page-item <%= paginacao.temAnterior ? '' : 'disabled' %>">
+                        <a class="page-link" href="<%= urlBase(paginacao.paginaAtual - 1) %>" aria-label="Página anterior">
+                            <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
+                        </a>
+                    </li>
+
+                    <%
+                    const inicioJanela = Math.max(1, paginacao.paginaAtual - 2);
+                    const fimJanela = Math.min(paginacao.totalPaginas, inicioJanela + 4);
+                    %>
+
+                    <% if (inicioJanela > 1) { %>
+                        <li class="page-item"><a class="page-link" href="<%= urlBase(1) %>">1</a></li>
+                        <% if (inicioJanela > 2) { %>
+                            <li class="page-item disabled"><span class="page-link">…</span></li>
+                        <% } %>
+                    <% } %>
+
+                    <% for (let pagina = inicioJanela; pagina <= fimJanela; pagina += 1) { %>
+                        <li class="page-item <%= pagina === paginacao.paginaAtual ? 'active' : '' %>">
+                            <a class="page-link" href="<%= urlBase(pagina) %>"
+                               <%= pagina === paginacao.paginaAtual ? 'aria-current="page"' : '' %>><%= pagina %></a>
+                        </li>
+                    <% } %>
+
+                    <% if (fimJanela < paginacao.totalPaginas) { %>
+                        <% if (fimJanela < paginacao.totalPaginas - 1) { %>
+                            <li class="page-item disabled"><span class="page-link">…</span></li>
+                        <% } %>
+                        <li class="page-item">
+                            <a class="page-link" href="<%= urlBase(paginacao.totalPaginas) %>"><%= paginacao.totalPaginas %></a>
+                        </li>
+                    <% } %>
+
+                    <li class="page-item <%= paginacao.temProxima ? '' : 'disabled' %>">
+                        <a class="page-link" href="<%= urlBase(paginacao.paginaAtual + 1) %>" aria-label="Próxima página">
+                            <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        <% } %>
+    </div>
+<% } %>

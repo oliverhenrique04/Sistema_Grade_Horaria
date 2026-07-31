@@ -1,0 +1,52 @@
+<%
+/*
+ * Cartao de indicador do painel.
+ *
+ * Obrigatorios: rotulo (texto), valor (numero), icone (classe FontAwesome).
+ * Opcionais:
+ *   nota      texto de apoio abaixo do numero;
+ *   url       caminho interno (com withBase aplicado aqui) que torna o cartao
+ *             clicavel - o chamador so deve informar quando o usuario tem
+ *             permissao de leitura no recurso de destino;
+ *   destaque  booleano; realca o cartao E acrescenta icone + texto, para que a
+ *             informacao nunca dependa apenas da cor;
+ *   chave     identificador estavel exposto em data-indicador (ancoras/testes).
+ */
+const indicadorUrl = typeof url !== 'undefined' && url ? url : '';
+const indicadorNota = typeof nota !== 'undefined' && nota ? nota : '';
+const indicadorChave = typeof chave !== 'undefined' && chave ? chave : '';
+const emDestaque = typeof destaque !== 'undefined' && Boolean(destaque);
+const classes = `painel-indicador${emDestaque ? ' border-warning border-2' : ''}`;
+const valorNumerico = Number(valor) || 0;
+%>
+<% if (indicadorUrl) { %>
+<a class="<%= classes %>" href="<%= withBase(indicadorUrl) %>" data-indicador="<%= indicadorChave %>" data-valor="<%= valorNumerico %>">
+<% } else { %>
+<div class="<%= classes %>" data-indicador="<%= indicadorChave %>" data-valor="<%= valorNumerico %>">
+<% } %>
+    <span class="painel-indicador-rotulo">
+        <i class="fa-solid <%= icone %>" aria-hidden="true"></i>
+        <%= rotulo %>
+    </span>
+
+    <span class="painel-indicador-valor"><%= valorNumerico.toLocaleString('pt-BR') %></span>
+
+    <% if (indicadorNota) { %>
+        <span class="painel-indicador-nota"><%= indicadorNota %></span>
+    <% } %>
+
+    <% if (emDestaque) { %>
+        <span class="painel-indicador-nota text-warning-emphasis fw-semibold">
+            <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+            Requer atenção
+        </span>
+    <% } %>
+
+    <% if (indicadorUrl) { %>
+        <span class="visually-hidden">Abrir a listagem de <%= rotulo %></span>
+    <% } %>
+<% if (indicadorUrl) { %>
+</a>
+<% } else { %>
+</div>
+<% } %>

@@ -1,0 +1,81 @@
+<%
+/*
+ * Resultado da carga concluida. Espera: relatorio, arquivo.
+ */
+const semLocal = Number(relatorio.aulas.semLocal || 0);
+const semHorario = Number(relatorio.aulas.semHorario || 0);
+%>
+<%- include('../../layouts/admin-inicio') %>
+
+<link rel="stylesheet" href="<%= asset('/css/importacao.css') %>">
+
+<div class="alert alert-success importacao-faixa" role="status">
+    <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+    <div>
+        <p class="mb-1 fw-semibold">Importação concluída.</p>
+        <p class="mb-0">
+            <%= arquivo.nome %> · período <%= relatorio.periodo.codigo %>.
+            A carga rodou em uma única transação: ou tudo foi gravado, ou nada seria.
+        </p>
+    </div>
+</div>
+
+<%- include('partials/relatorio', { relatorio: relatorio, nivel: 2 }) %>
+
+<section class="painel-cartao" aria-labelledby="titulo-proximos">
+    <div class="painel-cartao-cabecalho">
+        <div>
+            <h2 class="h6 mb-1" id="titulo-proximos">Próximos passos</h2>
+            <p class="painel-indicador-nota mb-0">A grade já está no ar; falta o que a planilha não traz.</p>
+        </div>
+    </div>
+
+    <ul class="importacao-proximos">
+        <% if (semLocal > 0) { %>
+            <li>
+                <i class="fa-solid fa-door-open" aria-hidden="true"></i>
+                <div>
+                    <strong><%= semLocal.toLocaleString('pt-BR') %> aulas sem local.</strong>
+                    O cubo não exporta a sala; a alocação é feita no painel.
+                    <a href="<%= withBase('/admin/aulas?semLocal=1') %>">Alocar locais</a>
+                </div>
+            </li>
+        <% } %>
+
+        <% if (semHorario > 0) { %>
+            <li>
+                <i class="fa-solid fa-hourglass-half" aria-hidden="true"></i>
+                <div>
+                    <strong><%= semHorario.toLocaleString('pt-BR') %> aulas sem horário.</strong>
+                    A faixa da planilha não corresponde a nenhum período do turno da turma.
+                    <a href="<%= withBase('/admin/aulas?semHorario=1') %>">Revisar pendências</a>
+                </div>
+            </li>
+        <% } %>
+
+        <li>
+            <i class="fa-solid fa-users-rectangle" aria-hidden="true"></i>
+            <div>
+                <strong>Confira as turmas gerenciais.</strong>
+                Elas concentram as disciplinas compartilhadas e aparecem marcadas na listagem.
+                <a href="<%= withBase('/admin/turmas') %>">Ver turmas</a>
+            </div>
+        </li>
+
+        <li>
+            <i class="fa-solid fa-eye" aria-hidden="true"></i>
+            <div>
+                <strong>Veja como ficou para o aluno.</strong>
+                <a href="<%= withBase('/') %>" target="_blank" rel="noopener">Abrir área pública</a>
+            </div>
+        </li>
+    </ul>
+
+    <div class="importacao-confirmacao-acoes">
+        <a class="btn btn-outline-secondary" href="<%= withBase('/admin/importacao') %>">
+            <i class="fa-solid fa-arrow-left" aria-hidden="true"></i> Voltar para importação
+        </a>
+    </div>
+</section>
+
+<%- include('../../layouts/admin-fim') %>

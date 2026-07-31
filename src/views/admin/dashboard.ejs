@@ -1,171 +1,276 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel Administrativo</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-</head>
-<body class="bg-light">
-    <nav class="navbar navbar-dark bg-dark border-bottom shadow-sm">
-        <div class="container">
-            <span class="navbar-brand mb-0 h1">
-                <i class="fa-solid fa-graduation-cap me-2"></i>Sistema Acadêmico
-            </span>
-            <div class="d-flex align-items-center gap-2">
-                <span class="badge text-bg-secondary text-uppercase"><%= usuarioLogado.tipo %></span>
-                <a href="<%= withBase('/') %>" class="btn btn-outline-light btn-sm">Ver Site Público</a>
-            </div>
+<%- include('../layouts/admin-inicio') %>
+
+<%
+/*
+ * Painel administrativo: indicadores do escopo do usuario, distribuicao por
+ * turno e pendencias/conflitos da grade.
+ *
+ * O <h1> da pagina vive na barra superior (partials/barra-superior), por isso
+ * as secoes daqui comecam em <h2> e os grupos de pendencia em <h3>.
+ */
+const painelPendencias = painel.pendencias;
+const podeAbrirGrade = painel.podeVerAulas;
+%>
+
+<% if (painel.aviso) { %>
+    <div class="alert alert-info d-flex gap-2 align-items-start" role="status">
+        <i class="fa-solid fa-circle-info mt-1" aria-hidden="true"></i>
+        <div>
+            <p class="fw-semibold mb-1"><%= painel.aviso.titulo %></p>
+            <p class="mb-0"><%= painel.aviso.descricao %></p>
         </div>
-    </nav>
+    </div>
+<% } %>
 
-    <main class="container py-4 py-md-5">
-        <div class="mb-4">
-            <h1 class="h3 mb-1">Painel de Gestão</h1>
-            <p class="text-muted mb-0">Bem-vindo, <strong><%= usuarioLogado.nome %></strong>. Acompanhe os principais indicadores e acesse os módulos do sistema.</p>
-        </div>
-
-        <div class="row g-3 mb-4">
-            <div class="col-6 col-lg-3">
-                <div class="card border-0 shadow-sm h-100">
-                    <div class="card-body">
-                        <div class="text-muted small">Turmas</div>
-                        <div class="fs-3 fw-bold"><%= stats.turmas %></div>
-                    </div>
-                </div>
-            </div>
-
-            <% if (usuarioLogado.tipo !== 'nap') { %>
-                <div class="col-6 col-lg-3">
-                    <div class="card border-0 shadow-sm h-100">
-                        <div class="card-body">
-                            <div class="text-muted small">Professores</div>
-                            <div class="fs-3 fw-bold"><%= stats.professores %></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-6 col-lg-3">
-                    <div class="card border-0 shadow-sm h-100">
-                        <div class="card-body">
-                            <div class="text-muted small">Disciplinas</div>
-                            <div class="fs-3 fw-bold"><%= stats.disciplinas %></div>
-                        </div>
-                    </div>
-                </div>
-            <% } %>
-
-            <div class="col-6 col-lg-3">
-                <div class="card border-0 shadow-sm h-100">
-                    <div class="card-body">
-                        <div class="text-muted small">Aulas sem sala</div>
-                        <div class="fs-3 fw-bold <%= stats.pendenciasSala > 0 ? 'text-danger' : 'text-success' %>"><%= stats.pendenciasSala %></div>
-                    </div>
-                </div>
-            </div>
-
-            <% if (usuarioLogado.tipo === 'admin') { %>
-                <div class="col-6 col-lg-3">
-                    <div class="card border-0 shadow-sm h-100">
-                        <div class="card-body">
-                            <div class="text-muted small">Cursos</div>
-                            <div class="fs-3 fw-bold"><%= stats.cursos %></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-6 col-lg-3">
-                    <div class="card border-0 shadow-sm h-100">
-                        <div class="card-body">
-                            <div class="text-muted small">Turnos</div>
-                            <div class="fs-3 fw-bold"><%= stats.turnos %></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-6 col-lg-3">
-                    <div class="card border-0 shadow-sm h-100">
-                        <div class="card-body">
-                            <div class="text-muted small">Usuários</div>
-                            <div class="fs-3 fw-bold"><%= stats.usuarios %></div>
-                        </div>
-                    </div>
-                </div>
-            <% } %>
+<section class="painel-cartao" aria-labelledby="titulo-periodo">
+    <div class="painel-cartao-cabecalho">
+        <div>
+            <h2 class="h6 mb-1" id="titulo-periodo">Período letivo atual</h2>
+            <p class="painel-indicador-nota mb-0">
+                Os indicadores consideram todas as turmas ativas do seu escopo.
+            </p>
         </div>
 
-        <div class="row g-3">
-            <% if (usuarioLogado.tipo !== 'nap') { %>
-                <div class="col-12 col-md-6 col-xl-4">
-                    <a href="<%= withBase('/admin/cursos?token=' + token) %>" class="card border-0 shadow-sm h-100 text-decoration-none">
-                        <div class="card-body d-flex align-items-center gap-3">
-                            <i class="fa-solid fa-book fa-xl text-primary"></i>
-                            <div>
-                                <div class="fw-semibold text-dark">Cursos</div>
-                                <small class="text-muted">Cadastro e coordenação</small>
-                            </div>
-                        </div>
-                    </a>
-                </div>
-                <div class="col-12 col-md-6 col-xl-4">
-                    <a href="<%= withBase('/admin/professores?token=' + token) %>" class="card border-0 shadow-sm h-100 text-decoration-none">
-                        <div class="card-body d-flex align-items-center gap-3">
-                            <i class="fa-solid fa-chalkboard-user fa-xl text-success"></i>
-                            <div>
-                                <div class="fw-semibold text-dark">Professores</div>
-                                <small class="text-muted">Equipe docente</small>
-                            </div>
-                        </div>
-                    </a>
-                </div>
-                <div class="col-12 col-md-6 col-xl-4">
-                    <a href="<%= withBase('/admin/disciplinas?token=' + token) %>" class="card border-0 shadow-sm h-100 text-decoration-none">
-                        <div class="card-body d-flex align-items-center gap-3">
-                            <i class="fa-solid fa-list-check fa-xl text-warning"></i>
-                            <div>
-                                <div class="fw-semibold text-dark">Disciplinas</div>
-                                <small class="text-muted">Matriz curricular</small>
-                            </div>
-                        </div>
-                    </a>
-                </div>
-            <% } %>
+        <% if (podeVer('periodos')) { %>
+            <a class="btn btn-sm btn-outline-secondary" href="<%= withBase('/admin/periodos') %>">
+                <i class="fa-solid fa-calendar-check" aria-hidden="true"></i>
+                Períodos letivos
+            </a>
+        <% } %>
+    </div>
 
-            <div class="col-12 col-md-6 col-xl-4">
-                <a href="<%= withBase('/admin/turmas?token=' + token) %>" class="card border-0 shadow-sm h-100 text-decoration-none">
-                    <div class="card-body d-flex align-items-center gap-3">
-                        <i class="fa-solid fa-users-rectangle fa-xl text-danger"></i>
-                        <div>
-                            <div class="fw-semibold text-dark">Turmas</div>
-                            <small class="text-muted"><%= usuarioLogado.tipo === 'nap' ? 'Definição de salas' : 'Montagem de grade' %></small>
-                        </div>
-                    </div>
-                </a>
+    <% if (painel.periodoAtual) { %>
+        <p class="h1 fw-bold mb-1" data-periodo-atual="<%= painel.periodoAtual.codigo %>">
+            <%= painel.periodoAtual.codigo %>
+        </p>
+        <p class="mb-0 text-body-secondary">
+            <i class="fa-solid fa-circle-check text-success" aria-hidden="true"></i>
+            <span><%= painel.periodoAtual.ano %> · <%= formatadores.ordinal(painel.periodoAtual.semestre) %> semestre</span>
+            <% if (painel.periodoAtual.data_inicio || painel.periodoAtual.data_fim) { %>
+                <span class="d-block d-sm-inline">
+                    <span class="d-none d-sm-inline" aria-hidden="true">·</span>
+                    <%= formatadores.dataBr(painel.periodoAtual.data_inicio) || 'início não informado' %>
+                    até
+                    <%= formatadores.dataBr(painel.periodoAtual.data_fim) || 'fim não informado' %>
+                </span>
+            <% } %>
+        </p>
+    <% } else { %>
+        <div class="alert alert-warning d-flex gap-2 align-items-start mb-0" role="alert">
+            <i class="fa-solid fa-triangle-exclamation mt-1" aria-hidden="true"></i>
+            <div>
+                <p class="fw-semibold mb-1">Nenhum período letivo marcado como atual</p>
+                <p class="mb-2">
+                    Sem período atual as turmas ficam sem referência de semestre no painel.
+                </p>
+                <% if (podeVer('periodos')) { %>
+                    <a class="btn btn-sm btn-warning" href="<%= withBase('/admin/periodos') %>">
+                        <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+                        Definir período letivo
+                    </a>
+                <% } else { %>
+                    <p class="mb-0">Peça a um administrador que defina o período letivo atual.</p>
+                <% } %>
+            </div>
+        </div>
+    <% } %>
+</section>
+
+<section class="painel-cartao" aria-labelledby="titulo-indicadores">
+    <div class="painel-cartao-cabecalho">
+        <h2 class="h6 mb-0" id="titulo-indicadores">Indicadores</h2>
+        <% if (painel.escopoDescricao) { %>
+            <span class="painel-indicador-nota"><%= painel.escopoDescricao %></span>
+        <% } %>
+    </div>
+
+    <% if (painel.indicadores.length === 0) { %>
+        <div class="painel-vazio">
+            <i class="fa-solid fa-lock" aria-hidden="true"></i>
+            <p class="mb-0">Seu perfil não tem permissão de leitura em nenhum indicador.</p>
+        </div>
+    <% } else { %>
+        <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xxl-4 g-3">
+            <% painel.indicadores.forEach((indicador) => { %>
+                <div class="col">
+                    <%- include('partials/indicador', {
+                        chave: indicador.chave,
+                        rotulo: indicador.rotulo,
+                        valor: indicador.valor,
+                        icone: indicador.icone,
+                        nota: indicador.nota,
+                        url: indicador.url,
+                        destaque: indicador.destaque
+                    }) %>
+                </div>
+            <% }) %>
+        </div>
+    <% } %>
+</section>
+
+<section class="painel-cartao" aria-labelledby="titulo-turnos">
+    <div class="painel-cartao-cabecalho">
+        <h2 class="h6 mb-0" id="titulo-turnos">Distribuição por turno</h2>
+        <% if (podeVer('turnos')) { %>
+            <a class="btn btn-sm btn-outline-secondary" href="<%= withBase('/admin/turnos') %>">
+                <i class="fa-solid fa-clock" aria-hidden="true"></i>
+                Turnos
+            </a>
+        <% } %>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table caption-top painel-tabela align-middle">
+            <caption class="painel-indicador-nota">
+                Turmas e aulas ativas de cada turno, dentro do seu escopo.
+            </caption>
+            <thead>
+                <tr>
+                    <th scope="col">Turno</th>
+                    <th scope="col" class="text-end">Turmas</th>
+                    <th scope="col" class="text-end">Aulas</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% painel.distribuicaoTurnos.forEach((turno) => { %>
+                    <tr data-turno="<%= turno.slug %>">
+                        <th scope="row" class="fw-semibold">
+                            <i class="fa-solid <%= turno.icone %>" aria-hidden="true"></i>
+                            <%= turno.nome %>
+                        </th>
+                        <td class="text-end"><%= turno.turmas %></td>
+                        <td class="text-end"><%= turno.aulas %></td>
+                    </tr>
+                <% }) %>
+                <% if (painel.distribuicaoTurnos.length === 0) { %>
+                    <tr>
+                        <td colspan="3" class="text-center text-body-secondary">
+                            Nenhum turno ativo cadastrado.
+                        </td>
+                    </tr>
+                <% } %>
+            </tbody>
+            <tfoot>
+                <tr>
+                    <th scope="row">Total</th>
+                    <td class="text-end fw-semibold"><%= painel.totalTurmasNosTurnos %></td>
+                    <td class="text-end fw-semibold"><%= painel.totalAulasNosTurnos %></td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</section>
+
+<% if (podeAbrirGrade) { %>
+    <section class="painel-cartao" aria-labelledby="titulo-pendencias" data-pendencias="<%= painelPendencias.total %>">
+        <div class="painel-cartao-cabecalho">
+            <div>
+                <h2 class="h6 mb-1" id="titulo-pendencias">Pendências e conflitos</h2>
+                <p class="painel-indicador-nota mb-0">
+                    Verificação feita sobre as aulas ativas das turmas do seu escopo.
+                </p>
             </div>
 
-            <% if (usuarioLogado.tipo === 'admin') { %>
-                <div class="col-12 col-md-6 col-xl-4">
-                    <a href="<%= withBase('/admin/turnos?token=' + token) %>" class="card border-0 shadow-sm h-100 text-decoration-none">
-                        <div class="card-body d-flex align-items-center gap-3">
-                            <i class="fa-solid fa-clock fa-xl text-info"></i>
-                            <div>
-                                <div class="fw-semibold text-dark">Turnos</div>
-                                <small class="text-muted">Configuração acadêmica</small>
-                            </div>
-                        </div>
-                    </a>
-                </div>
-                <div class="col-12 col-md-6 col-xl-4">
-                    <a href="<%= withBase('/admin/usuarios?token=' + token) %>" class="card border-0 shadow-sm h-100 text-decoration-none">
-                        <div class="card-body d-flex align-items-center gap-3">
-                            <i class="fa-solid fa-user-gear fa-xl text-secondary"></i>
-                            <div>
-                                <div class="fw-semibold text-dark">Usuários</div>
-                                <small class="text-muted">Perfis e permissões</small>
-                            </div>
-                        </div>
-                    </a>
-                </div>
+            <% if (painelPendencias.total > 0) { %>
+                <span class="badge text-bg-warning-subtle text-warning-emphasis border border-warning-subtle">
+                    <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+                    <%= painelPendencias.total %> ocorrência(s)
+                </span>
+            <% } else { %>
+                <span class="badge text-bg-success-subtle text-success-emphasis border border-success-subtle">
+                    <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+                    Tudo certo
+                </span>
             <% } %>
         </div>
-    </main>
-</body>
-</html>
+
+        <% if (painelPendencias.total === 0) { %>
+            <div class="painel-vazio">
+                <i class="fa-solid fa-circle-check text-success" aria-hidden="true"></i>
+                <p class="fw-semibold mb-1">Nenhuma pendência encontrada</p>
+                <p class="mb-0">
+                    As aulas do seu escopo estão com horário e local definidos, sem conflitos.
+                </p>
+            </div>
+        <% } else { %>
+            <% painelPendencias.grupos.forEach((grupo) => { %>
+                <div class="mb-4" data-pendencia="<%= grupo.tipo %>" data-total="<%= grupo.total %>">
+                    <h3 class="h6 d-flex flex-wrap align-items-center gap-2 mb-1">
+                        <i class="fa-solid <%= grupo.icone %> text-warning-emphasis" aria-hidden="true"></i>
+                        <span><%= grupo.rotulo %></span>
+                        <span class="badge text-bg-warning-subtle text-warning-emphasis border border-warning-subtle">
+                            <%= grupo.total %>
+                        </span>
+                    </h3>
+                    <p class="painel-indicador-nota"><%= grupo.descricao %></p>
+
+                    <div class="table-responsive">
+                        <table class="table caption-top painel-tabela align-middle">
+                            <caption class="painel-indicador-nota">
+                                <%= grupo.rotulo %>: <%= grupo.total %> ocorrência(s)<% if (grupo.ocultos > 0) { %>, exibindo as <%= grupo.exemplos.length %> primeiras<% } %>.
+                            </caption>
+                            <thead>
+                                <tr>
+                                    <th scope="col">Turma</th>
+                                    <th scope="col">Dia</th>
+                                    <th scope="col">Horário</th>
+                                    <th scope="col">Ocorrência</th>
+                                    <th scope="col"><span class="visually-hidden">Ações</span></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% grupo.exemplos.forEach((linha) => { %>
+                                    <%
+                                    const faixa = formatadores.faixaHoraria(linha.hora_inicio, linha.hora_fim);
+                                    const nomeTurma = linha.turma_nome || 'Turma sem nome';
+                                    %>
+                                    <tr>
+                                        <th scope="row" class="fw-semibold">
+                                            <%= nomeTurma %>
+                                            <% if (linha.turma_codigo) { %>
+                                                <span class="painel-indicador-nota d-block"><%= linha.turma_codigo %></span>
+                                            <% } %>
+                                        </th>
+                                        <td><%= dias.nomeDoDia(linha.dia_semana) || 'Dia inválido' %></td>
+                                        <td>
+                                            <% if (faixa) { %>
+                                                <%= faixa %>
+                                            <% } else { %>
+                                                Sem horário
+                                            <% } %>
+                                        </td>
+                                        <td>
+                                            <span class="d-block"><%= linha.detalhe %></span>
+                                            <% if (linha.disciplina_nome) { %>
+                                                <span class="painel-indicador-nota">
+                                                    Disciplina: <%= linha.disciplina_nome %>
+                                                </span>
+                                            <% } %>
+                                        </td>
+                                        <td class="text-end">
+                                            <a class="btn btn-sm btn-outline-primary text-nowrap"
+                                               href="<%= withBase('/admin/aulas/turma/' + linha.turma_id) %>">
+                                                <i class="fa-solid fa-table-cells" aria-hidden="true"></i>
+                                                <span>Abrir grade</span>
+                                                <span class="visually-hidden">da turma <%= nomeTurma %></span>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                <% }) %>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <% if (grupo.ocultos > 0) { %>
+                        <p class="painel-indicador-nota mb-0">
+                            <i class="fa-solid fa-ellipsis" aria-hidden="true"></i>
+                            E mais <%= grupo.ocultos %> ocorrência(s) deste tipo.
+                        </p>
+                    <% } %>
+                </div>
+            <% }) %>
+        <% } %>
+    </section>
+<% } %>
+
+<%- include('../layouts/admin-fim') %>

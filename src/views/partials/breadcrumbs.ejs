@@ -1,0 +1,14 @@
+<nav aria-label="Trilha de navegação" class="painel-breadcrumbs">
+    <ol class="breadcrumb mb-0">
+        <% breadcrumbs.forEach((item, indice) => { %>
+            <% const ultimo = indice === breadcrumbs.length - 1; %>
+            <li class="breadcrumb-item <%= ultimo ? 'active' : '' %>" <%= ultimo ? 'aria-current="page"' : '' %>>
+                <% if (!ultimo && item.url) { %>
+                    <a href="<%= withBase(item.url) %>"><%= item.texto %></a>
+                <% } else { %>
+                    <%= item.texto %>
+                <% } %>
+            </li>
+        <% }) %>
+    </ol>
+</nav>

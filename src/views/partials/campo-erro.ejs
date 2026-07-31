@@ -1,0 +1,10 @@
+<%
+/*
+ * Mensagem de erro de um campo de formulario.
+ * Espera: erros (objeto campo -> mensagem) e campo (nome do campo).
+ */
+const mensagem = erros && erros[campo];
+%>
+<% if (mensagem) { %>
+    <div class="invalid-feedback d-block" id="erro-<%= campo %>"><%= mensagem %></div>
+<% } %>

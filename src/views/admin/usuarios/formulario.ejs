@@ -1,0 +1,216 @@
+<%
+/*
+ * Formulario de usuario (criacao e edicao).
+ * Espera: modo, usuario, valores, erros, perfis, opcoes, senhaMinima, acao,
+ *         ehProprioUsuario.
+ *
+ * SEGURANCA: o campo de senha vem SEMPRE vazio — nem a senha nem o hash sao
+ * enviados para esta view, inclusive apos um erro de validacao.
+ */
+const edicao = modo === 'editar';
+const classe = (campo) => (erros && erros[campo] ? ' is-invalid' : '');
+const descrito = (campo) => (erros && erros[campo] ? 'erro-' + campo : '');
+const cursosMarcados = (valores.cursosIds || []).map(Number);
+const campusMarcados = (valores.campusIds || []).map(Number);
+%>
+<%- include('../../layouts/admin-inicio') %>
+
+<% if (typeof mensagem !== 'undefined' && mensagem) { %>
+    <div class="alert alert-danger" role="alert">
+        <i class="fa-solid fa-circle-exclamation me-2" aria-hidden="true"></i><%= mensagem %>
+    </div>
+<% } %>
+
+<% if (erros && erros.geral) { %>
+    <div class="alert alert-danger" role="alert">
+        <i class="fa-solid fa-circle-exclamation me-2" aria-hidden="true"></i><%= erros.geral %>
+    </div>
+<% } %>
+
+<% if (ehProprioUsuario) { %>
+    <div class="alert alert-info" role="alert">
+        <i class="fa-solid fa-circle-info me-2" aria-hidden="true"></i>
+        Este é o seu próprio usuário: por segurança, você não pode rebaixar o seu perfil nem inativar o seu acesso.
+    </div>
+<% } %>
+
+<div class="painel-cartao">
+    <div class="painel-cartao-cabecalho">
+        <h2 class="h6 mb-0"><%= edicao ? 'Editar usuário' : 'Novo usuário' %></h2>
+        <a class="btn btn-outline-secondary btn-sm" href="<%= withBase('/admin/usuarios') %>">
+            <i class="fa-solid fa-arrow-left" aria-hidden="true"></i> Voltar
+        </a>
+    </div>
+
+    <form method="POST" action="<%= withBase(acao) %>" novalidate autocomplete="off">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+        <div class="row g-3">
+            <div class="col-12 col-lg-6">
+                <label class="form-label" for="nome">Nome <span class="text-danger">*</span></label>
+                <input class="form-control<%= classe('nome') %>" type="text" id="nome" name="nome"
+                       value="<%= valores.nome %>" maxlength="120" required autofocus
+                       aria-describedby="<%= descrito('nome') %>">
+                <%- include('../../partials/campo-erro', { erros: erros, campo: 'nome' }) %>
+            </div>
+
+            <div class="col-12 col-lg-6">
+                <label class="form-label" for="email">E-mail <span class="text-danger">*</span></label>
+                <input class="form-control<%= classe('email') %>" type="email" id="email" name="email"
+                       value="<%= valores.email %>" maxlength="150" required inputmode="email"
+                       autocomplete="off" aria-describedby="<%= descrito('email') %>">
+                <%- include('../../partials/campo-erro', { erros: erros, campo: 'email' }) %>
+            </div>
+
+            <% if (!edicao) { %>
+                <div class="col-12 col-lg-6">
+                    <label class="form-label" for="senha">Senha <span class="text-danger">*</span></label>
+                    <input class="form-control<%= classe('senha') %>" type="password" id="senha" name="senha"
+                           minlength="<%= senhaMinima %>" maxlength="200" required autocomplete="new-password"
+                           aria-describedby="<%= descrito('senha') || 'ajuda-senha' %>">
+                    <div class="form-text" id="ajuda-senha">Mínimo de <%= senhaMinima %> caracteres.</div>
+                    <%- include('../../partials/campo-erro', { erros: erros, campo: 'senha' }) %>
+                </div>
+            <% } %>
+
+            <div class="col-12 col-lg-<%= edicao ? '6' : '3' %>">
+                <label class="form-label" for="perfil">Perfil <span class="text-danger">*</span></label>
+                <select class="form-select<%= classe('perfil') %>" id="perfil" name="perfil" required
+                        aria-describedby="<%= descrito('perfil') %>">
+                    <% perfis.forEach((perfil) => { %>
+                        <option value="<%= perfil.valor %>" <%= valores.perfil === perfil.valor ? 'selected' : '' %>>
+                            <%= perfil.rotulo %>
+                        </option>
+                    <% }) %>
+                </select>
+                <%- include('../../partials/campo-erro', { erros: erros, campo: 'perfil' }) %>
+            </div>
+
+            <div class="col-12 col-lg-<%= edicao ? '6' : '3' %>">
+                <label class="form-label" for="ativo">Situação</label>
+                <select class="form-select<%= classe('ativo') %>" id="ativo" name="ativo"
+                        aria-describedby="<%= descrito('ativo') %>">
+                    <option value="true" <%= valores.ativo ? 'selected' : '' %>>Ativo</option>
+                    <option value="false" <%= valores.ativo ? '' : 'selected' %>>Inativo</option>
+                </select>
+                <%- include('../../partials/campo-erro', { erros: erros, campo: 'ativo' }) %>
+            </div>
+        </div>
+
+        <hr class="my-4">
+
+        <h3 class="h6">Escopo de acesso</h3>
+        <p class="text-muted small">
+            Cursos valem para o perfil Coordenador e campus para o perfil NAP. Administradores enxergam tudo,
+            independentemente do que estiver marcado aqui.
+        </p>
+
+        <div class="row g-3">
+            <div class="col-12 col-lg-6">
+                <fieldset>
+                    <legend class="form-label">Cursos</legend>
+                    <% if (opcoes.cursos.length === 0) { %>
+                        <p class="text-muted small mb-0">Nenhum curso cadastrado.</p>
+                    <% } else { %>
+                        <div class="border rounded p-2" style="max-height: 240px; overflow-y: auto;">
+                            <% opcoes.cursos.forEach((curso) => { %>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="cursosIds"
+                                           id="curso-<%= curso.id %>" value="<%= curso.id %>"
+                                           <%= cursosMarcados.includes(Number(curso.id)) ? 'checked' : '' %>>
+                                    <label class="form-check-label" for="curso-<%= curso.id %>">
+                                        <%= curso.nome %><%= curso.ativo ? '' : ' — inativo' %>
+                                    </label>
+                                </div>
+                            <% }) %>
+                        </div>
+                    <% } %>
+                    <%- include('../../partials/campo-erro', { erros: erros, campo: 'cursosIds' }) %>
+                </fieldset>
+            </div>
+
+            <div class="col-12 col-lg-6">
+                <fieldset>
+                    <legend class="form-label">Campus</legend>
+                    <% if (opcoes.campus.length === 0) { %>
+                        <p class="text-muted small mb-0">Nenhum campus cadastrado.</p>
+                    <% } else { %>
+                        <div class="border rounded p-2" style="max-height: 240px; overflow-y: auto;">
+                            <% opcoes.campus.forEach((campus) => { %>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="campusIds"
+                                           id="campus-<%= campus.id %>" value="<%= campus.id %>"
+                                           <%= campusMarcados.includes(Number(campus.id)) ? 'checked' : '' %>>
+                                    <label class="form-check-label" for="campus-<%= campus.id %>">
+                                        <%= campus.nome %><%= campus.ativo ? '' : ' — inativo' %>
+                                    </label>
+                                </div>
+                            <% }) %>
+                        </div>
+                    <% } %>
+                    <%- include('../../partials/campo-erro', { erros: erros, campo: 'campusIds' }) %>
+                </fieldset>
+            </div>
+        </div>
+
+        <div class="d-flex flex-wrap gap-2 mt-4">
+            <button class="btn btn-primary" type="submit">
+                <i class="fa-solid fa-floppy-disk" aria-hidden="true"></i>
+                <%= edicao ? 'Salvar alterações' : 'Cadastrar usuário' %>
+            </button>
+            <a class="btn btn-outline-secondary" href="<%= withBase('/admin/usuarios') %>">Cancelar</a>
+        </div>
+    </form>
+</div>
+
+<% if (edicao) { %>
+    <div class="painel-cartao">
+        <h2 class="h6 mb-1">Redefinir senha</h2>
+        <p class="text-muted small">
+            A senha atual não pode ser consultada. Informe uma nova senha e comunique-a à pessoa por um canal seguro.
+        </p>
+
+        <form method="POST" action="<%= withBase('/admin/usuarios/' + valores.id + '/senha') %>"
+              autocomplete="off"
+              data-confirmar="Redefinir a senha de <%= valores.nome %>?">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+            <div class="row g-3 align-items-end">
+                <div class="col-12 col-md-4">
+                    <label class="form-label" for="nova-senha">Nova senha <span class="text-danger">*</span></label>
+                    <input class="form-control<%= classe('senha') %>" type="password" id="nova-senha" name="senha"
+                           minlength="<%= senhaMinima %>" maxlength="200" required autocomplete="new-password"
+                           aria-describedby="<%= descrito('senha') || 'ajuda-nova-senha' %>">
+                    <div class="form-text" id="ajuda-nova-senha">Mínimo de <%= senhaMinima %> caracteres.</div>
+                    <%- include('../../partials/campo-erro', { erros: erros, campo: 'senha' }) %>
+                </div>
+
+                <div class="col-12 col-md-4">
+                    <label class="form-label" for="confirmacao">Confirmar nova senha</label>
+                    <input class="form-control<%= classe('confirmacao') %>" type="password" id="confirmacao"
+                           name="confirmacao" maxlength="200" autocomplete="new-password"
+                           aria-describedby="<%= descrito('confirmacao') %>">
+                    <%- include('../../partials/campo-erro', { erros: erros, campo: 'confirmacao' }) %>
+                </div>
+
+                <div class="col-12 col-md-4">
+                    <button class="btn btn-outline-danger" type="submit">
+                        <i class="fa-solid fa-key" aria-hidden="true"></i> Redefinir senha
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <% if (usuario) { %>
+        <div class="painel-cartao">
+            <h2 class="h6 mb-2">Resumo</h2>
+            <ul class="list-unstyled small text-muted mb-0">
+                <li>Último login: <%= usuario.ultimoLoginEm ? formatadores.dataHoraBr(usuario.ultimoLoginEm) : 'nunca acessou' %>.</li>
+                <li><strong><%= (usuario.cursosIds || []).length %></strong> curso(s) e <strong><%= (usuario.campusIds || []).length %></strong> campus vinculado(s).</li>
+            </ul>
+        </div>
+    <% } %>
+<% } %>
+
+<%- include('../../layouts/admin-fim') %>

@@ -1,0 +1,367 @@
+<%- include('../../layouts/admin-inicio') %>
+
+<%
+/*
+ * Listagem de aulas: porta de entrada do menu.
+ *
+ * Alem dos filtros comuns, expoe as duas pendencias que o painel aponta
+ * ("sem horário" e "sem local") — os links do dashboard chegam aqui com
+ * ?sem_horario=1 e ?sem_local=1.
+ *
+ * Cada aula abre no montador da propria turma; a edicao acontece la, na celula.
+ */
+const podeEditar = podeVer('aulas', 'editar');
+const podeInativar = podeVer('aulas', 'inativar');
+
+const nomeDoDia = (valor) =>
+    (diasSemana.find((dia) => dia.valor === Number(valor)) || {}).nome || 'Sem dia';
+
+const temFiltro =
+    filtros.busca !== '' ||
+    filtros.turma_id !== '' ||
+    filtros.curso_id !== '' ||
+    filtros.campus_id !== '' ||
+    filtros.periodo_id !== '' ||
+    filtros.turno_id !== '' ||
+    filtros.professor_id !== '' ||
+    filtros.local_id !== '' ||
+    filtros.dia !== '' ||
+    filtros.modalidade !== '' ||
+    filtros.ativo !== '' ||
+    filtros.sem_horario ||
+    filtros.sem_local;
+%>
+
+<link rel="stylesheet" href="<%= asset('/css/montador.css') %>">
+
+<section class="painel-cartao" aria-labelledby="titulo-aulas">
+    <div class="painel-cartao-cabecalho">
+        <div>
+            <h2 class="h6 mb-1" id="titulo-aulas">Aulas</h2>
+            <p class="painel-indicador-nota mb-0">
+                A montagem da grade acontece por turma, na matriz de dias e horários.
+            </p>
+        </div>
+
+        <a class="btn btn-primary btn-sm" href="<%= withBase('/admin/aulas/turma') %>">
+            <i class="fa-solid fa-table-cells-large" aria-hidden="true"></i> Montar grade
+        </a>
+    </div>
+
+    <form method="GET" action="<%= withBase('/admin/aulas') %>" class="painel-filtros" role="search">
+        <div class="painel-filtros-campo">
+            <label class="form-label" for="filtro-busca">Buscar</label>
+            <input type="search" class="form-control form-control-sm" id="filtro-busca" name="busca"
+                   value="<%= filtros.busca %>" maxlength="120"
+                   placeholder="Disciplina, professor, local ou turma">
+        </div>
+
+        <div class="painel-filtros-campo">
+            <label class="form-label" for="filtro-turma">Turma</label>
+            <select class="form-select form-select-sm" id="filtro-turma" name="turma_id" data-buscavel="turmas">
+                <option value="">Todas</option>
+                <% opcoes.turmas.forEach((turma) => { %>
+                    <option value="<%= turma.id %>" <%= filtros.turma_id === String(turma.id) ? 'selected' : '' %>>
+                        <%= turma.nome %><%= turma.codigo ? ' (' + turma.codigo + ')' : '' %>
+                    </option>
+                <% }) %>
+            </select>
+        </div>
+
+        <div class="painel-filtros-campo">
+            <label class="form-label" for="filtro-curso">Curso</label>
+            <select class="form-select form-select-sm" id="filtro-curso" name="curso_id" data-buscavel="cursos">
+                <option value="">Todos</option>
+                <% opcoes.cursos.forEach((curso) => { %>
+                    <option value="<%= curso.id %>" <%= filtros.curso_id === String(curso.id) ? 'selected' : '' %>>
+                        <%= curso.nome %>
+                    </option>
+                <% }) %>
+            </select>
+        </div>
+
+        <div class="painel-filtros-campo">
+            <label class="form-label" for="filtro-campus">Campus</label>
+            <select class="form-select form-select-sm" id="filtro-campus" name="campus_id">
+                <option value="">Todos</option>
+                <% opcoes.campus.forEach((campus) => { %>
+                    <option value="<%= campus.id %>" <%= filtros.campus_id === String(campus.id) ? 'selected' : '' %>>
+                        <%= campus.nome %>
+                    </option>
+                <% }) %>
+            </select>
+        </div>
+
+        <div class="painel-filtros-campo">
+            <label class="form-label" for="filtro-periodo">Período letivo</label>
+            <select class="form-select form-select-sm" id="filtro-periodo" name="periodo_id">
+                <option value="">Todos</option>
+                <% opcoes.periodos.forEach((periodo) => { %>
+                    <option value="<%= periodo.id %>" <%= filtros.periodo_id === String(periodo.id) ? 'selected' : '' %>>
+                        <%= periodo.codigo %>
+                    </option>
+                <% }) %>
+            </select>
+        </div>
+
+        <div class="painel-filtros-campo">
+            <label class="form-label" for="filtro-turno">Turno</label>
+            <select class="form-select form-select-sm" id="filtro-turno" name="turno_id">
+                <option value="">Todos</option>
+                <% opcoes.turnos.forEach((turno) => { %>
+                    <option value="<%= turno.id %>" <%= filtros.turno_id === String(turno.id) ? 'selected' : '' %>>
+                        <%= turno.nome %>
+                    </option>
+                <% }) %>
+            </select>
+        </div>
+
+        <div class="painel-filtros-campo">
+            <label class="form-label" for="filtro-dia">Dia</label>
+            <select class="form-select form-select-sm" id="filtro-dia" name="dia">
+                <option value="">Todos</option>
+                <% diasSemana.forEach((dia) => { %>
+                    <option value="<%= dia.valor %>" <%= filtros.dia === String(dia.valor) ? 'selected' : '' %>>
+                        <%= dia.nome %>
+                    </option>
+                <% }) %>
+            </select>
+        </div>
+
+        <div class="painel-filtros-campo">
+            <label class="form-label" for="filtro-professor">Professor</label>
+            <select class="form-select form-select-sm" id="filtro-professor" name="professor_id" data-buscavel="professores">
+                <option value="">Todos</option>
+                <% opcoes.professores.forEach((professor) => { %>
+                    <option value="<%= professor.id %>" <%= filtros.professor_id === String(professor.id) ? 'selected' : '' %>>
+                        <%= professor.nome %>
+                    </option>
+                <% }) %>
+            </select>
+        </div>
+
+        <div class="painel-filtros-campo">
+            <label class="form-label" for="filtro-local">Local</label>
+            <select class="form-select form-select-sm" id="filtro-local" name="local_id"
+                    data-buscavel="locais">
+                <option value="">Todos</option>
+                <% opcoes.locais.forEach((local) => { %>
+                    <option value="<%= local.id %>" <%= filtros.local_id === String(local.id) ? 'selected' : '' %>>
+                        <%= local.nome %> — <%= local.campus_nome %>
+                    </option>
+                <% }) %>
+            </select>
+        </div>
+
+        <div class="painel-filtros-campo">
+            <label class="form-label" for="filtro-modalidade">Modalidade</label>
+            <select class="form-select form-select-sm" id="filtro-modalidade" name="modalidade">
+                <option value="">Todas</option>
+                <% modalidades.forEach((item) => { %>
+                    <option value="<%= item.valor %>" <%= filtros.modalidade === item.valor ? 'selected' : '' %>>
+                        <%= item.rotulo %>
+                    </option>
+                <% }) %>
+            </select>
+        </div>
+
+        <div class="painel-filtros-campo">
+            <label class="form-label" for="filtro-situacao">Situação</label>
+            <select class="form-select form-select-sm" id="filtro-situacao" name="ativo">
+                <option value="" <%= filtros.ativo === '' ? 'selected' : '' %>>Todas</option>
+                <option value="1" <%= filtros.ativo === '1' ? 'selected' : '' %>>Ativas</option>
+                <option value="0" <%= filtros.ativo === '0' ? 'selected' : '' %>>Inativas</option>
+            </select>
+        </div>
+
+        <div class="painel-filtros-campo">
+            <label class="form-label" for="filtro-por-pagina">Por página</label>
+            <select class="form-select form-select-sm" id="filtro-por-pagina" name="por_pagina"
+                    data-submete-ao-mudar>
+                <% paginacao.tamanhos.forEach((tamanho) => { %>
+                    <option value="<%= tamanho %>" <%= paginacao.porPagina === tamanho ? 'selected' : '' %>>
+                        <%= tamanho %>
+                    </option>
+                <% }) %>
+            </select>
+        </div>
+
+        <div class="painel-filtros-rodape">
+            <fieldset class="painel-filtros-pendencias">
+                <legend>Pendências</legend>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" value="1" id="filtro-sem-horario"
+                           name="sem_horario" <%= filtros.sem_horario ? 'checked' : '' %>>
+                    <label class="form-check-label" for="filtro-sem-horario">Sem horário</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" value="1" id="filtro-sem-local"
+                           name="sem_local" <%= filtros.sem_local ? 'checked' : '' %>>
+                    <label class="form-check-label" for="filtro-sem-local">Sem local</label>
+                </div>
+            </fieldset>
+
+            <div class="painel-filtros-fim">
+                <%
+                /* O total ja existia so no rodape da tabela, depois de 20 linhas.
+                   Aqui ele responde de imediato o que o filtro alcancou. */
+                const encontradas = paginacao.totalRegistros;
+                %>
+                <p class="painel-filtros-contagem" aria-live="polite">
+                    <% if (encontradas === 0) { %>
+                        Nenhuma aula encontrada
+                    <% } else { %>
+                        <strong><%= encontradas.toLocaleString('pt-BR') %></strong>
+                        aula<%= encontradas === 1 ? '' : 's' %>
+                        encontrada<%= encontradas === 1 ? '' : 's' %>
+                    <% } %>
+                </p>
+
+                <button type="submit" class="btn btn-sm btn-outline-secondary">
+                    <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i> Filtrar
+                </button>
+                <% if (temFiltro) { %>
+                    <a class="btn btn-sm btn-link" href="<%= withBase('/admin/aulas') %>">Limpar</a>
+                <% } %>
+            </div>
+        </div>
+    </form>
+
+    <% if (itens.length === 0) { %>
+        <%- include('../../partials/estado-vazio', {
+            icone: 'fa-calendar-days',
+            titulo: 'Nenhuma aula encontrada',
+            descricao: temFiltro
+                ? 'Nenhuma aula corresponde aos filtros aplicados.'
+                : 'Monte a grade de uma turma para começar.',
+            acaoUrl: withBase('/admin/aulas/turma'),
+            acaoTexto: 'Montar grade'
+        }) %>
+    <% } else { %>
+        <div class="table-responsive">
+            <table class="table painel-tabela align-middle">
+                <thead>
+                    <tr>
+                        <th scope="col">Turma</th>
+                        <th scope="col">Dia</th>
+                        <th scope="col">Horário</th>
+                        <th scope="col">Disciplina</th>
+                        <th scope="col">Professor</th>
+                        <th scope="col">Local</th>
+                        <th scope="col">Modalidade</th>
+                        <th scope="col">Situação</th>
+                        <th scope="col"><span class="visually-hidden">Ações</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% itens.forEach((aula) => { %>
+                        <tr>
+                            <%
+                            /* Numa turma gerencial a aula vale para varias
+                               turmas, de semestres diferentes: sem isso a
+                               listagem nao diz de quem e a disciplina. */
+                            const atendidas = Array.isArray(aula.turmas_atendidas)
+                                ? aula.turmas_atendidas
+                                : [];
+                            const semestres = [...new Set(
+                                atendidas.map((item) => item.semestre).filter((item) => item)
+                            )];
+                            %>
+                            <td>
+                                <a href="<%= withBase('/admin/aulas/turma/' + aula.turma_id) %>">
+                                    <%= aula.turma_nome %>
+                                </a>
+                                <% if (aula.turma_codigo) { %>
+                                    <span class="d-block small text-body-secondary"><%= aula.turma_codigo %></span>
+                                <% } %>
+                                <% if (atendidas.length > 0) { %>
+                                    <span class="d-block small text-body-secondary"
+                                          title="<%= atendidas.map((item) => item.codigo || item.nome).join(', ') %>">
+                                        <i class="fa-solid fa-share-nodes" aria-hidden="true"></i>
+                                        <%= atendidas.length %> turma<%= atendidas.length === 1 ? '' : 's' %><%
+                                        %><% if (semestres.length > 0) { %> ·
+                                            <%= semestres.map((item) => item + 'º').join(', ') %> sem<%
+                                        %><% } %>
+                                    </span>
+                                <% } else if (aula.semestre_curricular) { %>
+                                    <span class="d-block small text-body-secondary">
+                                        <%= formatadores.ordinal(aula.semestre_curricular) %> semestre
+                                    </span>
+                                <% } %>
+                            </td>
+                            <td><%= nomeDoDia(aula.dia_semana) %></td>
+                            <td>
+                                <% if (aula.horario_nome) { %>
+                                    <span class="d-block"><%= aula.horario_nome %></span>
+                                    <span class="small text-body-secondary">
+                                        <%= formatadores.faixaHoraria(aula.hora_inicio, aula.hora_fim) %>
+                                    </span>
+                                <% } else { %>
+                                    <span class="badge text-bg-warning-subtle text-warning-emphasis border border-warning-subtle">
+                                        Sem horário
+                                    </span>
+                                <% } %>
+                            </td>
+                            <th scope="row" class="fw-semibold"><%= aula.disciplina_nome %></th>
+                            <td><%= aula.professor_nome || '—' %></td>
+                            <td>
+                                <% if (aula.local_nome) { %>
+                                    <%= formatadores.tipoLocalRotulo(aula.local_tipo) %> <%= aula.local_nome %>
+                                <% } else { %>
+                                    <span class="badge text-bg-warning-subtle text-warning-emphasis border border-warning-subtle">
+                                        Sem local
+                                    </span>
+                                <% } %>
+                            </td>
+                            <td><%= formatadores.modalidadeRotulo(aula.modalidade) %></td>
+                            <td><%- include('../../partials/status-badge', { ativo: aula.ativo }) %></td>
+                            <td>
+                                <div class="painel-tabela-acoes">
+                                    <% if (podeEditar) { %>
+                                        <a class="btn btn-sm btn-outline-secondary"
+                                           href="<%= withBase('/admin/aulas/turma/' + aula.turma_id) %>?acao=editar&aula=<%= aula.id %>#formulario-aula">
+                                            <i class="fa-solid fa-pen" aria-hidden="true"></i>
+                                            <span class="visually-hidden">
+                                                Editar <%= aula.disciplina_nome %> de <%= aula.turma_nome %>
+                                            </span>
+                                        </a>
+                                    <% } %>
+
+                                    <% if (podeInativar) { %>
+                                        <form method="POST"
+                                              action="<%= withBase('/admin/aulas/' + aula.id + (aula.ativo ? '/inativar' : '/reativar')) %>"
+                                              data-confirmar="<%= aula.ativo ? 'Inativar' : 'Reativar' %> a aula de <%= aula.disciplina_nome %>?">
+                                            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                                            <input type="hidden" name="voltar" value="<%= voltar %>">
+                                            <button type="submit" class="btn btn-sm btn-outline-secondary">
+                                                <i class="fa-solid <%= aula.ativo ? 'fa-toggle-off' : 'fa-toggle-on' %>" aria-hidden="true"></i>
+                                                <span class="visually-hidden">
+                                                    <%= aula.ativo ? 'Inativar' : 'Reativar' %> <%= aula.disciplina_nome %>
+                                                </span>
+                                            </button>
+                                        </form>
+
+                                        <form method="POST"
+                                              action="<%= withBase('/admin/aulas/' + aula.id + '/remover') %>"
+                                              data-confirmar="Remover definitivamente a aula de <%= aula.disciplina_nome %>?">
+                                            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                                            <input type="hidden" name="voltar" value="<%= voltar %>">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                <i class="fa-solid fa-trash" aria-hidden="true"></i>
+                                                <span class="visually-hidden">Remover <%= aula.disciplina_nome %></span>
+                                            </button>
+                                        </form>
+                                    <% } %>
+                                </div>
+                            </td>
+                        </tr>
+                    <% }) %>
+                </tbody>
+            </table>
+        </div>
+
+        <%- include('../../partials/paginacao', { paginacao: paginacao, urlBase: urlBase }) %>
+    <% } %>
+</section>
+
+<%- include('../../layouts/admin-fim') %>

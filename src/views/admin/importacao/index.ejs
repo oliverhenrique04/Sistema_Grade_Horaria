@@ -1,0 +1,228 @@
+<%
+/*
+ * Envio da planilha do cubo. Espera: periodos, historico, erros, valores, acao.
+ *
+ * Nenhum dado e gravado por esta tela: o envio produz uma conferencia, e so a
+ * confirmacao na tela seguinte grava.
+ */
+const valorSelecionado = (valor) => (valor === null || valor === undefined ? '' : String(valor));
+const numero = (valor) => Number(valor || 0).toLocaleString('pt-BR');
+%>
+<%- include('../../layouts/admin-inicio') %>
+
+<link rel="stylesheet" href="<%= asset('/css/importacao.css') %>">
+
+<section class="painel-cartao" aria-labelledby="titulo-envio">
+    <div class="painel-cartao-cabecalho">
+        <div>
+            <h2 class="h6 mb-1" id="titulo-envio">Enviar planilha de horários</h2>
+            <p class="text-muted small mb-2">
+                Arquivo <code>.xlsx</code> exportado do TOTVS Educacional.
+            </p>
+
+            <%
+            /*
+             * Identificacao do cubo, copiada como aparece no menu do TOTVS —
+             * maiusculas e sem acento. E por esse texto que o operador procura
+             * o relatorio la; normalizar a grafia faria a busca nao casar.
+             *
+             * Fica no cabecalho, e nao junto ao campo de arquivo, porque e a
+             * primeira coisa de que se precisa: exporta-se no ERP antes de ter
+             * o que enviar aqui.
+             */
+            %>
+            <p class="importacao-cubo mb-0">
+                <i class="fa-solid fa-cube" aria-hidden="true"></i>
+                <span class="importacao-cubo-rotulo">Cubo de origem</span>
+                <code class="importacao-cubo-codigo" translate="no">OXY.EDU.1.0028 - CONFERENCIA DE CADASTRO COM HORARIO - SALA</code>
+            </p>
+        </div>
+    </div>
+
+    <form method="POST" action="<%= withBase(acao) %>" enctype="multipart/form-data"
+          class="importacao-formulario" data-envio-planilha>
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+        <div class="importacao-campo-arquivo">
+            <label class="form-label" for="arquivo">Planilha do cubo</label>
+
+            <%
+            /*
+             * A area de soltar e so a moldura: o <input type="file"> continua
+             * dentro dela, visivel e funcional. Quem arrasta o arquivo acerta um
+             * alvo grande; quem prefere clicar usa o mesmo campo de sempre; quem
+             * usa teclado chega nele pela tabulacao como em qualquer formulario.
+             */
+            %>
+            <div class="importacao-soltar" data-soltar-arquivo>
+                <i class="fa-solid fa-file-arrow-up importacao-soltar-icone" aria-hidden="true"></i>
+                <p class="importacao-soltar-titulo">Arraste o arquivo aqui ou escolha abaixo</p>
+                <input class="form-control <%= erros.arquivo ? 'is-invalid' : '' %>"
+                       type="file" id="arquivo" name="arquivo" accept=".xlsx" required
+                       <%= erros.arquivo ? 'aria-describedby="erro-arquivo"' : '' %>>
+                <p class="importacao-soltar-escolhido" data-arquivo-escolhido aria-live="polite"></p>
+            </div>
+
+            <%- include('../../partials/campo-erro', { erros: erros, campo: 'arquivo' }) %>
+        </div>
+
+        <div class="importacao-linha">
+            <div class="importacao-campo">
+                <label class="form-label" for="periodo">Período letivo de destino</label>
+                <select class="form-select <%= erros.periodoLetivoId ? 'is-invalid' : '' %>"
+                        id="periodo" name="periodoLetivoId">
+                    <option value="">Detectar pelas datas da planilha</option>
+                    <% periodos.forEach((periodo) => { %>
+                        <option value="<%= periodo.id %>"
+                                <%= valorSelecionado(valores.periodoLetivoId) === String(periodo.id) ? 'selected' : '' %>>
+                            <%= periodo.codigo %><%= periodo.atual ? ' (atual)' : '' %>
+                        </option>
+                    <% }) %>
+                </select>
+                <%- include('../../partials/campo-erro', { erros: erros, campo: 'periodoLetivoId' }) %>
+                <p class="form-text">
+                    Ao detectar, o período é criado se ainda não existir — sem passar a ser o atual.
+                </p>
+            </div>
+
+            <fieldset class="importacao-campo">
+                <legend class="form-label">Aulas fora da planilha</legend>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="inativar" name="inativarAusentes"
+                           value="1" <%= valores.inativarAusentes ? 'checked' : '' %>>
+                    <label class="form-check-label" for="inativar">
+                        Inativar aulas importadas que não estão mais na planilha
+                    </label>
+                </div>
+                <p class="form-text mb-0">
+                    Vale apenas para aulas vindas do TOTVS e apenas nas turmas presentes no arquivo.
+                    Uma carga parcial nunca desliga a grade de quem não veio nela.
+                </p>
+            </fieldset>
+        </div>
+
+        <div class="importacao-acoes">
+            <button type="submit" class="btn btn-primary" data-enviar-planilha>
+                <i class="fa-solid fa-magnifying-glass-chart" aria-hidden="true"></i>
+                <span data-rotulo-envio>Conferir antes de importar</span>
+            </button>
+            <p class="form-text mb-0">O envio não grava nada: você confere e confirma na tela seguinte.</p>
+        </div>
+    </form>
+
+    <%
+    /*
+     * A explicacao ficava ACIMA do formulario: quem entra para carregar a grade
+     * — que e a unica coisa que se faz aqui — encontrava cinco paragrafos antes
+     * do campo de arquivo. Ela continua inteira, mas recolhida: quem precisa
+     * abre, quem ja sabe vai direto ao envio.
+     */
+    %>
+    <details class="importacao-explicacao">
+        <summary>
+            <span class="importacao-explicacao-titulo">Como a carga é feita</span>
+            <span class="importacao-explicacao-nota">o que a planilha precisa ter e o que a carga faz</span>
+        </summary>
+
+        <ul>
+            <li>
+                <strong>Nada é duplicado.</strong> Campus, cursos, disciplinas, professores e turmas
+                são reconhecidos pelos códigos do TOTVS (filial, <code>CODCURSO</code>,
+                <code>CODDISC</code>, chapa e <code>CODTURMA</code>). Recarregar a mesma planilha
+                atualiza o que mudou.
+            </li>
+            <li>
+                <strong>Disciplina compartilhada fica em um lugar só.</strong> Quando o cubo aponta
+                uma turma gerencial (<code>TURMA_GERENCIAL</code>), a aula é registrada nela e as
+                turmas atendidas ficam ligadas a essa turma — sem repetir a mesma disciplina em cada
+                <code>CODTURMA</code>.
+            </li>
+            <li>
+                <strong>A sala não vem na planilha.</strong> As aulas entram sem local e aparecem em
+                <a href="<%= withBase('/admin/aulas?semLocal=1') %>">Aulas</a> para o NAP alocar.
+            </li>
+            <li>
+                <strong>Campus e curso novos entram com o nome do ERP.</strong> Ajuste o nome depois
+                em <a href="<%= withBase('/admin/campus') %>">Campus</a> e
+                <a href="<%= withBase('/admin/cursos') %>">Cursos</a> se quiser: o vínculo é feito
+                pelo código do TOTVS e continua valendo após o rename.
+            </li>
+            <li>
+                <strong>Turmas e aulas nunca são apagadas.</strong> O que sai da planilha pode, no
+                máximo, ser inativado — e só se você marcar a opção acima.
+            </li>
+            <li>
+                <strong>Colunas esperadas no arquivo.</strong>
+                <code>FILIAL</code>, <code>CHAPA</code>, <code>NOME</code>,
+                <code>HORAINICIAL</code>, <code>HORAFINAL</code>, <code>DISCIPLINA</code>,
+                <code>TURNO DISCIPLINA</code>, <code>TURMA_GERENCIAL</code>,
+                <code>GERENCIADA</code>, <code>CODTURMA</code>, <code>IDTURMADISC</code>,
+                <code>CODDISC</code> e <code>SEMANA</code>.
+            </li>
+        </ul>
+    </details>
+</section>
+
+<section class="painel-cartao" aria-labelledby="titulo-historico">
+    <div class="painel-cartao-cabecalho">
+        <div>
+            <h2 class="h6 mb-1" id="titulo-historico">Últimas importações</h2>
+            <p class="text-muted small mb-0">Registro de quem carregou, quando e com que resultado.</p>
+        </div>
+    </div>
+
+    <% if (historico.length === 0) { %>
+        <%- include('../../partials/estado-vazio', {
+            icone: 'fa-file-import',
+            titulo: 'Nenhuma importação registrada',
+            descricao: 'A primeira carga da grade aparecerá aqui.',
+            nivel: 3
+        }) %>
+    <% } else { %>
+        <div class="table-responsive">
+            <table class="table painel-tabela align-middle">
+                <caption class="visually-hidden">Importações já realizadas</caption>
+                <thead>
+                    <tr>
+                        <th scope="col">Quando</th>
+                        <th scope="col">Arquivo</th>
+                        <th scope="col">Período</th>
+                        <th scope="col">Responsável</th>
+                        <th scope="col" class="text-end">Linhas</th>
+                        <th scope="col" class="text-end">Aulas</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% historico.forEach((item) => { %>
+                        <%
+                        const resumo = item.resumo || {};
+                        const aulasDoResumo = resumo.aulas || {};
+                        const totalAvisos = Array.isArray(item.avisos) ? item.avisos.length : 0;
+                        %>
+                        <tr>
+                            <td><%= formatadores.dataHoraBr(item.criado_em) %></td>
+                            <th scope="row" class="fw-normal">
+                                <%= item.arquivo || '—' %>
+                                <% if (totalAvisos > 0) { %>
+                                    <span class="badge text-bg-warning-subtle text-warning-emphasis border border-warning-subtle">
+                                        <%= totalAvisos %> aviso<%= totalAvisos === 1 ? '' : 's' %>
+                                    </span>
+                                <% } %>
+                            </th>
+                            <td><%= item.periodo_codigo || '—' %></td>
+                            <td><%= item.usuario_nome || '—' %></td>
+                            <td class="text-end"><%= numero(item.linhas_consideradas) %></td>
+                            <td class="text-end">
+                                <%= numero(aulasDoResumo.novas) %> nova<%= aulasDoResumo.novas === 1 ? '' : 's' %>
+                                <span class="text-muted">·</span>
+                                <%= numero(aulasDoResumo.atualizadas) %> atualizada<%= aulasDoResumo.atualizadas === 1 ? '' : 's' %>
+                            </td>
+                        </tr>
+                    <% }) %>
+                </tbody>
+            </table>
+        </div>
+    <% } %>
+</section>
+
+<%- include('../../layouts/admin-fim') %>

@@ -1,0 +1,103 @@
+<%
+    // Filtros encadeados: cada lista ja chega do servico limitada pelas escolhas
+    // anteriores. O envio automatico no `change` e apenas conveniencia — o
+    // formulario funciona sem JavaScript pelo botao "Aplicar filtros".
+%>
+<form class="filtros glass-soft" method="GET" action="<%= withBase('/') %>" data-submete-ao-mudar>
+    <h2 class="filtros-titulo" id="titulo-filtros">
+        <i class="fa-solid fa-sliders" aria-hidden="true"></i> Filtrar a grade
+    </h2>
+
+    <div class="filtros-grade" role="group" aria-labelledby="titulo-filtros">
+        <div class="campo">
+            <label class="campo-rotulo" for="filtro-periodo">Período letivo</label>
+            <select class="campo-controle" id="filtro-periodo" name="periodo" aria-label="Filtrar por período letivo">
+                <% opcoes.periodos.forEach(function (periodo) { %>
+                    <option value="<%= periodo.id %>" <%= filtrosAplicados.periodoId === periodo.id ? 'selected' : '' %>>
+                        <%= periodo.codigo %><%= periodo.atual ? ' (atual)' : '' %>
+                    </option>
+                <% }) %>
+                <% if (opcoes.periodos.length === 0) { %>
+                    <option value="">Nenhum período disponível</option>
+                <% } %>
+            </select>
+        </div>
+
+        <div class="campo">
+            <label class="campo-rotulo" for="filtro-campus">Campus <span class="obrigatorio">(obrigatório)</span></label>
+            <select class="campo-controle" id="filtro-campus" name="campus" aria-label="Filtrar por campus">
+                <option value="">Selecione o campus</option>
+                <% opcoes.campus.forEach(function (campus) { %>
+                    <option value="<%= campus.id %>" <%= filtrosAplicados.campusId === campus.id ? 'selected' : '' %>>
+                        <%= campus.nome %>
+                    </option>
+                <% }) %>
+            </select>
+        </div>
+
+        <div class="campo">
+            <label class="campo-rotulo" for="filtro-curso">Curso <span class="obrigatorio">(obrigatório)</span></label>
+            <select class="campo-controle" id="filtro-curso" name="curso" aria-label="Filtrar por curso"
+                    aria-describedby="ajuda-curso">
+                <option value="">Selecione o curso</option>
+                <% opcoes.cursos.forEach(function (curso) { %>
+                    <option value="<%= curso.id %>" <%= filtrosAplicados.cursoId === curso.id ? 'selected' : '' %>>
+                        <%= curso.nome %>
+                    </option>
+                <% }) %>
+            </select>
+            <p class="campo-ajuda" id="ajuda-curso">
+                <% if (filtrosAplicados.campus) { %>
+                    Cursos com turmas no campus <%= filtrosAplicados.campus.nome %>.
+                <% } else { %>
+                    Escolha o campus para reduzir a lista de cursos.
+                <% } %>
+            </p>
+        </div>
+
+        <div class="campo">
+            <label class="campo-rotulo" for="filtro-semestre">Semestre</label>
+            <select class="campo-controle" id="filtro-semestre" name="semestre" aria-label="Filtrar por semestre curricular">
+                <option value="">Todos os semestres</option>
+                <% opcoes.semestres.forEach(function (semestre) { %>
+                    <option value="<%= semestre.valor %>" <%= filtrosAplicados.semestre === semestre.valor ? 'selected' : '' %>>
+                        <%= semestre.rotulo %> semestre
+                    </option>
+                <% }) %>
+            </select>
+        </div>
+
+        <div class="campo">
+            <label class="campo-rotulo" for="filtro-turno">Turno</label>
+            <select class="campo-controle" id="filtro-turno" name="turno" aria-label="Filtrar por turno">
+                <option value="">Todos os turnos</option>
+                <% opcoes.turnos.forEach(function (turno) { %>
+                    <option value="<%= turno.id %>" <%= filtrosAplicados.turnoId === turno.id ? 'selected' : '' %>>
+                        <%= turno.nome %>
+                    </option>
+                <% }) %>
+            </select>
+        </div>
+
+        <div class="campo">
+            <label class="campo-rotulo" for="filtro-turma">Turma</label>
+            <select class="campo-controle" id="filtro-turma" name="turma" aria-label="Filtrar por turma">
+                <option value="">Todas as turmas</option>
+                <% opcoes.turmas.forEach(function (turma) { %>
+                    <option value="<%= turma.id %>" <%= filtrosAplicados.turmaId === turma.id ? 'selected' : '' %>>
+                        <%= turma.nome %>
+                    </option>
+                <% }) %>
+            </select>
+        </div>
+    </div>
+
+    <div class="filtros-acoes">
+        <button class="botao botao-primario" type="submit">
+            <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i> Aplicar filtros
+        </button>
+        <a class="botao botao-secundario" href="<%= withBase('/') %>">
+            <i class="fa-solid fa-eraser" aria-hidden="true"></i> Limpar filtros
+        </a>
+    </div>
+</form>

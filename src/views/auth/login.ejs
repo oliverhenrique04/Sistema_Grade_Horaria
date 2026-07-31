@@ -1,0 +1,219 @@
+<%
+    // Pagina standalone: nao usa o layout administrativo.
+    // Variaveis esperadas: erro, email, proximo, csrfToken (todas opcionais).
+    const mensagemErro = typeof erro !== 'undefined' && erro ? erro : '';
+    const emailPreenchido = typeof email !== 'undefined' && email ? email : '';
+    const proximoDestino = typeof proximo !== 'undefined' && proximo ? proximo : '';
+%>
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Entrar • Grade Horária</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --azul-escuro: #0f172a;
+            --azul-medio: #1e293b;
+            --destaque: #38bdf8;
+        }
+
+        body {
+            min-height: 100vh;
+            margin: 0;
+            font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+            background: radial-gradient(circle at 20% 20%, #1e3a8a 0%, transparent 55%),
+                        radial-gradient(circle at 80% 0%, #0e7490 0%, transparent 45%),
+                        var(--azul-escuro);
+            color: #e2e8f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px 16px;
+        }
+
+        .cartao-login {
+            width: 100%;
+            max-width: 420px;
+            background: rgba(15, 23, 42, 0.82);
+            border: 1px solid rgba(148, 163, 184, 0.22);
+            border-radius: 18px;
+            padding: 32px 28px;
+            box-shadow: 0 24px 60px rgba(2, 6, 23, 0.55);
+            backdrop-filter: blur(10px);
+        }
+
+        .marca {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .marca img {
+            height: 44px;
+            width: auto;
+        }
+
+        .marca h1 {
+            font-size: 1.15rem;
+            font-weight: 800;
+            margin: 0;
+            line-height: 1.2;
+        }
+
+        .marca p {
+            margin: 2px 0 0;
+            font-size: 0.8rem;
+            color: #94a3b8;
+        }
+
+        .form-label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            color: #cbd5f5;
+        }
+
+        .form-control {
+            background: rgba(15, 23, 42, 0.75);
+            border: 1px solid rgba(148, 163, 184, 0.35);
+            color: #f8fafc;
+            padding: 11px 14px;
+            border-radius: 10px;
+        }
+
+        .form-control::placeholder { color: #64748b; }
+
+        .form-control:focus {
+            background: rgba(15, 23, 42, 0.95);
+            color: #f8fafc;
+            border-color: var(--destaque);
+            box-shadow: 0 0 0 0.22rem rgba(56, 189, 248, 0.32);
+        }
+
+        /* Foco sempre visivel, inclusive para navegacao por teclado. */
+        a:focus-visible,
+        button:focus-visible,
+        input:focus-visible {
+            outline: 3px solid var(--destaque);
+            outline-offset: 2px;
+        }
+
+        .btn-entrar {
+            width: 100%;
+            padding: 12px;
+            font-weight: 700;
+            border: none;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #2563eb, #0ea5e9);
+            color: #fff;
+        }
+
+        .btn-entrar:hover { filter: brightness(1.08); color: #fff; }
+
+        .alerta-erro {
+            display: flex;
+            gap: 10px;
+            align-items: flex-start;
+            background: rgba(220, 38, 38, 0.16);
+            border: 1px solid rgba(248, 113, 113, 0.5);
+            color: #fecaca;
+            border-radius: 10px;
+            padding: 12px 14px;
+            font-size: 0.9rem;
+            margin-bottom: 18px;
+        }
+
+        .rodape-login {
+            margin-top: 22px;
+            text-align: center;
+            font-size: 0.78rem;
+            color: #64748b;
+        }
+
+        .rodape-login a { color: #94a3b8; }
+
+        @media (max-width: 420px) {
+            .cartao-login { padding: 26px 20px; }
+        }
+    </style>
+</head>
+<body>
+    <main class="cartao-login">
+        <div class="marca">
+            <img src="<%= withBase('/logo_unieuro.png') %>" alt="">
+            <div>
+                <h1>Grade Horária</h1>
+                <p>Acesso administrativo</p>
+            </div>
+        </div>
+
+        <!-- aria-live garante que leitores de tela anunciem o erro apos o envio. -->
+        <div aria-live="assertive" role="status">
+            <% if (mensagemErro) { %>
+                <div class="alerta-erro" id="erro-login" role="alert">
+                    <i class="fa-solid fa-circle-exclamation mt-1" aria-hidden="true"></i>
+                    <span><%= mensagemErro %></span>
+                </div>
+            <% } %>
+        </div>
+
+        <form action="<%= withBase('/login') %>" method="POST" novalidate>
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <% if (proximoDestino) { %>
+                <input type="hidden" name="proximo" value="<%= proximoDestino %>">
+            <% } %>
+
+            <div class="mb-3">
+                <label class="form-label" for="email">E-mail</label>
+                <input
+                    class="form-control"
+                    type="email"
+                    id="email"
+                    name="email"
+                    value="<%= emailPreenchido %>"
+                    placeholder="nome@unieuro.edu.br"
+                    autocomplete="email"
+                    inputmode="email"
+                    maxlength="150"
+                    required
+                    autofocus
+                    <%= mensagemErro ? 'aria-describedby="erro-login"' : '' %>
+                >
+            </div>
+
+            <div class="mb-4">
+                <label class="form-label" for="senha">Senha</label>
+                <input
+                    class="form-control"
+                    type="password"
+                    id="senha"
+                    name="senha"
+                    placeholder="••••••••"
+                    autocomplete="current-password"
+                    maxlength="200"
+                    required
+                    <%= mensagemErro ? 'aria-describedby="erro-login"' : '' %>
+                >
+            </div>
+
+            <button class="btn btn-entrar" type="submit">
+                <i class="fa-solid fa-right-to-bracket me-2" aria-hidden="true"></i>Entrar
+            </button>
+        </form>
+
+        <p class="rodape-login">
+            Esqueceu a senha? Procure a administração do sistema.<br>
+            <a href="<%= withBase('/') %>">Voltar para a consulta pública</a>
+        </p>
+    </main>
+</body>
+</html>
