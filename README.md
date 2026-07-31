@@ -1,180 +1,299 @@
-
 # Sistema de Grade Horária Acadêmica
 
-Um sistema web completo para gestão e visualização de horários de aulas universitárias. O projeto conta com uma área administrativa para coordenação (CRUDs e montagem de grade) e uma interface pública moderna e responsiva para os alunos.
+Aplicação web para montagem e consulta de grades horárias universitárias. Possui uma
+**área pública** de consulta para alunos e um **painel administrativo** protegido por
+login, com perfis de acesso e validação de conflitos de horário.
 
 ---
 
 ## Funcionalidades
 
-### Área Pública (Alunos)
-* **Visualização Clara:** Grade horária organizada por dias da semana.
-* **Filtros Inteligentes:** Seleção por Curso (exibe o Coordenador responsável).
-* **Abas de Turnos:** Navegação fluida entre Integral, Matutino, Vespertino e Noturno.
-* **Identidade Visual:** Cores e ícones dinâmicos para cada turno (ex: Amarelo para Vespertino, Azul para Noturno).
-* **Responsividade:** Funciona bem em celulares e desktops.
+### Área pública
 
-### Área Administrativa (Coordenação)
-* **Painel de Controle:** Dashboard com acesso rápido a todas as funções.
-* **Gerenciamento Completo (CRUD):**
-    * Cursos (com Coordenador e total de semestres).
-    * Turmas (Vínculo com Curso, Turno e Semestre).
-    * Disciplinas, Professores e Usuários.
-* **Montador de Grade Visual:** Interface intuitiva para associar *Disciplina + Professor + Dia* a uma turma específica.
-* **Segurança:** Proteção contra exclusão de registros que possuem dependências.
+- Consulta da grade filtrando por período letivo, campus, curso, semestre, turma e turno.
+- Exibição de dia, horário inicial e final, disciplina, professor, local e modalidade.
+- Funciona em desktop, celular e impressão.
+- Não expõe dados administrativos.
+
+### Painel administrativo
+
+- Login por e-mail e senha, com sessão persistida no PostgreSQL.
+- Perfis: administrador, coordenador e NAP (operador de campus).
+- Cadastros de usuários, campus, turnos, horários dos turnos, cursos, períodos letivos,
+  turmas, disciplinas, professores e locais — todos com busca, filtros, paginação,
+  validação no servidor e ativação/desativação.
+- Montador de grade em matriz (dias × horários do turno) com adicionar, editar, remover,
+  copiar, mover e pré-visualização de conflitos.
+- **Alocação de sala em lote**: aplica o mesmo local ao recorte escolhido, combinando
+  disciplinas, dias da semana e horários (seleção múltipla em cada eixo) e o atalho
+  "só as que estão sem local", reportando as que gerariam choque de sala.
+- Dashboard com indicadores por escopo do usuário, incluindo pendências e conflitos.
+- **Importação da grade a partir do cubo do TOTVS Educacional** (`.xlsx`), com conferência
+  antes de gravar, carga idempotente e histórico das execuções.
+
+### Regras de grade garantidas pelo sistema
+
+- Cada período de horário tem **exatamente 50 minutos**.
+- Períodos do mesmo turno **não podem se sobrepor**; intervalos entre eles são permitidos.
+- Cada turno aceita **qualquer quantidade** de períodos.
+- Uma turma não pode ter duas aulas no mesmo dia e horário — exceto a turma gerencial,
+  que existe para concentrar disciplinas compartilhadas e as oferta em paralelo.
+- Um professor não pode estar em duas aulas simultâneas, mesmo em cursos, turmas ou
+  campus diferentes.
+- Um local não pode receber duas aulas simultâneas (exceto ambientes virtuais).
+- O horário escolhido precisa pertencer ao turno da turma.
+- O local precisa pertencer ao campus da turma (exceto ambientes virtuais).
+- Registros inativos não podem ser usados em novas aulas.
+- Aulas de segunda a sábado.
 
 ---
 
-## Tecnologias Utilizadas
+## Tecnologias
 
-* **Backend:** Node.js, Express.
-* **Banco de Dados:** PostgreSQL.
-* **Frontend:** EJS (Template Engine), CSS3 (Custom Properties), Bootstrap 5 (Admin).
-* **Ícones:** FontAwesome 6.
+Node.js · Express 5 · PostgreSQL (driver `pg`, sem ORM) · EJS · Bootstrap 5 · Zod ·
+bcrypt · Jest + Supertest · ESLint + Prettier.
 
 ---
 
-## Instalação e Configuração
-
-Siga estes passos para rodar o projeto localmente ou no GitHub Codespaces.
+## Instalação
 
 ### 1. Pré-requisitos
-* Node.js instalado.
-* PostgreSQL instalado e rodando.
 
-### 2. Clonar e Instalar Dependências
+- Node.js 20 ou superior
+- PostgreSQL 14 ou superior
+
+### 2. Dependências
+
 ```bash
-git clone [https://github.com/seu-usuario/seu-repo.git](https://github.com/seu-usuario/seu-repo.git)
-cd Sistema_Grade_Horaria
+git clone <url-do-repositorio>
+cd grade-horaria-cursos
 npm install
 ```
 
-### 3. Configurar variáveis de ambiente
-Crie o arquivo `.env` na raiz (ou copie de `.env.example`) e ajuste:
+### 3. Variáveis de ambiente
+
+```bash
+cp .env.example .env
+```
 
 ```env
 PORT=3000
-DATABASE_URL=postgresql://SEU_USUARIO:SUA_SENHA@SEU_HOST:5432/grade_horaria
+NODE_ENV=production
+DATABASE_URL=postgresql://usuario:senha@host:5432/grade_horaria
 DB_SSL=false
+DB_SCHEMA=public
+BASE_PATH=
+SESSION_SECRET=<gere um segredo longo>
+SESSION_TTL_MINUTOS=480
+COOKIE_SECURE=true
+ADMIN_NOME=Administrador
+ADMIN_EMAIL=admin@suainstituicao.edu.br
+ADMIN_SENHA=
 ```
 
-### 4. Configurar o Banco de Dados
-
-O sistema espera um banco de dados chamado `grade_horaria`.
-
-**Passo A: Iniciar o serviço (se estiver no Linux/Codespaces)**
+Gere o segredo de sessão com:
 
 ```bash
-sudo service postgresql start
-
+node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
 ```
 
-**Passo B: Criar o Banco e Tabelas**
-Execute o comando abaixo para criar o banco e importar a estrutura (tabelas e dados iniciais):
+O carregamento é em camadas: `src/config/env.js` lê `.env.<NODE_ENV>` e depois `.env`,
+com precedência para o arquivo específico do ambiente. Assim `.env.development` e
+`.env.test` convivem com o `.env` de produção sem sobrescrevê-lo.
+
+`BASE_PATH` permite servir a aplicação em um subcaminho atrás de proxy reverso
+(ex.: `BASE_PATH=/grades`). O cabeçalho `X-Forwarded-Prefix` também é aceito.
+
+### 4. Banco de dados
 
 ```bash
-createdb -h 127.0.0.1 -U postgres grade_horaria
-psql -h 127.0.0.1 -U postgres -d grade_horaria -f src/database/schema.sql
-
+createdb grade_horaria
+npm run migrate     # cria a estrutura
+npm run seed        # campus, turnos, horários, período letivo e administrador
 ```
 
-> **Nota:** Usuários do admin não são criados automaticamente no schema por segurança. Crie manualmente os usuários com `token_acesso` no banco.
+O `seed` cria o administrador a partir de `ADMIN_EMAIL`/`ADMIN_SENHA`. Se `ADMIN_SENHA`
+estiver vazio, uma senha aleatória é gerada e exibida **uma única vez** no terminal.
 
-### 5. Rodar o Projeto
+Para definir ou redefinir a senha de qualquer usuário:
 
 ```bash
-node app.js
-
+npm run usuario:senha -- usuario@dominio.com "NovaSenhaForte"
 ```
 
-Acesse no navegador: `http://localhost:3000`
+### 5. Executar
+
+```bash
+npm start           # produção
+npm run dev         # desenvolvimento, com recarga automática
+```
+
+- Área pública: `http://localhost:3000/`
+- Painel: `http://localhost:3000/admin` (redireciona para `/login`)
 
 ---
 
-## Estrutura do Projeto
+## Comandos
+
+| Comando                                    | Descrição                              |
+| ------------------------------------------ | -------------------------------------- |
+| `npm start`                                | Sobe o servidor                        |
+| `npm run dev`                              | Servidor em desenvolvimento com watch  |
+| `npm run migrate`                          | Aplica migrations pendentes            |
+| `npm run migrate:status`                   | Lista migrations aplicadas e pendentes |
+| `npm run seed`                             | Carga inicial idempotente              |
+| `npm run usuario:senha -- <email> [senha]` | Define a senha de um usuário           |
+| `npm test`                                 | Testes automatizados                   |
+| `npm run lint` / `npm run lint:fix`        | ESLint                                 |
+| `npm run format` / `npm run format:check`  | Prettier                               |
+
+---
+
+## Estrutura do projeto
 
 ```
-Sistema_Grade_Horaria/
-├── node_modules/
-├── public/              # Arquivos estáticos (CSS, Imagens)
-│   └── css/
-│       └── style.css    # Estilos da área pública
-├── src/
-│   ├── controllers/     # Lógica das rotas
-│   │   ├── adminController.js
-│   │   └── publicController.js
-│   ├── database/        # Configuração do Banco
-│   │   ├── db.js        # Conexão Pool
-│   │   └── schema.sql   # Estrutura das tabelas
-│   ├── routes/          # Definição das rotas (URL)
-│   │   └── index.js
-│   └── views/           # Telas (HTML/EJS)
-│       ├── admin/       # Telas do Painel (Listar, Form, Grade)
-│       └── public/      # Tela Inicial (index.ejs)
-├── app.js               # Arquivo principal do servidor
-└── package.json
-
+app.js                     Sobe o servidor HTTP
+src/
+├── app.js                 Fábrica do Express (criarApp)
+├── config/                Configuração, pool do banco, definição do menu
+├── routes/                Rotas (admin/ agrega um arquivo por recurso)
+├── controllers/           Camada HTTP
+├── services/              Regras de negócio (conflitos, escopo, autenticação, importação)
+├── repositories/          Todo o SQL, sempre parametrizado
+├── middlewares/           Sessão, autenticação, autorização, CSRF, segurança, erros
+├── validators/            Schemas Zod por recurso
+├── views/                 EJS: layouts/, partials/, admin/, publico/, auth/, erros/
+├── database/              migrate.js, cli.js, migrations/, seeds/
+└── utils/                 Erros, dias, formatadores, paginação, filtros, planilha, textos
+public/                    CSS, JS e imagens
+scripts/                   Utilitários de operação
+storage/                   Planilhas enviadas aguardando confirmação (fora do versionamento)
+tests/                     Jest + Supertest
 ```
 
 ---
 
-## Acesso em Produção (NUTED)
+## Segurança
 
-Implantação com Nginx em:
+- Autenticação por e-mail e senha; senhas com bcrypt (custo 12).
+- **Não existe autenticação por token na URL.** A antiga rota `/admin?token=...` foi
+  removida.
+- Sessões persistidas no PostgreSQL, cookie `httpOnly`, `secure` em produção, `sameSite`
+  configurável, expiração e regeneração da sessão após o login.
+- Proteção CSRF em todas as requisições que alteram estado.
+- Rate limiting no login.
+- Helmet, limite de tamanho de requisição e tratamento global de erros.
+- Queries parametrizadas e validação de entrada com Zod.
+- Autorização por perfil verificada no backend, com proteção contra mass assignment.
+- Proteção contra redirecionamento para domínios externos.
+- Senhas, hashes, cookies e segredos nunca são registrados em log.
 
-- Público: `https://nuted.unieuro.edu.br/grades/`
-- Admin: `https://nuted.unieuro.edu.br/grades/admin?token=SEU_TOKEN`
+---
 
-## Acesso ao Admin (Ambiente Local)
+## Perfis de acesso
 
-Para acessar localmente, vá para `/admin?token=SEU_TOKEN`.
+| Perfil                       | Alcance                                                                                                                   |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| **Administrador**            | Acesso global a todos os cadastros e grades                                                                               |
+| **Coordenador**              | Cursos, turmas e grades vinculados ao seu escopo (`usuario_cursos`)                                                       |
+| **NAP / operador de campus** | Consulta das grades do campus autorizado e alteração de informações operacionais, especialmente locais (`usuario_campus`) |
 
-O token deve existir na tabela `usuarios.token_acesso`.
+Um usuário pode estar vinculado a **vários cursos** e a **vários campus**.
 
-Exemplo de criação manual de usuário admin:
+---
+
+## Modelo de dados
+
+Entidades: `usuarios`, `usuario_cursos`, `usuario_campus`, `campus`, `turnos`,
+`horarios_turno`, `cursos`, `curso_campus`, `periodos_letivos`, `turmas`, `disciplinas`,
+`curso_disciplinas`, `professores`, `locais`, `aulas`, `aula_professores`, `importacoes`,
+`session`.
+
+Migrations incrementais em `src/database/migrations/`, registradas em `schema_migrations`.
+Nenhuma migration recria o banco com `DROP TABLE`.
+
+---
+
+## Importação da grade (TOTVS)
+
+`Administração → Importar grade` (perfil administrador) carrega a grade a partir do
+`.xlsx` exportado do cubo de horários do TOTVS Educacional.
+
+O envio **não grava nada**: a carga inteira é executada em modo de teste, com as mesmas
+validações da gravação real, e desfeita. O relatório mostra o que vai acontecer; a
+gravação só ocorre na confirmação, em uma única transação.
+
+**A carga não duplica registros.** Cada entidade é reconhecida por um código estável do
+ERP — filial, `CODCURSO`, `CODDISC`, chapa do professor, `CODTURMA` (dentro do período e do
+campus) e `IDTURMADISC` para a aula. Recarregar a mesma planilha atualiza o que mudou.
+
+Pontos do modelo do TOTVS que a importação trata:
+
+| Situação no cubo                                     | O que o sistema faz                                                                                                                                         |
+| ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `TURMA_GERENCIAL = Sim`                              | A disciplina fica na turma que a oferta. As linhas `GERENCIADA = SIM` são espelhos e não viram aula; as turmas atendidas são criadas e ligadas à gerencial. |
+| Mesma aula em várias linhas (um professor por linha) | Vira uma aula só. O titular fica como professor principal e a equipe completa em `aula_professores`.                                                        |
+| Mesmo `CODTURMA` em filiais diferentes               | Turmas distintas, uma por campus.                                                                                                                           |
+| Turma sem semestre no código (`GPDIRM`, `DIRESPM1`)  | Turma sem semestre curricular — o campo aceita "não se aplica".                                                                                             |
+| Faixa de horário que não existe no turno             | Período de 50 minutos é criado no turno; faixa deslocada encaixa no período existente; o que não encaixa vira pendência sinalizada.                         |
+| Planilha não traz sala                               | Aulas entram sem local, listadas como pendência para o NAP.                                                                                                 |
+
+Aulas que saem da planilha só são inativadas se o operador marcar a opção — e apenas nas
+turmas presentes no arquivo. Nada é apagado.
+
+---
+
+## Migração da versão anterior
+
+A versão anterior usava outro modelo (`grade`, `turmas.unidade` como texto livre, `sala`
+como texto livre, login por token na URL). Ao aplicar as migrations, essas tabelas são
+**movidas para o schema `legado`** — nada é apagado:
 
 ```sql
-INSERT INTO usuarios (nome, email, senha, tipo, token_acesso)
-VALUES ('Administrador', 'admin@dominio.com', 'SENHA_FORTE', 'admin', 'TOKEN_ADMIN');
+SELECT * FROM legado.arquivamento;   -- o que foi arquivado e quantas linhas
+SELECT * FROM legado.grade;          -- aulas do modelo antigo
+SELECT * FROM legado.turmas;
 ```
 
-
+O sistema novo inicia com os cadastros vazios, prontos para uso, com campus, turnos,
+horários, período letivo e administrador criados pelo `seed`.
 
 ---
 
-## Solução de Problemas Comuns (Codespaces)
+## Operação em produção
 
-Se você estiver rodando no GitHub Codespaces e encontrar erros de conexão, siga este guia:
+O serviço roda por systemd (`grade-horaria.service`, usuário `www-data`) atrás do nginx,
+que serve a aplicação em `/grades` com `proxy_pass http://127.0.0.1:3000/` — repare na
+barra final: o nginx **remove** o prefixo antes de repassar, e informa o caminho original
+pelo cabeçalho `X-Forwarded-Prefix`. Por isso a aplicação monta as rotas na raiz e o
+`BASE_PATH` só é usado para **gerar** URLs.
 
-### Erro: `Connection refused` ou `password authentication failed`
+Consequência importante: o cookie de sessão precisa de `path: '/'`. Com `path=/grades`, o
+`express-session` compara o caminho do cookie com `req.originalUrl` (que chega sem o
+prefixo), detecta divergência e ignora a sessão inteira — o login se torna impossível.
 
-O banco de dados do Codespaces pode "dormir" ou resetar as configurações de permissão.
-
-**Solução (Kit de Reanimação):**
-Rode estes comandos no terminal para reiniciar o banco e liberar o acesso:
+Atualização com mudança de banco:
 
 ```bash
-# 1. Iniciar o serviço
-sudo service postgresql start
+# 1. Backup (sempre)
+pg_dump "$DATABASE_URL" --no-owner --no-privileges -f backups/producao-$(date +%F-%H%M).sql
 
-# 2. Configurar permissão total local (Trust)
-sudo sed -i -e 's/md5/trust/g' -e 's/peer/trust/g' -e 's/scram-sha-256/trust/g' $(sudo find /etc/postgresql -name pg_hba.conf)
+# 2. Migrations e carga inicial
+NODE_ENV=production npm run migrate
+NODE_ENV=production npm run seed
 
-# 3. Reiniciar para aplicar
-sudo service postgresql restart
-
-# 4. (Opcional) Se o banco sumiu, recrie-o:
-createdb -h 127.0.0.1 -U postgres grade_horaria
-psql -h 127.0.0.1 -U postgres -d grade_horaria -f src/database/schema.sql
-
+# 3. Reiniciar
+sudo systemctl restart grade-horaria.service
+sudo systemctl status grade-horaria.service
 ```
 
-### Erro: `Cannot read properties of null (reading 'substring')`
-
-Isso acontece se existirem Turnos no banco de dados sem o "Slug" (identificador) preenchido.
-
-**Solução:**
-Rode este SQL para corrigir os dados:
+O `.env` de produção precisa conter `SESSION_SECRET` (a aplicação recusa iniciar sem ele)
+e deve ser legível pelo `www-data`:
 
 ```bash
-psql -h 127.0.0.1 -U postgres -d grade_horaria -c "UPDATE turnos SET slug = LOWER(nome) WHERE slug IS NULL;"
+chgrp www-data .env && chmod 640 .env
+```
+
+## Licença
+
+ISC.
