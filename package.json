@@ -1,28 +1,66 @@
 {
-  "name": "sistema_grade_horaria",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/oliverhenrique04/Sistema_Grade_Horaria.git"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
-  "bugs": {
-    "url": "https://github.com/oliverhenrique04/Sistema_Grade_Horaria/issues"
-  },
-  "homepage": "https://github.com/oliverhenrique04/Sistema_Grade_Horaria#readme",
-  "dependencies": {
-    "body-parser": "^2.2.2",
-    "dotenv": "^17.2.4",
-    "ejs": "^4.0.1",
-    "express": "^5.2.1",
-    "pg": "^8.18.0"
-  }
+    "name": "sistema_grade_horaria",
+    "version": "2.0.0",
+    "description": "Sistema de gestao de grades horarias academicas",
+    "main": "app.js",
+    "scripts": {
+        "start": "node app.js",
+        "dev": "NODE_ENV=development node --watch app.js",
+        "migrate": "node src/database/cli.js migrate",
+        "migrate:status": "node src/database/cli.js status",
+        "seed": "node src/database/cli.js seed",
+        "relatorio:migracao": "node src/database/cli.js relatorio",
+        "usuario:senha": "node src/database/cli.js senha",
+        "test": "NODE_ENV=test jest --runInBand",
+        "test:watch": "NODE_ENV=test jest --runInBand --watch",
+        "lint": "eslint .",
+        "lint:fix": "eslint . --fix",
+        "format": "prettier --write \"**/*.{js,json,md}\"",
+        "format:check": "prettier --check \"**/*.{js,json,md}\""
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/oliverhenrique04/Sistema_Grade_Horaria.git"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "type": "commonjs",
+    "bugs": {
+        "url": "https://github.com/oliverhenrique04/Sistema_Grade_Horaria/issues"
+    },
+    "homepage": "https://github.com/oliverhenrique04/Sistema_Grade_Horaria#readme",
+    "dependencies": {
+        "bcrypt": "^6.0.0",
+        "connect-pg-simple": "^10.0.0",
+        "dotenv": "^17.2.4",
+        "ejs": "^4.0.1",
+        "express": "^5.2.1",
+        "express-rate-limit": "^8.6.1",
+        "express-session": "^1.19.0",
+        "helmet": "^8.3.0",
+        "pg": "^8.18.0",
+        "zod": "^4.4.3"
+    },
+    "devDependencies": {
+        "@eslint/js": "^10.0.1",
+        "eslint": "^10.8.0",
+        "eslint-config-prettier": "^10.1.8",
+        "globals": "^17.8.0",
+        "jest": "^30.4.2",
+        "prettier": "^3.9.6",
+        "supertest": "^7.2.2"
+    },
+    "jest": {
+        "testEnvironment": "node",
+        "testMatch": [
+            "<rootDir>/tests/**/*.test.js"
+        ],
+        "globalSetup": "<rootDir>/tests/setup/global-setup.js",
+        "globalTeardown": "<rootDir>/tests/setup/global-teardown.js",
+        "setupFilesAfterEnv": [
+            "<rootDir>/tests/setup/after-env.js"
+        ],
+        "testTimeout": 60000
+    }
 }
