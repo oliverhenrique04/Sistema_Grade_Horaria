@@ -1,0 +1,56 @@
+<%
+    // Estado inicial: a consulta so e exibida depois de escolher campus e curso,
+    // como na versao anterior da area publica. `faltando` vem do servico.
+    const faltando = filtrosAplicados.faltando || [];
+    const listaFaltando = faltando.length === 2
+        ? faltando[0] + ' e ' + faltando[1]
+        : (faltando[0] || '');
+%>
+<section class="orientacao glass" aria-labelledby="titulo-orientacao">
+    <p class="orientacao-icone" aria-hidden="true"><i class="fa-solid fa-filter-circle-xmark"></i></p>
+
+    <h2 id="titulo-orientacao">Escolha o campus e o curso</h2>
+
+    <p>
+        Para ver a grade horária é preciso selecionar
+        <strong><%= listaFaltando %></strong> nos filtros acima.
+        Depois disso você pode refinar por semestre, turno ou turma.
+    </p>
+
+    <ol class="orientacao-passos">
+        <li class="<%= filtrosAplicados.campus ? 'passo-ok' : '' %>">
+            <i class="fa-solid <%= filtrosAplicados.campus ? 'fa-circle-check' : 'fa-circle-dot' %>" aria-hidden="true"></i>
+            <span>
+                1. Campus:
+                <% if (filtrosAplicados.campus) { %>
+                    <strong><%= filtrosAplicados.campus.nome %></strong> (selecionado)
+                <% } else { %>
+                    <strong>a selecionar</strong>
+                <% } %>
+            </span>
+        </li>
+        <li class="<%= filtrosAplicados.curso ? 'passo-ok' : '' %>">
+            <i class="fa-solid <%= filtrosAplicados.curso ? 'fa-circle-check' : 'fa-circle-dot' %>" aria-hidden="true"></i>
+            <span>
+                2. Curso:
+                <% if (filtrosAplicados.curso) { %>
+                    <strong><%= filtrosAplicados.curso.nome %></strong> (selecionado)
+                <% } else { %>
+                    <strong>a selecionar</strong>
+                <% } %>
+            </span>
+        </li>
+        <li>
+            <i class="fa-solid fa-circle-dot" aria-hidden="true"></i>
+            <span>3. Semestre, turno e turma: opcionais, para reduzir a lista.</span>
+        </li>
+    </ol>
+
+    <% if (opcoes.campus.length === 0) { %>
+        <p class="aviso">
+            <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+            Ainda não há turmas publicadas no período letivo
+            <strong><%= filtrosAplicados.periodo ? filtrosAplicados.periodo.codigo : 'selecionado' %></strong>.
+        </p>
+    <% } %>
+</section>

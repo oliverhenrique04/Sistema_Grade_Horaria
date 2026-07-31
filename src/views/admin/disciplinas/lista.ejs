@@ -1,0 +1,146 @@
+<%- include('../../layouts/admin-inicio') %>
+
+<%
+/*
+ * Listagem de disciplinas. Recebe do controller: itens, cursos, filtros,
+ * paginacao, urlBase, urlNovo, urlLimpar e retorno.
+ */
+const statusSelecionado = filtros.status === true ? 'ativos' : filtros.status === false ? 'inativos' : '';
+%>
+
+<div class="painel-cartao">
+    <div class="painel-cartao-cabecalho">
+        <div>
+            <h2 class="h6 mb-1">Disciplinas cadastradas</h2>
+            <p class="text-muted small mb-0">A matriz curricular liga cada disciplina aos cursos e ao semestre sugerido.</p>
+        </div>
+
+        <% if (podeVer('disciplinas', 'criar')) { %>
+            <a href="<%= urlNovo %>" class="btn btn-primary btn-sm">
+                <i class="fa-solid fa-plus" aria-hidden="true"></i> Nova disciplina
+            </a>
+        <% } %>
+    </div>
+
+    <form method="GET" action="<%= urlLimpar %>" class="painel-filtros" role="search">
+        <div class="painel-filtros-campo">
+            <label class="form-label" for="filtro-busca">Buscar</label>
+            <input type="search" class="form-control form-control-sm" id="filtro-busca" name="busca"
+                   value="<%= filtros.busca || '' %>" maxlength="120" placeholder="Nome ou código">
+        </div>
+
+        <div class="painel-filtros-campo">
+            <label class="form-label" for="filtro-curso">Curso</label>
+            <select class="form-select form-select-sm" id="filtro-curso" name="cursoId" data-submete-ao-mudar>
+                <option value="">Todos</option>
+                <% cursos.forEach((curso) => { %>
+                    <option value="<%= curso.id %>" <%= filtros.cursoId === curso.id ? 'selected' : '' %>><%= curso.nome %></option>
+                <% }) %>
+            </select>
+        </div>
+
+        <div class="painel-filtros-campo">
+            <label class="form-label" for="filtro-status">Situação</label>
+            <select class="form-select form-select-sm" id="filtro-status" name="status" data-submete-ao-mudar>
+                <option value="">Todas</option>
+                <option value="ativos" <%= statusSelecionado === 'ativos' ? 'selected' : '' %>>Somente ativas</option>
+                <option value="inativos" <%= statusSelecionado === 'inativos' ? 'selected' : '' %>>Somente inativas</option>
+            </select>
+        </div>
+
+        <div class="painel-filtros-campo">
+            <label class="form-label" for="filtro-por-pagina">Por página</label>
+            <select class="form-select form-select-sm" id="filtro-por-pagina" name="por_pagina" data-submete-ao-mudar>
+                <% paginacao.tamanhos.forEach((tamanho) => { %>
+                    <option value="<%= tamanho %>" <%= paginacao.porPagina === tamanho ? 'selected' : '' %>><%= tamanho %></option>
+                <% }) %>
+            </select>
+        </div>
+
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-sm btn-outline-primary">
+                <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i> Filtrar
+            </button>
+            <a href="<%= urlLimpar %>" class="btn btn-sm btn-outline-secondary">Limpar</a>
+        </div>
+    </form>
+
+    <% if (itens.length === 0) { %>
+        <%- include('../../partials/estado-vazio', {
+            icone: 'fa-book',
+            titulo: 'Nenhuma disciplina encontrada',
+            descricao: 'Ajuste os filtros ou cadastre a primeira disciplina.',
+            acaoUrl: podeVer('disciplinas', 'criar') ? urlNovo : null,
+            acaoTexto: 'Nova disciplina'
+        }) %>
+    <% } else { %>
+        <div class="table-responsive">
+            <table class="table painel-tabela align-middle">
+                <caption class="visually-hidden">Lista de disciplinas cadastradas</caption>
+                <thead>
+                    <tr>
+                        <th scope="col">Disciplina</th>
+                        <th scope="col">Código</th>
+                        <th scope="col" class="text-center">Carga horária</th>
+                        <th scope="col">Cursos</th>
+                        <th scope="col" class="text-center">Aulas</th>
+                        <th scope="col">Situação</th>
+                        <th scope="col" class="text-end">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% itens.forEach((item) => { %>
+                        <tr>
+                            <td class="fw-semibold"><%= item.nome %></td>
+                            <td><%= item.codigo || '—' %></td>
+                            <td class="text-center"><%= item.carga_horaria === null ? '—' : item.carga_horaria + 'h' %></td>
+                            <td class="small"><%= item.cursos_nomes || '—' %></td>
+                            <td class="text-center"><%= item.total_aulas %></td>
+                            <td><%- include('../../partials/status-badge', { ativo: item.ativo }) %></td>
+                            <td>
+                                <div class="painel-tabela-acoes">
+                                    <% if (podeVer('disciplinas', 'editar')) { %>
+                                        <a class="btn btn-sm btn-outline-secondary"
+                                           href="<%= withBase('/admin/disciplinas/' + item.id + '/editar') %>"
+                                           title="Editar <%= item.nome %>">
+                                            <i class="fa-solid fa-pen" aria-hidden="true"></i>
+                                            <span class="visually-hidden">Editar</span>
+                                        </a>
+                                    <% } %>
+
+                                    <% if (podeVer('disciplinas', 'inativar')) { %>
+                                        <form method="POST" action="<%= withBase('/admin/disciplinas/' + item.id + '/status') %>"
+                                              data-confirmar="<%= item.ativo ? 'Inativar a disciplina ' + item.nome + '?' : 'Reativar a disciplina ' + item.nome + '?' %>">
+                                            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                                            <input type="hidden" name="ativo" value="<%= item.ativo ? '0' : '1' %>">
+                                            <input type="hidden" name="retorno" value="<%= retorno %>">
+                                            <button type="submit" class="btn btn-sm btn-outline-secondary"
+                                                    title="<%= item.ativo ? 'Inativar' : 'Reativar' %> <%= item.nome %>">
+                                                <i class="fa-solid <%= item.ativo ? 'fa-ban' : 'fa-rotate-left' %>" aria-hidden="true"></i>
+                                                <span class="visually-hidden"><%= item.ativo ? 'Inativar' : 'Reativar' %></span>
+                                            </button>
+                                        </form>
+
+                                        <form method="POST" action="<%= withBase('/admin/disciplinas/' + item.id + '/excluir') %>"
+                                              data-confirmar="Excluir definitivamente a disciplina <%= item.nome %>? Esta ação não pode ser desfeita.">
+                                            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                                            <input type="hidden" name="retorno" value="<%= retorno %>">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Excluir <%= item.nome %>">
+                                                <i class="fa-solid fa-trash" aria-hidden="true"></i>
+                                                <span class="visually-hidden">Excluir</span>
+                                            </button>
+                                        </form>
+                                    <% } %>
+                                </div>
+                            </td>
+                        </tr>
+                    <% }) %>
+                </tbody>
+            </table>
+        </div>
+
+        <%- include('../../partials/paginacao') %>
+    <% } %>
+</div>
+
+<%- include('../../layouts/admin-fim') %>

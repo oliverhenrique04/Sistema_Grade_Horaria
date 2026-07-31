@@ -1,0 +1,135 @@
+<%- include('../../layouts/admin-inicio') %>
+
+<%
+/*
+ * Formulario de disciplina (criacao e edicao). Recebe do controller: modo,
+ * disciplina, cursos, valores, erros, acaoFormulario e urlCancelar.
+ *
+ * A matriz curricular e enviada como um checkbox `cursosIds` por curso marcado
+ * mais um campo `semestre_<cursoId>` com o semestre sugerido de cada um.
+ */
+const edicao = modo === 'edicao';
+%>
+
+<div class="painel-cartao">
+    <form method="POST" action="<%= acaoFormulario %>" novalidate>
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label class="form-label" for="nome">Nome da disciplina <span class="text-danger" aria-hidden="true">*</span></label>
+                <input type="text" class="form-control <%= erros.nome ? 'is-invalid' : '' %>"
+                       id="nome" name="nome" value="<%= valores.nome %>" maxlength="150" required>
+                <%- include('../../partials/campo-erro', { erros: erros, campo: 'nome' }) %>
+            </div>
+
+            <div class="col-md-3">
+                <label class="form-label" for="codigo">Código</label>
+                <input type="text" class="form-control <%= erros.codigo ? 'is-invalid' : '' %>"
+                       id="codigo" name="codigo" value="<%= valores.codigo %>" maxlength="30">
+                <div class="form-text">Opcional, mas único no sistema.</div>
+                <%- include('../../partials/campo-erro', { erros: erros, campo: 'codigo' }) %>
+            </div>
+
+            <div class="col-md-3">
+                <label class="form-label" for="cargaHoraria">Carga horária</label>
+                <div class="input-group">
+                    <input type="number" class="form-control <%= erros.cargaHoraria ? 'is-invalid' : '' %>"
+                           id="cargaHoraria" name="cargaHoraria" value="<%= valores.cargaHoraria %>"
+                           min="1" step="1">
+                    <span class="input-group-text">horas</span>
+                    <%- include('../../partials/campo-erro', { erros: erros, campo: 'cargaHoraria' }) %>
+                </div>
+            </div>
+
+            <div class="col-12">
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" role="switch"
+                           id="ativo" name="ativo" value="1" <%= valores.ativo ? 'checked' : '' %>>
+                    <label class="form-check-label" for="ativo">Disciplina ativa</label>
+                </div>
+                <div class="form-text">Disciplinas inativas não podem ser usadas em novas aulas.</div>
+                <%- include('../../partials/campo-erro', { erros: erros, campo: 'ativo' }) %>
+            </div>
+        </div>
+
+        <hr class="my-4">
+
+        <fieldset>
+            <legend class="h6">Matriz curricular</legend>
+            <p class="text-muted small">Marque os cursos que oferecem a disciplina e informe o semestre sugerido.</p>
+
+            <% if (cursos.length === 0) { %>
+                <p class="text-muted small mb-0">Nenhum curso cadastrado ainda.</p>
+            <% } else { %>
+                <div class="table-responsive">
+                    <table class="table painel-tabela align-middle">
+                        <caption class="visually-hidden">Cursos que oferecem esta disciplina</caption>
+                        <thead>
+                            <tr>
+                                <th scope="col">Ofertar</th>
+                                <th scope="col">Curso</th>
+                                <th scope="col" style="width: 180px">Semestre sugerido</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% cursos.forEach((curso) => { %>
+                                <% const marcado = valores.cursosIds.includes(curso.id); %>
+                                <tr>
+                                    <td>
+                                        <input class="form-check-input" type="checkbox" name="cursosIds"
+                                               value="<%= curso.id %>" id="curso-<%= curso.id %>"
+                                               <%= marcado ? 'checked' : '' %>
+                                               aria-label="Ofertar em <%= curso.nome %>">
+                                    </td>
+                                    <td>
+                                        <label class="form-check-label" for="curso-<%= curso.id %>">
+                                            <%= curso.nome %>
+                                            <% if (!curso.ativo) { %>
+                                                <span class="badge text-bg-secondary-subtle text-secondary-emphasis">inativo</span>
+                                            <% } %>
+                                        </label>
+                                    </td>
+                                    <td>
+                                        <input type="number" class="form-control form-control-sm"
+                                               name="semestre_<%= curso.id %>" min="1" max="20" step="1"
+                                               value="<%= valores.semestres[curso.id] || '' %>"
+                                               aria-label="Semestre sugerido em <%= curso.nome %>">
+                                    </td>
+                                </tr>
+                            <% }) %>
+                        </tbody>
+                    </table>
+                </div>
+            <% } %>
+
+            <%- include('../../partials/campo-erro', { erros: erros, campo: 'vinculos' }) %>
+        </fieldset>
+
+        <div class="d-flex gap-2 mt-4">
+            <button type="submit" class="btn btn-primary">
+                <i class="fa-solid fa-floppy-disk" aria-hidden="true"></i>
+                <%= edicao ? 'Salvar alterações' : 'Cadastrar disciplina' %>
+            </button>
+            <a href="<%= urlCancelar %>" class="btn btn-outline-secondary">Cancelar</a>
+        </div>
+    </form>
+</div>
+
+<% if (edicao) { %>
+    <div class="painel-cartao">
+        <h2 class="h6">Informações do cadastro</h2>
+        <dl class="row mb-0 small">
+            <dt class="col-sm-3">Aulas na grade</dt>
+            <dd class="col-sm-9"><%= disciplina.total_aulas %></dd>
+
+            <dt class="col-sm-3">Criada em</dt>
+            <dd class="col-sm-9"><%= formatadores.dataBr(disciplina.criado_em) %></dd>
+
+            <dt class="col-sm-3">Última alteração</dt>
+            <dd class="col-sm-9"><%= formatadores.dataBr(disciplina.atualizado_em) %></dd>
+        </dl>
+    </div>
+<% } %>
+
+<%- include('../../layouts/admin-fim') %>

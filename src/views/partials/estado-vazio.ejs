@@ -1,0 +1,24 @@
+<%
+/*
+ * Estado vazio reutilizavel.
+ * Espera: icone (classe FontAwesome), titulo, descricao e, opcionalmente,
+ * acaoUrl + acaoTexto e nivel (h2..h4; use o nivel coerente com a secao onde
+ * o componente esta inserido, para nao quebrar a hierarquia de headings).
+ * Passe nivel = 0 para nao gerar heading nenhum.
+ */
+const nivelTitulo = typeof nivel !== 'undefined' ? Number(nivel) : 2;
+%>
+<div class="painel-vazio">
+    <i class="fa-solid <%= typeof icone !== 'undefined' && icone ? icone : 'fa-inbox' %>" aria-hidden="true"></i>
+    <% if (nivelTitulo >= 2 && nivelTitulo <= 6) { %>
+        <h<%= nivelTitulo %> class="h6 mb-1"><%= titulo %></h<%= nivelTitulo %>>
+    <% } else { %>
+        <p class="fw-semibold mb-1"><%= titulo %></p>
+    <% } %>
+    <p class="mb-3"><%= typeof descricao !== 'undefined' ? descricao : '' %></p>
+    <% if (typeof acaoUrl !== 'undefined' && acaoUrl) { %>
+        <a href="<%= acaoUrl %>" class="btn btn-primary btn-sm">
+            <i class="fa-solid fa-plus" aria-hidden="true"></i> <%= acaoTexto %>
+        </a>
+    <% } %>
+</div>

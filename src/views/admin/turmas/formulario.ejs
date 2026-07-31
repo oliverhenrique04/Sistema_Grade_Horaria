@@ -1,0 +1,180 @@
+<%
+/*
+ * Formulario de turma (criacao e edicao).
+ * Espera: modo, turma, valores, erros, opcoes, semestres, acao.
+ */
+const edicao = modo === 'editar';
+const classe = (campo) => (erros && erros[campo] ? ' is-invalid' : '');
+const descrito = (campo) => (erros && erros[campo] ? 'erro-' + campo : '');
+const selecionado = (valor, atual) => (String(valor) === String(atual) ? 'selected' : '');
+%>
+<%- include('../../layouts/admin-inicio') %>
+
+<% if (erros && erros.geral) { %>
+    <div class="alert alert-danger" role="alert">
+        <i class="fa-solid fa-circle-exclamation me-2" aria-hidden="true"></i><%= erros.geral %>
+    </div>
+<% } %>
+
+<div class="painel-cartao">
+    <div class="painel-cartao-cabecalho">
+        <h2 class="h6 mb-0"><%= edicao ? 'Editar turma' : 'Nova turma' %></h2>
+        <a class="btn btn-outline-secondary btn-sm" href="<%= withBase('/admin/turmas') %>">
+            <i class="fa-solid fa-arrow-left" aria-hidden="true"></i> Voltar
+        </a>
+    </div>
+
+    <form method="POST" action="<%= withBase(acao) %>" novalidate>
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+        <div class="row g-3">
+            <div class="col-12 col-lg-8">
+                <label class="form-label" for="nome">Nome da turma <span class="text-danger">*</span></label>
+                <input class="form-control<%= classe('nome') %>" type="text" id="nome" name="nome"
+                       value="<%= valores.nome %>" maxlength="120" required autofocus
+                       aria-describedby="<%= descrito('nome') %>">
+                <%- include('../../partials/campo-erro', { erros: erros, campo: 'nome' }) %>
+            </div>
+
+            <div class="col-12 col-lg-4">
+                <label class="form-label" for="codigo">Código</label>
+                <input class="form-control<%= classe('codigo') %>" type="text" id="codigo" name="codigo"
+                       value="<%= valores.codigo %>" maxlength="40"
+                       aria-describedby="<%= descrito('codigo') || 'ajuda-codigo' %>">
+                <div class="form-text" id="ajuda-codigo">Opcional. Precisa ser único dentro do período letivo.</div>
+                <%- include('../../partials/campo-erro', { erros: erros, campo: 'codigo' }) %>
+            </div>
+
+            <div class="col-12 col-md-6">
+                <label class="form-label" for="periodoLetivoId">Período letivo <span class="text-danger">*</span></label>
+                <select class="form-select<%= classe('periodoLetivoId') %>" id="periodoLetivoId" name="periodoLetivoId"
+                        required aria-describedby="<%= descrito('periodoLetivoId') %>">
+                    <option value="">Selecione…</option>
+                    <% opcoes.periodos.forEach((periodo) => { %>
+                        <option value="<%= periodo.id %>" <%= selecionado(periodo.id, valores.periodoLetivoId) %>>
+                            <%= periodo.codigo %><%= periodo.atual ? ' (atual)' : '' %><%= periodo.ativo ? '' : ' — inativo' %>
+                        </option>
+                    <% }) %>
+                </select>
+                <%- include('../../partials/campo-erro', { erros: erros, campo: 'periodoLetivoId' }) %>
+            </div>
+
+            <div class="col-12 col-md-6">
+                <label class="form-label" for="turnoId">Turno <span class="text-danger">*</span></label>
+                <select class="form-select<%= classe('turnoId') %>" id="turnoId" name="turnoId"
+                        required aria-describedby="<%= descrito('turnoId') %>">
+                    <option value="">Selecione…</option>
+                    <% opcoes.turnos.forEach((turno) => { %>
+                        <option value="<%= turno.id %>" <%= selecionado(turno.id, valores.turnoId) %>>
+                            <%= turno.nome %><%= turno.ativo ? '' : ' — inativo' %>
+                        </option>
+                    <% }) %>
+                </select>
+                <%- include('../../partials/campo-erro', { erros: erros, campo: 'turnoId' }) %>
+            </div>
+
+            <div class="col-12 col-md-6">
+                <label class="form-label" for="cursoId">Curso <span class="text-danger">*</span></label>
+                <select class="form-select<%= classe('cursoId') %>" id="cursoId" name="cursoId"
+                        required aria-describedby="<%= descrito('cursoId') || 'ajuda-curso' %>">
+                    <option value="">Selecione…</option>
+                    <% opcoes.cursos.forEach((curso) => { %>
+                        <option value="<%= curso.id %>"
+                                data-campus="<%= (opcoes.cursoCampus[curso.id] || []).join(',') %>"
+                                <%= selecionado(curso.id, valores.cursoId) %>>
+                            <%= curso.nome %><%= curso.ativo ? '' : ' — inativo' %>
+                        </option>
+                    <% }) %>
+                </select>
+                <div class="form-text" id="ajuda-curso">O curso precisa estar ofertado no campus escolhido.</div>
+                <%- include('../../partials/campo-erro', { erros: erros, campo: 'cursoId' }) %>
+            </div>
+
+            <div class="col-12 col-md-6">
+                <label class="form-label" for="campusId">Campus <span class="text-danger">*</span></label>
+                <select class="form-select<%= classe('campusId') %>" id="campusId" name="campusId"
+                        required aria-describedby="<%= descrito('campusId') %>">
+                    <option value="">Selecione…</option>
+                    <% opcoes.campus.forEach((campus) => { %>
+                        <option value="<%= campus.id %>" <%= selecionado(campus.id, valores.campusId) %>>
+                            <%= campus.nome %><%= campus.ativo ? '' : ' — inativo' %>
+                        </option>
+                    <% }) %>
+                </select>
+                <%- include('../../partials/campo-erro', { erros: erros, campo: 'campusId' }) %>
+            </div>
+
+            <div class="col-12 col-md-6">
+                <label class="form-label" for="semestreCurricular">Semestre curricular</label>
+                <select class="form-select<%= classe('semestreCurricular') %>" id="semestreCurricular"
+                        name="semestreCurricular" aria-describedby="<%= descrito('semestreCurricular') %>">
+                    <option value="">Não se aplica</option>
+                    <% semestres.forEach((semestre) => { %>
+                        <option value="<%= semestre %>" <%= selecionado(semestre, valores.semestreCurricular) %>>
+                            <%= formatadores.ordinal(semestre) %>
+                        </option>
+                    <% }) %>
+                </select>
+                <div class="form-text">
+                    Deixe em branco apenas em turma gerencial ou em turma especial que
+                    atravessa semestres.
+                </div>
+                <%- include('../../partials/campo-erro', { erros: erros, campo: 'semestreCurricular' }) %>
+            </div>
+
+            <div class="col-12">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="gerencial" name="gerencial"
+                           value="1" <%= valores.gerencial ? 'checked' : '' %>>
+                    <label class="form-check-label" for="gerencial">
+                        Turma gerencial (concentra disciplinas compartilhadas)
+                    </label>
+                    <div class="form-text">
+                        Turma gerencial pode ofertar disciplinas diferentes no mesmo dia e horário —
+                        cada uma atende um conjunto distinto de turmas. Nas demais, isso continua
+                        sendo tratado como choque de agenda.
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 col-md-6">
+                <label class="form-label" for="ativo">Situação</label>
+                <select class="form-select<%= classe('ativo') %>" id="ativo" name="ativo"
+                        aria-describedby="<%= descrito('ativo') %>">
+                    <option value="true" <%= valores.ativo ? 'selected' : '' %>>Ativa</option>
+                    <option value="false" <%= valores.ativo ? '' : 'selected' %>>Inativa</option>
+                </select>
+                <div class="form-text">Turmas inativas somem da consulta pública, mas mantêm o histórico de aulas.</div>
+                <%- include('../../partials/campo-erro', { erros: erros, campo: 'ativo' }) %>
+            </div>
+        </div>
+
+        <div class="d-flex flex-wrap gap-2 mt-4">
+            <button class="btn btn-primary" type="submit">
+                <i class="fa-solid fa-floppy-disk" aria-hidden="true"></i>
+                <%= edicao ? 'Salvar alterações' : 'Cadastrar turma' %>
+            </button>
+            <a class="btn btn-outline-secondary" href="<%= withBase('/admin/turmas') %>">Cancelar</a>
+
+            <% if (edicao && turma) { %>
+                <a class="btn btn-outline-primary ms-auto"
+                   href="<%= withBase('/admin/aulas/turma/' + turma.id) %>">
+                    <i class="fa-solid fa-calendar-days" aria-hidden="true"></i> Montar grade
+                </a>
+            <% } %>
+        </div>
+    </form>
+</div>
+
+<% if (edicao && turma) { %>
+    <div class="painel-cartao">
+        <h2 class="h6 mb-2">Resumo</h2>
+        <ul class="list-unstyled small text-muted mb-0">
+            <li><strong><%= turma.total_aulas %></strong> aula(s) cadastrada(s), sendo <strong><%= turma.total_aulas_ativas %></strong> ativa(s).</li>
+            <li>Criada em <%= formatadores.dataHoraBr(turma.criado_em) %>.</li>
+            <li>Última alteração em <%= formatadores.dataHoraBr(turma.atualizado_em) %>.</li>
+        </ul>
+    </div>
+<% } %>
+
+<%- include('../../layouts/admin-fim') %>

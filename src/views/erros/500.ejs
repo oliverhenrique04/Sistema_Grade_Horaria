@@ -1,0 +1,6 @@
+<%- include('parcial-erro', {
+    codigo: status || 500,
+    icone: 'fa-triangle-exclamation',
+    titulo: 'Erro interno',
+    descricao: mensagem || 'Ocorreu um erro inesperado. Tente novamente em instantes.'
+}) %>

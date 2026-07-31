@@ -1,0 +1,354 @@
+/* ==========================================================================
+   Importacao de grade — estilos proprios sobre admin.css.
+
+   Reaproveita os tokens do painel (--painel-borda, --painel-radius) para que a
+   tela nao pareca de outro sistema.
+   ========================================================================== */
+
+/* Faixa de estado no topo (nada gravado / concluido) --------------------- */
+.importacao-faixa {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.importacao-faixa > i {
+    font-size: 1.3rem;
+    line-height: 1.4;
+    flex: 0 0 auto;
+}
+
+.importacao-faixa p {
+    font-size: 0.9rem;
+}
+
+/* Explicacao do funcionamento ------------------------------------------- */
+/*
+ * Explicacao da carga: recolhida por padrao, abaixo do formulario.
+ *
+ * Ela e referencia — consulta-se uma vez e nunca mais. Acima do campo de
+ * arquivo, cobrava cinco paragrafos de leitura de quem so queria enviar a
+ * planilha. Aqui continua inteira, a um clique.
+ */
+.importacao-explicacao {
+    background: #f8fafc;
+    border: 1px solid var(--painel-borda);
+    border-radius: var(--painel-radius);
+    padding: 12px 16px;
+    margin-top: 20px;
+}
+
+.importacao-explicacao > summary {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 10px;
+    list-style: none;
+    cursor: pointer;
+}
+
+.importacao-explicacao > summary::-webkit-details-marker {
+    display: none;
+}
+
+.importacao-explicacao > summary::before {
+    content: '';
+    flex: 0 0 auto;
+    width: 0;
+    height: 0;
+    border-left: 5px solid #64748b;
+    border-block: 4px solid transparent;
+    transition: transform 0.15s ease;
+}
+
+.importacao-explicacao[open] > summary::before {
+    transform: rotate(90deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .importacao-explicacao > summary::before {
+        transition: none;
+    }
+}
+
+.importacao-explicacao > summary:focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: 3px;
+    border-radius: 6px;
+}
+
+.importacao-explicacao-titulo {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #0f172a;
+}
+
+.importacao-explicacao-nota {
+    font-size: 0.82rem;
+    color: #94a3b8;
+}
+
+.importacao-explicacao ul {
+    margin-top: 12px;
+    margin: 0;
+    padding-left: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    font-size: 0.88rem;
+    color: #334155;
+}
+
+.importacao-explicacao code {
+    font-size: 0.85em;
+}
+
+/* Formulario de envio ---------------------------------------------------- */
+.importacao-formulario {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    max-width: 640px;
+}
+
+/*
+ * Area de soltar. E moldura, nao substituto: o <input type="file"> continua
+ * dentro dela. Arrastar e atalho; clicar e teclado seguem funcionando iguais.
+ */
+.importacao-soltar {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 22px 18px;
+    text-align: center;
+    background: #f8fafc;
+    border: 2px dashed var(--painel-borda);
+    border-radius: var(--painel-radius);
+    transition:
+        border-color 0.15s ease,
+        background-color 0.15s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .importacao-soltar {
+        transition: none;
+    }
+}
+
+.importacao-soltar-ativa {
+    border-color: #2563eb;
+    background: #eff6ff;
+}
+
+.importacao-soltar:focus-within {
+    border-color: #2563eb;
+}
+
+.importacao-soltar-icone {
+    font-size: 1.6rem;
+    color: #94a3b8;
+}
+
+.importacao-soltar-ativa .importacao-soltar-icone {
+    color: #2563eb;
+}
+
+.importacao-soltar-titulo {
+    margin: 0;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #334155;
+}
+
+.importacao-soltar input[type='file'] {
+    max-width: 420px;
+    padding: 10px;
+}
+
+.importacao-soltar-escolhido {
+    margin: 0;
+    font-size: 0.85rem;
+    color: #15803d;
+    font-weight: 600;
+}
+
+.importacao-soltar-escolhido:empty {
+    display: none;
+}
+
+/* Periodo e a opcao de inativar dividem a linha em tela larga. */
+.importacao-linha {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    align-items: start;
+    gap: 18px 24px;
+}
+
+.importacao-acoes {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    align-items: flex-start;
+    border-top: 1px solid var(--painel-borda);
+    padding-top: 16px;
+}
+
+/* Numeros do relatorio --------------------------------------------------- */
+.importacao-numeros {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 12px;
+}
+
+.importacao-destaque {
+    border-color: #2563eb;
+    box-shadow: inset 3px 0 0 #2563eb;
+}
+
+.importacao-indicador-alerta {
+    border-color: #fcd34d;
+    box-shadow: inset 3px 0 0 #f59e0b;
+}
+
+.importacao-indicador-erro {
+    border-color: #fca5a5;
+    box-shadow: inset 3px 0 0 #dc2626;
+}
+
+/* Lista de cadastros criados --------------------------------------------- */
+.importacao-lista-cadastros {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 8px 18px;
+    font-size: 0.88rem;
+}
+
+.importacao-lista-cadastros li {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    color: #334155;
+}
+
+.importacao-lista-cadastros i {
+    color: #64748b;
+    width: 1.1em;
+    flex: 0 0 auto;
+}
+
+/* Avisos ----------------------------------------------------------------- */
+.importacao-avisos {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.importacao-avisos .alert {
+    font-size: 0.88rem;
+}
+
+.importacao-aviso-detalhe {
+    padding-left: 18px;
+    font-size: 0.84rem;
+    max-height: 220px;
+    overflow-y: auto;
+}
+
+/* Confirmacao ------------------------------------------------------------ */
+.importacao-confirmacao-acoes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+}
+
+.importacao-confirmacao {
+    position: sticky;
+    bottom: 12px;
+}
+
+/* Proximos passos -------------------------------------------------------- */
+.importacao-proximos {
+    list-style: none;
+    margin: 0 0 16px;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    font-size: 0.9rem;
+}
+
+.importacao-proximos li {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+}
+
+.importacao-proximos i {
+    color: #64748b;
+    margin-top: 3px;
+    width: 1.2em;
+    flex: 0 0 auto;
+}
+
+@media (max-width: 640px) {
+    .importacao-confirmacao {
+        position: static;
+    }
+
+    .importacao-confirmacao-acoes form,
+    .importacao-confirmacao-acoes .btn {
+        width: 100%;
+    }
+}
+
+@media print {
+    .importacao-confirmacao,
+    .importacao-formulario {
+        display: none;
+    }
+}
+
+/* <legend> do Bootstrap vira titulo de secao; aqui ele e rotulo de campo. */
+.importacao-campo legend.form-label {
+    float: none;
+    width: auto;
+    font-size: inherit;
+    line-height: inherit;
+}
+
+/* Identificacao do cubo de origem ---------------------------------------- */
+.importacao-cubo {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 10px;
+}
+
+.importacao-cubo > i {
+    color: #94a3b8;
+}
+
+.importacao-cubo-rotulo {
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #64748b;
+}
+
+/* O codigo e para ser copiado e procurado no ERP: fonte monoespacada e o
+   texto inteiro selecionavel, sem truncar. */
+.importacao-cubo-codigo {
+    padding: 3px 9px;
+    background: #f1f5f9;
+    border: 1px solid var(--painel-borda);
+    border-radius: 6px;
+    font-size: 0.8rem;
+    color: #0f172a;
+    overflow-wrap: anywhere;
+}

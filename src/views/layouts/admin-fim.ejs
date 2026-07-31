@@ -1,0 +1,20 @@
+            </main>
+
+            <footer class="painel-rodape">
+                <span>Grade Horária · Painel administrativo</span>
+                <span><%= anoAtual %></span>
+            </footer>
+        </div>
+    </div>
+
+    <div class="painel-overlay" data-fechar-menu hidden></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="<%= asset('/js/admin.js') %>"></script>
+    <% if (typeof scriptsExtras !== 'undefined' && scriptsExtras) { %>
+        <% scriptsExtras.forEach((caminho) => { %>
+            <script src="<%= asset(caminho) %>"></script>
+        <% }) %>
+    <% } %>
+</body>
+</html>

@@ -1,0 +1,189 @@
+<%- include('../../layouts/admin-inicio') %>
+
+<%
+/*
+ * Horarios dos turnos: lista ordenada por turno e ordem, agrupada com um
+ * cabecalho por turno. A quantidade de periodos e livre por turno.
+ *
+ * O nome do turno de cada linha vem do mapa montado aqui a partir da lista de
+ * turnos, para nao depender das colunas devolvidas pela consulta.
+ */
+const turnosPorId = {};
+turnos.forEach((turno) => { turnosPorId[turno.id] = turno; });
+
+const urlNovo = withBase('/admin/horarios/novo' + (filtros.turno_id ? '?turno_id=' + filtros.turno_id : ''));
+let turnoAnterior = null;
+%>
+
+<section class="painel-cartao" aria-labelledby="titulo-horarios">
+    <div class="painel-cartao-cabecalho">
+        <div>
+            <h2 class="h6 mb-1" id="titulo-horarios">Horários dos turnos</h2>
+            <p class="painel-indicador-nota mb-0">
+                Períodos ativos do mesmo turno não podem se sobrepor. Intervalos entre
+                períodos são permitidos: basta deixar uma lacuna entre o término de um e
+                o início do seguinte.
+            </p>
+        </div>
+
+        <% if (podeVer('horarios', 'criar')) { %>
+            <a class="btn btn-primary btn-sm" href="<%= urlNovo %>">
+                <i class="fa-solid fa-plus" aria-hidden="true"></i> Novo horário
+            </a>
+        <% } %>
+    </div>
+
+    <form method="GET" action="<%= withBase('/admin/horarios') %>" class="painel-filtros" role="search">
+        <div class="painel-filtros-campo">
+            <label class="form-label" for="filtro-turno">Turno</label>
+            <select class="form-select form-select-sm" id="filtro-turno" name="turno_id"
+                    data-submete-ao-mudar>
+                <option value="">Todos os turnos</option>
+                <% turnos.forEach((turno) => { %>
+                    <option value="<%= turno.id %>" <%= filtros.turno_id === String(turno.id) ? 'selected' : '' %>>
+                        <%= turno.nome %><%= turno.ativo ? '' : ' (inativo)' %>
+                    </option>
+                <% }) %>
+            </select>
+        </div>
+
+        <div class="painel-filtros-campo">
+            <label class="form-label" for="filtro-busca">Buscar</label>
+            <input type="search" class="form-control form-control-sm" id="filtro-busca"
+                   name="busca" value="<%= filtros.busca %>" placeholder="Nome do horário"
+                   maxlength="120">
+        </div>
+
+        <div class="painel-filtros-campo">
+            <label class="form-label" for="filtro-situacao">Situação</label>
+            <select class="form-select form-select-sm" id="filtro-situacao" name="ativo"
+                    data-submete-ao-mudar>
+                <option value="" <%= filtros.ativo === '' ? 'selected' : '' %>>Todos</option>
+                <option value="1" <%= filtros.ativo === '1' ? 'selected' : '' %>>Ativos</option>
+                <option value="0" <%= filtros.ativo === '0' ? 'selected' : '' %>>Inativos</option>
+            </select>
+        </div>
+
+        <div class="painel-filtros-campo">
+            <label class="form-label" for="filtro-por-pagina">Por página</label>
+            <select class="form-select form-select-sm" id="filtro-por-pagina" name="por_pagina"
+                    data-submete-ao-mudar>
+                <% paginacao.tamanhos.forEach((tamanho) => { %>
+                    <option value="<%= tamanho %>" <%= paginacao.porPagina === tamanho ? 'selected' : '' %>>
+                        <%= tamanho %>
+                    </option>
+                <% }) %>
+            </select>
+        </div>
+
+        <div>
+            <button type="submit" class="btn btn-sm btn-outline-secondary">
+                <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i> Filtrar
+            </button>
+            <a class="btn btn-sm btn-link" href="<%= withBase('/admin/horarios') %>">Limpar</a>
+        </div>
+    </form>
+
+    <% if (itens.length === 0) { %>
+        <%- include('../../partials/estado-vazio', {
+            icone: 'fa-hourglass-half',
+            titulo: 'Nenhum horário encontrado',
+            descricao: 'Cadastre os períodos do turno. Cada período dura ' + duracaoMinutos + ' minutos.',
+            acaoUrl: podeVer('horarios', 'criar') ? urlNovo : null,
+            acaoTexto: 'Novo horário'
+        }) %>
+    <% } else { %>
+        <div class="table-responsive">
+            <table class="table painel-tabela align-middle">
+                <thead>
+                    <tr>
+                        <th scope="col" class="text-end">Ordem</th>
+                        <th scope="col">Horário</th>
+                        <th scope="col">Faixa</th>
+                        <th scope="col">Situação</th>
+                        <th scope="col"><span class="visually-hidden">Ações</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% itens.forEach((item) => { %>
+                        <%
+                        const turno = turnosPorId[item.turno_id];
+                        const nomeTurno = turno ? turno.nome : (item.turno_nome || 'Turno');
+                        // `total_aulas` e opcional na consulta: quando ausente, o botao
+                        // de excluir aparece e o servico decide (e explica) o bloqueio.
+                        const aulas = typeof item.total_aulas === 'number' ? item.total_aulas : null;
+                        const mudouTurno = turnoAnterior !== item.turno_id;
+                        turnoAnterior = item.turno_id;
+                        %>
+
+                        <% if (mudouTurno) { %>
+                            <tr class="table-light">
+                                <th scope="colgroup" colspan="5">
+                                    <i class="fa-solid <%= turno && turno.icone ? turno.icone : 'fa-clock' %>" aria-hidden="true"></i>
+                                    <%= nomeTurno %>
+                                </th>
+                            </tr>
+                        <% } %>
+
+                        <tr>
+                            <td class="text-end"><%= item.ordem %></td>
+                            <th scope="row" class="fw-semibold"><%= item.nome %></th>
+                            <td><%= formatadores.faixaHoraria(item.hora_inicio, item.hora_fim) %></td>
+                            <td><%- include('../../partials/status-badge', { ativo: item.ativo }) %></td>
+                            <td>
+                                <div class="painel-tabela-acoes">
+                                    <% if (podeVer('horarios', 'editar')) { %>
+                                        <a class="btn btn-sm btn-outline-secondary"
+                                           href="<%= withBase('/admin/horarios/' + item.id + '/editar') %>">
+                                            <i class="fa-solid fa-pen" aria-hidden="true"></i>
+                                            <span class="visually-hidden">Editar <%= item.nome %></span>
+                                        </a>
+                                    <% } %>
+
+                                    <% if (podeVer('horarios', 'inativar')) { %>
+                                        <form method="POST"
+                                              action="<%= withBase('/admin/horarios/' + item.id + '/situacao') %>"
+                                              data-confirmar="<%= item.ativo ? 'Inativar o horário ' + item.nome + '?' : 'Reativar o horário ' + item.nome + '?' %>">
+                                            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                                            <input type="hidden" name="ativo" value="<%= item.ativo ? '0' : '1' %>">
+                                            <input type="hidden" name="turno_id" value="<%= filtros.turno_id %>">
+                                            <button type="submit" class="btn btn-sm btn-outline-secondary">
+                                                <i class="fa-solid <%= item.ativo ? 'fa-toggle-off' : 'fa-toggle-on' %>" aria-hidden="true"></i>
+                                                <span class="visually-hidden">
+                                                    <%= item.ativo ? 'Inativar' : 'Reativar' %> <%= item.nome %>
+                                                </span>
+                                            </button>
+                                        </form>
+
+                                        <% if (aulas === null || aulas === 0) { %>
+                                            <form method="POST"
+                                                  action="<%= withBase('/admin/horarios/' + item.id + '/excluir') %>"
+                                                  data-confirmar="Excluir definitivamente o horário <%= item.nome %>?">
+                                                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                                                <input type="hidden" name="turno_id" value="<%= filtros.turno_id %>">
+                                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                    <i class="fa-solid fa-trash" aria-hidden="true"></i>
+                                                    <span class="visually-hidden">Excluir <%= item.nome %></span>
+                                                </button>
+                                            </form>
+                                        <% } else { %>
+                                            <span class="badge text-bg-light border align-self-center"
+                                                  title="Horário usado em aulas: só pode ser inativado.">
+                                                <i class="fa-solid fa-lock" aria-hidden="true"></i>
+                                                <%= aulas %> aula<%= aulas === 1 ? '' : 's' %>
+                                            </span>
+                                        <% } %>
+                                    <% } %>
+                                </div>
+                            </td>
+                        </tr>
+                    <% }) %>
+                </tbody>
+            </table>
+        </div>
+
+        <%- include('../../partials/paginacao', { paginacao: paginacao, urlBase: urlBase }) %>
+    <% } %>
+</section>
+
+<%- include('../../layouts/admin-fim') %>

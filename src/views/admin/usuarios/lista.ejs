@@ -1,0 +1,160 @@
+<%
+/*
+ * Listagem de usuarios (area exclusiva do perfil admin).
+ * Espera: usuarios, paginacao, filtros, perfis, urlBase.
+ * A senha e o hash nunca chegam a esta view.
+ */
+const valorFiltro = (valor) => (valor === null || valor === undefined ? '' : valor);
+const idLogado = usuarioLogado ? Number(usuarioLogado.id) : null;
+%>
+<%- include('../../layouts/admin-inicio') %>
+
+<div class="painel-cartao">
+    <div class="painel-cartao-cabecalho">
+        <div>
+            <h2 class="h6 mb-1">Contas de acesso</h2>
+            <p class="text-muted small mb-0">
+                O perfil define o que a pessoa pode fazer; o escopo define quais cursos e campus ela enxerga.
+            </p>
+        </div>
+
+        <a class="btn btn-primary btn-sm" href="<%= withBase('/admin/usuarios/novo') %>">
+            <i class="fa-solid fa-plus" aria-hidden="true"></i> Novo usuário
+        </a>
+    </div>
+
+    <form class="painel-filtros" method="GET" action="<%= withBase('/admin/usuarios') %>" role="search">
+        <div class="painel-filtros-campo" style="flex: 2 1 260px;">
+            <label class="form-label" for="filtro-busca">Buscar</label>
+            <input class="form-control form-control-sm" type="search" id="filtro-busca" name="busca"
+                   value="<%= valorFiltro(filtros.busca) %>" placeholder="Nome ou e-mail" maxlength="120">
+        </div>
+
+        <div class="painel-filtros-campo">
+            <label class="form-label" for="filtro-perfil">Perfil</label>
+            <select class="form-select form-select-sm" id="filtro-perfil" name="perfil">
+                <option value="">Todos</option>
+                <% perfis.forEach((perfil) => { %>
+                    <option value="<%= perfil.valor %>" <%= filtros.perfil === perfil.valor ? 'selected' : '' %>>
+                        <%= perfil.rotulo %>
+                    </option>
+                <% }) %>
+            </select>
+        </div>
+
+        <div class="painel-filtros-campo" style="flex: 0 1 140px; min-width: 140px;">
+            <label class="form-label" for="filtro-status">Situação</label>
+            <select class="form-select form-select-sm" id="filtro-status" name="ativo">
+                <option value="">Todas</option>
+                <option value="true" <%= filtros.ativo === true ? 'selected' : '' %>>Ativos</option>
+                <option value="false" <%= filtros.ativo === false ? 'selected' : '' %>>Inativos</option>
+            </select>
+        </div>
+
+        <div class="painel-filtros-campo" style="flex: 0 0 auto; min-width: auto;">
+            <button class="btn btn-outline-primary btn-sm" type="submit">
+                <i class="fa-solid fa-filter" aria-hidden="true"></i> Filtrar
+            </button>
+            <a class="btn btn-outline-secondary btn-sm" href="<%= withBase('/admin/usuarios') %>">Limpar</a>
+        </div>
+    </form>
+
+    <% if (usuarios.length === 0) { %>
+        <%- include('../../partials/estado-vazio', {
+            icone: 'fa-user-gear',
+            titulo: 'Nenhum usuário encontrado',
+            descricao: 'Ajuste os filtros ou cadastre um novo usuário para liberar o acesso ao painel.',
+            acaoUrl: withBase('/admin/usuarios/novo'),
+            acaoTexto: 'Novo usuário'
+        }) %>
+    <% } else { %>
+        <div class="table-responsive">
+            <table class="table painel-tabela">
+                <thead>
+                    <tr>
+                        <th scope="col">Usuário</th>
+                        <th scope="col">Perfil</th>
+                        <th scope="col">Escopo</th>
+                        <th scope="col">Último login</th>
+                        <th scope="col">Situação</th>
+                        <th scope="col" class="text-end">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% usuarios.forEach((usuario) => { %>
+                        <% const ehVoce = idLogado === Number(usuario.id); %>
+                        <tr>
+                            <td>
+                                <span class="fw-semibold"><%= usuario.nome %></span>
+                                <% if (ehVoce) { %>
+                                    <span class="badge text-bg-primary-subtle text-primary-emphasis border border-primary-subtle">você</span>
+                                <% } %>
+                                <div class="small text-muted"><%= usuario.email %></div>
+                            </td>
+                            <td><%= formatadores.perfilRotulo(usuario.perfil) %></td>
+                            <td>
+                                <% if ((usuario.cursos_nomes || []).length === 0 && (usuario.campus_nomes || []).length === 0) { %>
+                                    <span class="text-muted small">—</span>
+                                <% } else { %>
+                                    <% (usuario.cursos_nomes || []).forEach((nome) => { %>
+                                        <span class="badge text-bg-light border me-1">
+                                            <i class="fa-solid fa-graduation-cap" aria-hidden="true"></i> <%= nome %>
+                                        </span>
+                                    <% }) %>
+                                    <% (usuario.campus_nomes || []).forEach((nome) => { %>
+                                        <span class="badge text-bg-light border me-1">
+                                            <i class="fa-solid fa-building-columns" aria-hidden="true"></i> <%= nome %>
+                                        </span>
+                                    <% }) %>
+                                <% } %>
+                            </td>
+                            <td class="small">
+                                <%= usuario.ultimo_login_em ? formatadores.dataHoraBr(usuario.ultimo_login_em) : 'Nunca acessou' %>
+                            </td>
+                            <td><%- include('../../partials/status-badge', { ativo: usuario.ativo }) %></td>
+                            <td>
+                                <div class="painel-tabela-acoes">
+                                    <a class="btn btn-outline-secondary btn-sm"
+                                       href="<%= withBase('/admin/usuarios/' + usuario.id + '/editar') %>"
+                                       title="Editar usuário">
+                                        <i class="fa-solid fa-pen" aria-hidden="true"></i>
+                                        <span class="visually-hidden">Editar <%= usuario.nome %></span>
+                                    </a>
+
+                                    <% if (!ehVoce) { %>
+                                        <form method="POST"
+                                              action="<%= withBase('/admin/usuarios/' + usuario.id + '/status') %>"
+                                              data-confirmar="<%= usuario.ativo ? 'Inativar o acesso de ' + usuario.nome + '?' : 'Reativar o acesso de ' + usuario.nome + '?' %>">
+                                            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                                            <input type="hidden" name="ativo" value="<%= usuario.ativo ? 'false' : 'true' %>">
+                                            <button class="btn btn-outline-<%= usuario.ativo ? 'warning' : 'success' %> btn-sm"
+                                                    type="submit"
+                                                    title="<%= usuario.ativo ? 'Inativar acesso' : 'Reativar acesso' %>">
+                                                <i class="fa-solid <%= usuario.ativo ? 'fa-user-slash' : 'fa-user-check' %>" aria-hidden="true"></i>
+                                                <span class="visually-hidden"><%= usuario.ativo ? 'Inativar' : 'Reativar' %> <%= usuario.nome %></span>
+                                            </button>
+                                        </form>
+
+                                        <form method="POST"
+                                              action="<%= withBase('/admin/usuarios/' + usuario.id + '/excluir') %>"
+                                              data-confirmar="Excluir definitivamente o usuário <%= usuario.nome %>? Prefira inativar para preservar o histórico.">
+                                            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                                            <button class="btn btn-outline-danger btn-sm" type="submit" title="Excluir usuário">
+                                                <i class="fa-solid fa-trash" aria-hidden="true"></i>
+                                                <span class="visually-hidden">Excluir <%= usuario.nome %></span>
+                                            </button>
+                                        </form>
+                                    <% } %>
+                                </div>
+                            </td>
+                        </tr>
+                    <% }) %>
+                </tbody>
+            </table>
+        </div>
+
+        <%- include('../../partials/paginacao', { paginacao: paginacao, urlBase: urlBase }) %>
+    <% } %>
+</div>
+
+<%- include('../../layouts/admin-fim') %>

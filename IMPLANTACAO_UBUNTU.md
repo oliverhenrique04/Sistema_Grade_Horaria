@@ -151,6 +151,7 @@ sudo tail -f /var/log/nginx/access.log
 ## 10. Troubleshooting rápido
 
 ### `npm ERR! EACCES: permission denied`
+
 Corrija dono/permissão da pasta:
 
 ```bash
@@ -158,6 +159,7 @@ sudo chown -R $USER:$USER /var/www/grade-horaria
 ```
 
 ### `npm ERR! ENOENT ... package.json`
+
 Você está em pasta errada. Confirme:
 
 ```bash
@@ -166,10 +168,12 @@ ls -la
 ```
 
 ### `curl -I http://127.0.0.1:3100` falha
+
 - App não iniciou em `PORT=3100`
 - PM2 não está rodando processo
 - Erro de `.env` ou conexão com banco
 
 ### `nginx -t` com upstream inválido
+
 - Garanta `upstream grade_horaria_app { server 127.0.0.1:3100; }`
 - Não use hostname inexistente no `server` do upstream

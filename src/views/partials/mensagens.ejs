@@ -1,0 +1,12 @@
+<% const ESTILOS = { sucesso: 'success', erro: 'danger', aviso: 'warning', info: 'info' }; %>
+<% const ICONES = { sucesso: 'fa-circle-check', erro: 'fa-circle-exclamation', aviso: 'fa-triangle-exclamation', info: 'fa-circle-info' }; %>
+
+<div class="painel-mensagens" aria-live="polite" role="status">
+    <% (mensagens || []).forEach((mensagem) => { %>
+        <div class="alert alert-<%= ESTILOS[mensagem.tipo] || 'info' %> alert-dismissible fade show" role="alert">
+            <i class="fa-solid <%= ICONES[mensagem.tipo] || 'fa-circle-info' %> me-2" aria-hidden="true"></i>
+            <%= mensagem.texto %>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
+        </div>
+    <% }) %>
+</div>

@@ -1,0 +1,98 @@
+<%
+/*
+ * Painel de pendencias do montador: aulas ATIVAS sem horario definido.
+ *
+ * Elas nao cabem em nenhuma celula da matriz, entao ficam aqui com uma acao
+ * direta para receber dia e horario (POST /admin/aulas/:id/mover).
+ *
+ * Espera: pendentes, dias, horarios, podeMover, podeEditar, voltar e
+ * urlBaseMontador.
+ */
+%>
+
+<section class="painel-cartao montador-pendencias" aria-labelledby="titulo-pendencias">
+    <div class="painel-cartao-cabecalho">
+        <div>
+            <h2 class="h6 mb-1" id="titulo-pendencias">
+                <i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i>
+                Aulas sem horário
+                <span class="badge text-bg-warning-subtle text-warning-emphasis border border-warning-subtle">
+                    <%= pendentes.length %>
+                </span>
+            </h2>
+            <p class="painel-indicador-nota mb-0">
+                Estas aulas existem na turma, mas ainda não ocupam nenhuma célula da grade.
+            </p>
+        </div>
+    </div>
+
+    <ul class="montador-pendencias-lista">
+        <% pendentes.forEach((aula) => { %>
+            <li class="montador-pendencia">
+                <div class="montador-pendencia-dados">
+                    <p class="fw-semibold mb-1"><%= aula.disciplina_nome %></p>
+                    <p class="mb-1 text-body-secondary">
+                        <i class="fa-solid fa-chalkboard-user" aria-hidden="true"></i>
+                        <%= aula.professor_nome || 'Sem professor' %>
+                        <span aria-hidden="true">·</span>
+                        <i class="fa-solid fa-door-open" aria-hidden="true"></i>
+                        <%= aula.local_nome ? formatadores.tipoLocalRotulo(aula.local_tipo) + ' ' + aula.local_nome : 'Sem local' %>
+                        <span aria-hidden="true">·</span>
+                        <%= formatadores.modalidadeRotulo(aula.modalidade) %>
+                    </p>
+                </div>
+
+                <% if (podeMover) { %>
+                    <form method="POST" action="<%= withBase('/admin/aulas/' + aula.id + '/mover') %>"
+                          class="montador-pendencia-form">
+                        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                        <input type="hidden" name="voltar" value="<%= voltar %>">
+
+                        <div class="montador-campo">
+                            <label class="form-label" for="pendencia-dia-<%= aula.id %>">
+                                Dia<span class="visually-hidden"> para <%= aula.disciplina_nome %></span>
+                            </label>
+                            <select class="form-select form-select-sm" id="pendencia-dia-<%= aula.id %>"
+                                    name="dia_semana" required>
+                                <% dias.forEach((dia) => { %>
+                                    <option value="<%= dia.valor %>" <%= Number(aula.dia_semana) === dia.valor ? 'selected' : '' %>>
+                                        <%= dia.curto %>
+                                    </option>
+                                <% }) %>
+                            </select>
+                        </div>
+
+                        <div class="montador-campo">
+                            <label class="form-label" for="pendencia-horario-<%= aula.id %>">
+                                Horário<span class="visually-hidden"> para <%= aula.disciplina_nome %></span>
+                            </label>
+                            <select class="form-select form-select-sm" id="pendencia-horario-<%= aula.id %>"
+                                    name="horario_turno_id" required>
+                                <option value="">Selecione…</option>
+                                <% horarios.forEach((horario) => { %>
+                                    <option value="<%= horario.id %>">
+                                        <%= horario.nome %> — <%= horario.faixa %>
+                                    </option>
+                                <% }) %>
+                            </select>
+                        </div>
+
+                        <button type="submit" class="btn btn-sm btn-primary">
+                            <i class="fa-solid fa-calendar-plus" aria-hidden="true"></i>
+                            Atribuir
+                            <span class="visually-hidden">horário para <%= aula.disciplina_nome %></span>
+                        </button>
+                    </form>
+                <% } %>
+
+                <% if (podeEditar) { %>
+                    <a class="btn btn-sm btn-outline-secondary"
+                       href="<%= urlBaseMontador %>?acao=editar&aula=<%= aula.id %>#formulario-aula">
+                        <i class="fa-solid fa-pen" aria-hidden="true"></i>
+                        Editar<span class="visually-hidden"> <%= aula.disciplina_nome %></span>
+                    </a>
+                <% } %>
+            </li>
+        <% }) %>
+    </ul>
+</section>

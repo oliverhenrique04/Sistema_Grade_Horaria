@@ -1,0 +1,157 @@
+<%- include('../../layouts/admin-inicio') %>
+
+<%
+/*
+ * Listagem de cursos. Recebe do controller: itens, campus, filtros, paginacao,
+ * urlBase, urlNovo, urlLimpar e retorno.
+ */
+const statusSelecionado = filtros.status === true ? 'ativos' : filtros.status === false ? 'inativos' : '';
+%>
+
+<div class="painel-cartao">
+    <div class="painel-cartao-cabecalho">
+        <div>
+            <h2 class="h6 mb-1">Cursos cadastrados</h2>
+            <p class="text-muted small mb-0">Um curso pode ser ofertado em vários campus.</p>
+        </div>
+
+        <% if (podeVer('cursos', 'criar')) { %>
+            <a href="<%= urlNovo %>" class="btn btn-primary btn-sm">
+                <i class="fa-solid fa-plus" aria-hidden="true"></i> Novo curso
+            </a>
+        <% } %>
+    </div>
+
+    <form method="GET" action="<%= urlLimpar %>" class="painel-filtros" role="search">
+        <div class="painel-filtros-campo">
+            <label class="form-label" for="filtro-busca">Buscar</label>
+            <input type="search" class="form-control form-control-sm" id="filtro-busca" name="busca"
+                   value="<%= filtros.busca || '' %>" maxlength="120"
+                   placeholder="Nome, sigla ou coordenador">
+        </div>
+
+        <div class="painel-filtros-campo">
+            <label class="form-label" for="filtro-campus">Campus</label>
+            <select class="form-select form-select-sm" id="filtro-campus" name="campusId" data-submete-ao-mudar>
+                <option value="">Todos</option>
+                <% campus.forEach((item) => { %>
+                    <option value="<%= item.id %>" <%= filtros.campusId === item.id ? 'selected' : '' %>><%= item.nome %></option>
+                <% }) %>
+            </select>
+        </div>
+
+        <div class="painel-filtros-campo">
+            <label class="form-label" for="filtro-status">Situação</label>
+            <select class="form-select form-select-sm" id="filtro-status" name="status" data-submete-ao-mudar>
+                <option value="">Todas</option>
+                <option value="ativos" <%= statusSelecionado === 'ativos' ? 'selected' : '' %>>Somente ativos</option>
+                <option value="inativos" <%= statusSelecionado === 'inativos' ? 'selected' : '' %>>Somente inativos</option>
+            </select>
+        </div>
+
+        <div class="painel-filtros-campo">
+            <label class="form-label" for="filtro-por-pagina">Por página</label>
+            <select class="form-select form-select-sm" id="filtro-por-pagina" name="por_pagina" data-submete-ao-mudar>
+                <% paginacao.tamanhos.forEach((tamanho) => { %>
+                    <option value="<%= tamanho %>" <%= paginacao.porPagina === tamanho ? 'selected' : '' %>><%= tamanho %></option>
+                <% }) %>
+            </select>
+        </div>
+
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-sm btn-outline-primary">
+                <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i> Filtrar
+            </button>
+            <a href="<%= urlLimpar %>" class="btn btn-sm btn-outline-secondary">Limpar</a>
+        </div>
+    </form>
+
+    <% if (itens.length === 0) { %>
+        <%- include('../../partials/estado-vazio', {
+            icone: 'fa-graduation-cap',
+            titulo: 'Nenhum curso encontrado',
+            descricao: 'Ajuste os filtros ou cadastre o primeiro curso.',
+            acaoUrl: podeVer('cursos', 'criar') ? urlNovo : null,
+            acaoTexto: 'Novo curso'
+        }) %>
+    <% } else { %>
+        <div class="table-responsive">
+            <table class="table painel-tabela align-middle">
+                <caption class="visually-hidden">Lista de cursos cadastrados</caption>
+                <thead>
+                    <tr>
+                        <th scope="col">Curso</th>
+                        <th scope="col">Coordenador</th>
+                        <th scope="col">Campus</th>
+                        <th scope="col" class="text-center">Semestres</th>
+                        <th scope="col" class="text-center">Turmas</th>
+                        <th scope="col">Situação</th>
+                        <th scope="col" class="text-end">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% itens.forEach((item) => { %>
+                        <tr>
+                            <td>
+                                <div class="fw-semibold"><%= item.nome %></div>
+                                <% if (item.sigla) { %>
+                                    <div class="small text-muted"><%= item.sigla %></div>
+                                <% } %>
+                            </td>
+                            <td><%= item.coordenador || '—' %></td>
+                            <td class="small"><%= item.campus_nomes || '—' %></td>
+                            <td class="text-center"><%= item.semestres_total %></td>
+                            <td class="text-center">
+                                <%= item.total_turmas %>
+                                <% if (item.turmas_ativas > 0) { %>
+                                    <span class="text-muted small">(<%= item.turmas_ativas %> ativa<%= item.turmas_ativas === 1 ? '' : 's' %>)</span>
+                                <% } %>
+                            </td>
+                            <td><%- include('../../partials/status-badge', { ativo: item.ativo }) %></td>
+                            <td>
+                                <div class="painel-tabela-acoes">
+                                    <% if (podeVer('cursos', 'editar')) { %>
+                                        <a class="btn btn-sm btn-outline-secondary"
+                                           href="<%= withBase('/admin/cursos/' + item.id + '/editar') %>"
+                                           title="Editar <%= item.nome %>">
+                                            <i class="fa-solid fa-pen" aria-hidden="true"></i>
+                                            <span class="visually-hidden">Editar</span>
+                                        </a>
+                                    <% } %>
+
+                                    <% if (podeVer('cursos', 'inativar')) { %>
+                                        <form method="POST" action="<%= withBase('/admin/cursos/' + item.id + '/status') %>"
+                                              data-confirmar="<%= item.ativo ? 'Inativar o curso ' + item.nome + '?' : 'Reativar o curso ' + item.nome + '?' %>">
+                                            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                                            <input type="hidden" name="ativo" value="<%= item.ativo ? '0' : '1' %>">
+                                            <input type="hidden" name="retorno" value="<%= retorno %>">
+                                            <button type="submit" class="btn btn-sm btn-outline-secondary"
+                                                    title="<%= item.ativo ? 'Inativar' : 'Reativar' %> <%= item.nome %>">
+                                                <i class="fa-solid <%= item.ativo ? 'fa-ban' : 'fa-rotate-left' %>" aria-hidden="true"></i>
+                                                <span class="visually-hidden"><%= item.ativo ? 'Inativar' : 'Reativar' %></span>
+                                            </button>
+                                        </form>
+
+                                        <form method="POST" action="<%= withBase('/admin/cursos/' + item.id + '/excluir') %>"
+                                              data-confirmar="Excluir definitivamente o curso <%= item.nome %>? Esta ação não pode ser desfeita.">
+                                            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                                            <input type="hidden" name="retorno" value="<%= retorno %>">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Excluir <%= item.nome %>">
+                                                <i class="fa-solid fa-trash" aria-hidden="true"></i>
+                                                <span class="visually-hidden">Excluir</span>
+                                            </button>
+                                        </form>
+                                    <% } %>
+                                </div>
+                            </td>
+                        </tr>
+                    <% }) %>
+                </tbody>
+            </table>
+        </div>
+
+        <%- include('../../partials/paginacao') %>
+    <% } %>
+</div>
+
+<%- include('../../layouts/admin-fim') %>

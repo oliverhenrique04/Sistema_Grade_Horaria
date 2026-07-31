@@ -1,0 +1,101 @@
+<%
+/*
+ * Formulario de destino: mover ou copiar uma aula para outro dia/horario.
+ *
+ * Existe para que essas duas operacoes NAO dependam de arrastar e soltar: sao
+ * dois selects e um botao, operaveis por teclado e sem JavaScript.
+ *
+ * Espera: acao ('mover' ou 'copiar'), aulaSelecionada, dias, horarios, valores
+ * e voltar.
+ */
+const mover = acao === 'mover';
+const acaoForm = withBase('/admin/aulas/' + aulaSelecionada.id + (mover ? '/mover' : '/copiar'));
+
+const igual = (a, b) => String(a === null || a === undefined ? '' : a) === String(b === null || b === undefined ? '' : b);
+
+const origemDia = dias.filter((dia) => dia.valor === aulaSelecionada.dia_semana)
+    .map((dia) => dia.nome)
+    .join('') || 'sem dia definido';
+const origemHorario = aulaSelecionada.horario_nome
+    ? `${aulaSelecionada.horario_nome} (${formatadores.faixaHoraria(aulaSelecionada.hora_inicio, aulaSelecionada.hora_fim)})`
+    : 'sem horário definido';
+%>
+
+<section class="painel-cartao montador-formulario" id="formulario-destino"
+         aria-labelledby="titulo-formulario-destino" tabindex="-1">
+    <div class="painel-cartao-cabecalho">
+        <div>
+            <h2 class="h6 mb-1" id="titulo-formulario-destino">
+                <%= mover ? 'Mover aula' : 'Copiar aula' %>
+            </h2>
+            <p class="painel-indicador-nota mb-0">
+                <%= aulaSelecionada.disciplina_nome %> · atualmente em <%= origemDia %>, <%= origemHorario %>
+            </p>
+        </div>
+
+        <a class="btn btn-sm btn-outline-secondary" href="<%= urlBaseMontador %>">
+            <i class="fa-solid fa-xmark" aria-hidden="true"></i> Fechar
+        </a>
+    </div>
+
+    <form method="POST" action="<%= acaoForm %>" class="montador-formulario-campos">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <input type="hidden" name="voltar" value="<%= voltar %>">
+
+        <%
+        /* Campos ocultos usados apenas pelo botao "Verificar conflitos": a
+           pre-visualizacao precisa da aula inteira, nao so do destino.
+           Em "copiar" o id da origem NAO e enviado, porque a copia e uma aula
+           nova e nao pode ignorar a original na checagem. */
+        %>
+        <input type="hidden" name="turma_id" value="<%= aulaSelecionada.turma_id %>">
+        <input type="hidden" name="disciplina_id" value="<%= aulaSelecionada.disciplina_id %>">
+        <input type="hidden" name="professor_id" value="<%= aulaSelecionada.professor_id || '' %>">
+        <input type="hidden" name="local_id" value="<%= aulaSelecionada.local_id || '' %>">
+        <input type="hidden" name="modalidade" value="<%= aulaSelecionada.modalidade %>">
+        <% if (mover) { %>
+            <input type="hidden" name="aula_id" value="<%= aulaSelecionada.id %>">
+        <% } %>
+
+        <div class="montador-formulario-linha">
+            <div class="montador-campo">
+                <label class="form-label" for="campo-destino-dia">Dia da semana</label>
+                <select class="form-select" id="campo-destino-dia" name="dia_semana" required>
+                    <% dias.forEach((dia) => { %>
+                        <option value="<%= dia.valor %>" <%= igual(valores.dia_semana, dia.valor) ? 'selected' : '' %>>
+                            <%= dia.nome %>
+                        </option>
+                    <% }) %>
+                </select>
+            </div>
+
+            <div class="montador-campo">
+                <label class="form-label" for="campo-destino-horario">Horário</label>
+                <select class="form-select" id="campo-destino-horario" name="horario_turno_id">
+                    <option value="">Sem horário definido (fica como pendência)</option>
+                    <% horarios.forEach((horario) => { %>
+                        <option value="<%= horario.id %>" <%= igual(valores.horario_turno_id, horario.id) ? 'selected' : '' %>>
+                            <%= horario.nome %> — <%= horario.faixa %>
+                        </option>
+                    <% }) %>
+                </select>
+            </div>
+        </div>
+
+        <div class="montador-formulario-acoes">
+            <button type="submit" class="btn btn-primary">
+                <i class="fa-solid <%= mover ? 'fa-arrows-up-down-left-right' : 'fa-copy' %>" aria-hidden="true"></i>
+                <%= mover ? 'Mover aula' : 'Criar cópia' %>
+            </button>
+
+            <button type="submit" class="btn btn-outline-secondary" formnovalidate
+                    formaction="<%= withBase('/admin/aulas/prever') %>"
+                    data-prever="<%= withBase('/admin/aulas/prever') %>">
+                <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+                Verificar conflitos
+            </button>
+
+            <a class="btn btn-link" href="<%= urlBaseMontador %>">Cancelar</a>
+        </div>
+    </form>
+</section>

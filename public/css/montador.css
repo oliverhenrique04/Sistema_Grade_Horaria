@@ -1,0 +1,957 @@
+/* ==========================================================================
+   Montador de grade horaria — matriz dias x horarios.
+
+   Carregado por um <link> no corpo das views de aulas: o layout do painel nao
+   aceita CSS extra por variavel e injetar por JavaScript deixaria a pagina sem
+   estilo quando o JS estiver desligado.
+
+   Estende o admin.css (variaveis --painel-*) e o Bootstrap 5.
+   ========================================================================== */
+
+:root {
+    --montador-borda: #dbe2ea;
+    --montador-celula-vazia: #f8fafc;
+    --montador-celula-ocupada: #ffffff;
+    --montador-destaque: #2563eb;
+    --montador-alerta: #b45309;
+}
+
+/* Cabecalho da turma ---------------------------------------------------- */
+.montador-acoes-topo {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.montador-indicadores {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 20px;
+    margin: 12px 0 0;
+}
+
+.montador-indicador {
+    margin: 0;
+    font-size: 0.85rem;
+    color: #475569;
+}
+
+.montador-indicador span {
+    font-weight: 700;
+    font-size: 1.05rem;
+    color: #0f172a;
+    margin-right: 4px;
+}
+
+.montador-indicador-alerta span {
+    color: var(--montador-alerta);
+}
+
+/* Conflitos ------------------------------------------------------------- */
+.montador-conflitos {
+    border-left: 4px solid #dc2626;
+}
+
+.montador-conflitos:focus {
+    outline: 3px solid var(--montador-destaque);
+    outline-offset: 2px;
+}
+
+.montador-conflitos-resumo {
+    font-weight: 600;
+    color: #b91c1c;
+}
+
+.montador-conflitos-lista {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 8px;
+}
+
+.montador-conflito {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 8px;
+    font-size: 0.9rem;
+}
+
+.montador-conflitos-ok {
+    color: #15803d;
+    font-weight: 600;
+}
+
+/* Formularios ----------------------------------------------------------- */
+.montador-formulario:focus {
+    outline: 3px solid var(--montador-destaque);
+    outline-offset: 2px;
+}
+
+.montador-formulario-linha {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px 16px;
+    margin-bottom: 12px;
+}
+
+.montador-campo {
+    flex: 1 1 200px;
+    min-width: 0;
+}
+
+.montador-campo-largo {
+    flex: 2 1 280px;
+}
+
+.montador-formulario-acoes {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--montador-borda);
+}
+
+.montador-periodos {
+    border: 1px solid var(--montador-borda);
+    border-radius: var(--painel-radius, 12px);
+    padding: 12px 14px;
+    margin-bottom: 12px;
+}
+
+.montador-periodos legend {
+    float: none;
+    width: auto;
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-bottom: 0;
+}
+
+.montador-periodos-lista {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+}
+
+.montador-periodo .form-check-label span {
+    font-size: 0.8rem;
+    display: block;
+}
+
+.montador-resumo {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px 28px;
+    margin-bottom: 12px;
+}
+
+.montador-resumo dt {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #64748b;
+}
+
+.montador-resumo dd {
+    margin: 0;
+    font-weight: 600;
+}
+
+/* Grade ----------------------------------------------------------------- */
+.montador-seletor-dia {
+    display: flex;
+    align-items: end;
+    gap: 8px;
+}
+
+.montador-seletor-dia .form-label {
+    align-self: center;
+}
+
+.montador-grade-rolagem {
+    overflow-x: auto;
+}
+
+.montador-grade {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 6px;
+    table-layout: fixed;
+    min-width: 900px;
+}
+
+.montador-grade thead th {
+    text-align: center;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #475569;
+    padding: 6px 4px;
+    border-bottom: 2px solid var(--montador-borda);
+}
+
+.montador-grade .montador-coluna-horario {
+    width: 132px;
+    text-align: left;
+    vertical-align: middle;
+    font-weight: 600;
+    color: #0f172a;
+}
+
+.montador-horario-nome {
+    display: block;
+    font-weight: 700;
+    font-size: 0.9rem;
+}
+
+.montador-horario-faixa {
+    display: block;
+    font-size: 0.8rem;
+    color: #64748b;
+    font-weight: 500;
+}
+
+.montador-grade td {
+    vertical-align: stretch;
+    padding: 0;
+}
+
+/* Celulas --------------------------------------------------------------- */
+.montador-celula {
+    display: block;
+    width: 100%;
+    min-height: 104px;
+    border: 1px solid var(--montador-borda);
+    border-radius: 10px;
+    padding: 8px 10px;
+    text-decoration: none;
+    color: inherit;
+    background: var(--montador-celula-ocupada);
+}
+
+.montador-celula-vazia {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    background: var(--montador-celula-vazia);
+    border-style: dashed;
+    color: #64748b;
+    font-size: 0.85rem;
+}
+
+a.montador-celula-vazia:hover,
+a.montador-celula-vazia:focus-visible {
+    border-color: var(--montador-destaque);
+    color: var(--montador-destaque);
+    background: #eff6ff;
+}
+
+a.montador-celula-vazia:focus-visible,
+.montador-celula-ocupada:focus-within {
+    outline: 3px solid var(--montador-destaque);
+    outline-offset: 2px;
+}
+
+.montador-celula-inerte {
+    cursor: default;
+}
+
+.montador-celula-ocupada {
+    border-left: 4px solid var(--montador-destaque);
+}
+
+.montador-celula-ocupada.modalidade-ead {
+    border-left-color: #7c3aed;
+}
+
+.montador-celula-ocupada.modalidade-hibrido {
+    border-left-color: #0891b2;
+}
+
+.montador-celula-disciplina {
+    font-weight: 700;
+    font-size: 0.9rem;
+    line-height: 1.2;
+}
+
+.montador-celula-linha {
+    font-size: 0.8rem;
+    color: #475569;
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+}
+
+.montador-celula-linha i {
+    color: #94a3b8;
+    flex: 0 0 auto;
+}
+
+.montador-celula-acoes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.montador-celula-acoes .btn {
+    --bs-btn-padding-y: 2px;
+    --bs-btn-padding-x: 6px;
+    --bs-btn-font-size: 0.75rem;
+}
+
+.montador-celula-selecionada {
+    border-color: var(--montador-destaque);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+}
+
+/* Lista cronologica (telas estreitas) ------------------------------------ */
+.montador-cronologico {
+    display: grid;
+    gap: 18px;
+}
+
+.montador-dia-titulo {
+    border-bottom: 2px solid var(--montador-borda);
+    padding-bottom: 4px;
+    margin-bottom: 10px;
+}
+
+.montador-dia-lista {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 10px;
+}
+
+.montador-dia-item {
+    border-left: 3px solid var(--montador-borda);
+    padding-left: 10px;
+}
+
+/* Pendencias ------------------------------------------------------------ */
+.montador-pendencias {
+    border-left: 4px solid #f59e0b;
+}
+
+.montador-pendencias-lista {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 12px;
+}
+
+.montador-pendencia {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    gap: 12px;
+    padding: 12px;
+    border: 1px solid var(--montador-borda);
+    border-radius: var(--painel-radius, 12px);
+    background: #fffbeb;
+}
+
+.montador-pendencia-dados {
+    flex: 1 1 240px;
+    min-width: 0;
+}
+
+.montador-pendencia-form {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    gap: 8px;
+}
+
+.montador-pendencia-form .montador-campo {
+    flex: 0 1 150px;
+}
+
+/* Alternancia matriz x lista -------------------------------------------- */
+.montador-somente-estreito {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .montador-somente-largo {
+        display: none;
+    }
+
+    .montador-somente-estreito {
+        display: grid;
+    }
+
+    .montador-pendencia-form .montador-campo {
+        flex: 1 1 120px;
+    }
+}
+
+/* Impressao ------------------------------------------------------------- */
+@media print {
+    .painel-menu,
+    .painel-topo,
+    .painel-rodape,
+    .painel-breadcrumbs,
+    .painel-mensagens,
+    .montador-acoes-topo,
+    .montador-seletor-dia,
+    .montador-celula-acoes,
+    .montador-formulario,
+    .montador-pendencias .montador-pendencia-form,
+    .atalho-conteudo {
+        display: none !important;
+    }
+
+    /* A matriz sempre imprime como matriz, mesmo em papel estreito. */
+    .montador-somente-largo {
+        display: block !important;
+    }
+
+    .montador-somente-estreito {
+        display: none !important;
+    }
+
+    .painel,
+    .painel-conteudo,
+    .painel-main {
+        display: block;
+        padding: 0;
+        margin: 0;
+        background: #fff;
+    }
+
+    .painel-cartao {
+        border: 0;
+        box-shadow: none;
+        padding: 0;
+        margin-bottom: 12px;
+        break-inside: avoid;
+    }
+
+    .montador-grade {
+        min-width: 0;
+        border-spacing: 2px;
+        font-size: 0.72rem;
+    }
+
+    .montador-celula {
+        min-height: 0;
+        break-inside: avoid;
+    }
+
+    .montador-grade-rolagem {
+        overflow: visible;
+    }
+
+    a[href]::after {
+        content: '';
+    }
+}
+
+/* Aulas em paralelo -------------------------------------------------------
+   Turma gerencial oferta disciplinas distintas no mesmo dia e horario, cada
+   uma para um conjunto diferente de turmas. A pilha mantem todas visiveis, com
+   rolagem propria para nao esticar a linha inteira da matriz. */
+.montador-celula-pilha {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    height: 100%;
+}
+
+.montador-celula-paralelas {
+    max-height: 320px;
+    overflow-y: auto;
+    padding-right: 2px;
+}
+
+.montador-celula-aviso {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #7c3aed;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    position: sticky;
+    top: 0;
+    background: #faf5ff;
+    border: 1px solid #e9d5ff;
+    border-radius: 6px;
+    padding: 3px 6px;
+    z-index: 1;
+}
+
+.montador-celula-equipe {
+    display: inline-block;
+    margin-left: 4px;
+    padding: 0 5px;
+    border-radius: 999px;
+    background: #e2e8f0;
+    color: #334155;
+    font-size: 0.7rem;
+    font-weight: 600;
+    cursor: help;
+}
+
+.montador-celula-adicionar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 6px;
+    border: 1px dashed #cbd5e1;
+    border-radius: 8px;
+    color: #64748b;
+    font-size: 0.75rem;
+    text-decoration: none;
+}
+
+.montador-celula-adicionar:hover,
+.montador-celula-adicionar:focus-visible {
+    border-color: #2563eb;
+    color: #2563eb;
+}
+
+@media print {
+    .montador-celula-paralelas {
+        max-height: none;
+        overflow: visible;
+    }
+
+    .montador-celula-adicionar {
+        display: none;
+    }
+}
+
+/* Aula que a turma apenas assiste --------------------------------------------
+   Disciplina compartilhada, registrada na turma gerencial. Aparece por inteiro
+   na grade de quem a cursa; a edicao continua na turma de origem. A distincao e
+   discreta de proposito: para o aluno e uma aula como qualquer outra. */
+.montador-celula-assistida {
+    border-style: dashed;
+}
+
+.montador-celula-marca {
+    display: inline-flex;
+    align-items: center;
+    color: #94a3b8;
+    font-size: 0.75rem;
+    cursor: help;
+}
+
+/* Turmas atendidas pela gerencial ------------------------------------------
+   No ensalamento do TOTVS, a turma "GP" concentra as disciplinas compartilhadas
+   de varias turmas — quase sempre de semestres diferentes. Este bloco permite
+   recortar a matriz por turma atendida, deixando-a legivel como a de uma turma
+   comum, e o selo de semestre na celula responde "de quem e esta disciplina?"
+   sem exigir o recorte. */
+.montador-atendidas {
+    border: 1px solid #bae6fd;
+    background: #f0f9ff;
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-bottom: 14px;
+}
+
+.montador-atendidas-cabecalho p {
+    font-size: 0.85rem;
+    color: #0c4a6e;
+}
+
+.montador-atendidas-cabecalho i {
+    margin-right: 4px;
+}
+
+.montador-atendidas-lista {
+    list-style: none;
+    margin: 10px 0 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.montador-atendida {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 10px;
+    border: 1px solid #bae6fd;
+    border-radius: 999px;
+    background: #fff;
+    color: #0c4a6e;
+    font-size: 0.78rem;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.montador-atendida:hover,
+.montador-atendida:focus-visible {
+    border-color: #0284c7;
+    color: #075985;
+}
+
+.montador-atendida.ativa {
+    background: #0284c7;
+    border-color: #0284c7;
+    color: #fff;
+}
+
+.montador-atendida-codigo {
+    font-weight: 600;
+}
+
+.montador-atendida-semestre {
+    opacity: 0.85;
+}
+
+.montador-atendida-contagem {
+    background: rgba(15, 23, 42, 0.08);
+    border-radius: 999px;
+    padding: 0 6px;
+    font-variant-numeric: tabular-nums;
+}
+
+.montador-atendida.ativa .montador-atendida-contagem {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+.montador-atendidas-nota {
+    margin-top: 10px;
+    font-size: 0.78rem;
+    color: #0c4a6e;
+    opacity: 0.85;
+}
+
+/* Selo de semestre na celula */
+.montador-celula-semestres {
+    line-height: 1;
+}
+
+.montador-selo-semestre {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 7px;
+    border-radius: 999px;
+    background: #ede9fe;
+    color: #5b21b6;
+    font-size: 0.7rem;
+    font-weight: 600;
+    cursor: help;
+}
+
+@media print {
+    .montador-atendidas-lista,
+    .montador-atendidas-nota {
+        display: none;
+    }
+}
+
+/* Selecao das turmas que cursam a aula (turma gerencial) */
+.montador-atendidas-campo {
+    border: 1px solid var(--painel-borda, #e2e8f0);
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-bottom: 14px;
+}
+
+.montador-atendidas-opcoes {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 4px 16px;
+    margin-top: 8px;
+}
+
+.montador-atendidas-opcoes .form-check-label {
+    display: flex;
+    gap: 6px;
+    align-items: baseline;
+    font-size: 0.85rem;
+}
+
+/* ==========================================================================
+   Alocacao de sala em lote
+
+   O caso dominante depois de uma importacao e "toda a turma nesta sala": duas
+   decisoes numa linha so. Os tres eixos de recorte ficam recolhidos atras de um
+   `<details>` — abertos, eram um paredao de caixas que punia justamente o
+   caminho mais usado.
+
+   Tokens e componentes vem de admin.css e do restante deste arquivo.
+   ========================================================================== */
+.montador-alocacao-topo {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.montador-alocacao-saldo {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 5px;
+    font-size: 0.8rem;
+    color: var(--montador-alerta);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+/* Linha de acao: rotulo do campo alinhado ao topo, controle e botao alinhados
+   pela base para que o conjunto leia como uma unica faixa. */
+.montador-alocacao-acao {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 12px 16px;
+}
+
+.montador-alocacao-campo {
+    flex: 1 1 300px;
+    min-width: 0;
+}
+
+.montador-alocacao-campo .form-label {
+    margin-bottom: 4px;
+}
+
+.montador-alocacao-escopo {
+    /* Alinha a caixa com o meio do select, nao com o topo do bloco. */
+    padding-bottom: 9px;
+    margin-bottom: 0;
+    white-space: nowrap;
+}
+
+.montador-alocacao-enviar {
+    margin-bottom: 1px;
+    padding-inline: 22px;
+}
+
+/* Refino recolhivel ------------------------------------------------------- */
+.montador-alocacao-refino {
+    margin-top: 14px;
+    border-top: 1px solid var(--montador-borda);
+    padding-top: 12px;
+}
+
+.montador-alocacao-refino > summary {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    width: fit-content;
+    padding: 2px 4px;
+    margin-inline-start: -4px;
+    border-radius: 6px;
+    cursor: pointer;
+    list-style: none;
+}
+
+.montador-alocacao-refino > summary::-webkit-details-marker {
+    display: none;
+}
+
+/* Triangulo proprio: o nativo varia entre navegadores e nao acompanha a cor. */
+.montador-alocacao-refino > summary::before {
+    content: '';
+    width: 0;
+    height: 0;
+    border-inline-start: 5px solid currentColor;
+    border-block: 4px solid transparent;
+    transition: transform 0.15s ease;
+    transform-origin: 25% 50%;
+}
+
+.montador-alocacao-refino[open] > summary::before {
+    transform: rotate(90deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .montador-alocacao-refino > summary::before {
+        transition: none;
+    }
+}
+
+.montador-alocacao-refino > summary:hover .montador-alocacao-refino-titulo {
+    text-decoration: underline;
+}
+
+.montador-alocacao-refino > summary:focus-visible {
+    outline: 2px solid var(--montador-destaque);
+    outline-offset: 2px;
+}
+
+.montador-alocacao-refino-titulo {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #334155;
+}
+
+.montador-alocacao-refino-nota {
+    font-size: 0.8rem;
+    color: #94a3b8;
+}
+
+/* Eixos ------------------------------------------------------------------- */
+/* Tres colunas em telas largas; empilham sozinhas quando nao cabem. */
+.montador-alocacao-eixos {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    align-items: start; /* cada eixo tem a altura do proprio conteudo */
+    gap: 14px;
+    margin-top: 14px;
+}
+
+/*
+ * Eixo de recorte.
+ *
+ * Cada eixo e uma tabelinha de duas colunas: o que marcar e quantas aulas
+ * aquilo alcanca. O numero sozinho nao se explica — quem da sentido a ele e o
+ * cabecalho "aulas", que fica alinhado a coluna e vale para a lista inteira.
+ */
+.montador-eixo {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    background: #fff;
+    border: 1px solid var(--painel-borda);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.montador-eixo-topo {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 9px 12px;
+    background: #f8fafc;
+    border-bottom: 1px solid var(--painel-borda);
+}
+
+.montador-eixo-titulo {
+    margin: 0;
+    font-size: 0.9rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: #0f172a;
+}
+
+/* Rotulo da coluna da direita. */
+.montador-eixo-unidade {
+    flex: 0 0 auto;
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #94a3b8;
+}
+
+.montador-eixo-lista {
+    margin: 0;
+    padding: 5px;
+    list-style: none;
+    max-height: 264px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+.montador-eixo-item {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding-left: 9px;
+    border-radius: 8px;
+}
+
+.montador-eixo-item:hover {
+    background: #f1f5f9;
+}
+
+.montador-eixo-item .form-check-input {
+    flex: 0 0 auto;
+    margin: 0;
+}
+
+.montador-eixo-item label {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 8px 11px 8px 0;
+    font-size: 0.85rem;
+    line-height: 1.35;
+    color: #334155;
+    cursor: pointer;
+}
+
+.montador-eixo-rotulo {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.montador-eixo-total {
+    flex: 0 0 auto;
+    font-size: 0.8rem;
+    font-variant-numeric: tabular-nums;
+    color: #94a3b8;
+}
+
+/* Marcado: a linha inteira responde, nao so a caixa. */
+.montador-eixo-item:has(:checked) {
+    background: #eff6ff;
+}
+
+.montador-eixo-item:has(:checked) label {
+    font-weight: 600;
+    color: #1d4ed8;
+}
+
+.montador-eixo-item:has(:checked) .montador-eixo-total {
+    color: #1d4ed8;
+}
+
+.montador-eixo-item:has(:focus-visible) {
+    outline: 2px solid var(--montador-destaque);
+    outline-offset: 1px;
+}
+
+.montador-alocacao-ajuda {
+    margin-top: 16px;
+    font-size: 0.8rem;
+    color: #64748b;
+    max-width: 68ch;
+}
+
+/* Marcar varias caixas seguidas e o uso principal aqui no celular: sem isto,
+   cada toque espera o intervalo do duplo-toque para dar zoom. */
+.montador-alocacao .form-check-label,
+.montador-alocacao .form-check-input,
+.montador-alocacao .btn,
+.montador-alocacao summary {
+    touch-action: manipulation;
+}
+
+.montador-alocacao h2 {
+    text-wrap: balance;
+}
+
+@media (max-width: 560px) {
+    .montador-alocacao-enviar {
+        width: 100%;
+    }
+}
+
+@media print {
+    .montador-alocacao {
+        display: none;
+    }
+}

@@ -1,3 +1,20 @@
 node_modules/
-.env
+coverage/
 npm-debug.log*
+
+# Variaveis de ambiente (nunca versionar credenciais)
+.env
+.env.*
+!.env.example
+
+# Artefatos locais
+*.local
+backups/
+
+# Envios temporarios da importacao de grade (planilhas aguardando confirmacao)
+storage/
+
+# Planilhas do ERP na raiz: contem nome e matricula de professores
+/*.xlsx
+/*.xls
+/*.csv

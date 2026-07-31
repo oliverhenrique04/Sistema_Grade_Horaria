@@ -1,0 +1,31 @@
+<%
+    // Campus e curso escolhidos, mas nenhuma turma sobrou no recorte atual.
+%>
+<section class="orientacao glass" aria-labelledby="titulo-vazio">
+    <p class="orientacao-icone" aria-hidden="true"><i class="fa-solid fa-calendar-xmark"></i></p>
+
+    <h2 id="titulo-vazio">Nenhuma turma encontrada</h2>
+
+    <p>
+        Não há turmas publicadas para
+        <strong><%= filtrosAplicados.curso ? filtrosAplicados.curso.nome : 'o curso selecionado' %></strong>
+        no campus
+        <strong><%= filtrosAplicados.campus ? filtrosAplicados.campus.nome : 'selecionado' %></strong>
+        <% if (filtrosAplicados.semestre) { %>
+            no <strong><%= filtrosAplicados.semestreRotulo %> semestre</strong>
+        <% } %>
+        <% if (filtrosAplicados.turno) { %>
+            no turno <strong><%= filtrosAplicados.turno.nome %></strong>
+        <% } %>
+        dentro do período letivo
+        <strong><%= filtrosAplicados.periodo ? filtrosAplicados.periodo.codigo : 'selecionado' %></strong>.
+    </p>
+
+    <p>Tente remover o semestre, o turno ou a turma para ampliar a busca.</p>
+
+    <p>
+        <a class="botao botao-secundario" href="<%= withBase('/') %>">
+            <i class="fa-solid fa-eraser" aria-hidden="true"></i> Limpar filtros
+        </a>
+    </p>
+</section>
