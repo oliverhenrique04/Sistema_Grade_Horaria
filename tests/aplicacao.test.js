@@ -115,6 +115,23 @@ describe('Aplicacao', () => {
             expect(resposta.status).toBe(404);
             expect(resposta.body.erro).toBeDefined();
         });
+
+        it('usa a pagina propria tambem quando o erro nasce antes das rotas', async () => {
+            // Falha do parser de corpo: e levantada antes de qualquer rota, quando
+            // `res.locals` tem apenas o que o contextoBase colocou. As paginas de
+            // erro chamam `asset` e `withBase`; se esses helpers ainda nao existirem
+            // o render quebra e o Express devolve o "Bad Request" cru do
+            // finalhandler, sem explicacao nenhuma para o operador.
+            const resposta = await agente
+                .post('/login')
+                .set('Content-Type', 'application/json')
+                .send('{invalido');
+
+            expect(resposta.status).toBe(400);
+            expect(resposta.headers['content-type']).toMatch(/html/);
+            expect(resposta.text).not.toContain('<pre>Bad Request</pre>');
+            expect(resposta.text).toContain('Ocorreu um erro inesperado');
+        });
     });
 
     describe('garantias estruturais', () => {

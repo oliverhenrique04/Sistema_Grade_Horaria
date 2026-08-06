@@ -30,6 +30,13 @@ const criarApp = () => {
     // Permite include com caminho absoluto a partir da pasta de views.
     app.locals.basedir = path.join(__dirname, 'views');
 
+    // Precisa vir antes de tudo: as paginas de erro usam `asset` e `withBase`, e
+    // um erro dos parsers de corpo (JSON malformado, corpo grande demais) e
+    // levantado antes de qualquer rota. Sem os helpers em `res.locals` o render da
+    // pagina de erro falha e o Express devolve o "Bad Request" cru do finalhandler.
+    // So depende de cabecalhos e configuracao — nao usa sessao nem corpo.
+    app.use(contextoBase);
+
     // Helmet, parsers de corpo com limite de tamanho e demais protecoes.
     aplicarSeguranca(app);
 
@@ -39,7 +46,6 @@ const criarApp = () => {
         })
     );
 
-    app.use(contextoBase);
     app.use(criarMiddlewareSessao());
     app.use(flash);
     app.use(gerarToken);
