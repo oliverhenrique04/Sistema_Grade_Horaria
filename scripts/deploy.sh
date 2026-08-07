@@ -21,6 +21,12 @@ SERVICO=grade-horaria.service
 vermelho() { printf '\033[31m%s\033[0m\n' "$*"; }
 verde() { printf '\033[32m%s\033[0m\n' "$*"; }
 
+# Sem terminal (cron, automacao), o sudo precisa de um helper para pedir a
+# senha; com terminal, pergunta do jeito de sempre.
+raiz() {
+    if [[ -n "${SUDO_ASKPASS:-}" ]]; then sudo -A "$@"; else sudo "$@"; fi
+}
+
 no_ar() {
     local sha
     sha=$(git -C "$APP" rev-parse --short HEAD)
@@ -59,8 +65,8 @@ fi
 
 # Antes de mexer no worktree: sem poder reiniciar, o deploy pararia no meio e
 # deixaria arquivo novo rodando em processo velho.
-if ! sudo -n true 2>/dev/null; then
-    if ! sudo -v; then
+if ! raiz -n true 2>/dev/null; then
+    if ! raiz -v; then
         vermelho 'Sem permissao para reiniciar o servico — nada foi alterado.'
         exit 1
     fi
@@ -78,7 +84,7 @@ if ! git -C "$REPO" diff --quiet "$ATUAL" "$SHA" -- package-lock.json package.js
     (cd "$APP" && npm ci --omit=dev --silent)
 fi
 
-sudo systemctl restart "$SERVICO"
+raiz systemctl restart "$SERVICO"
 sleep 3
 
 if ! systemctl is-active --quiet "$SERVICO"; then
