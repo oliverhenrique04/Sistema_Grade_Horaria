@@ -63,6 +63,34 @@ desenvolvimento contra o banco de produção.
 `./scripts/recriar-dev.sh` recria o banco de desenvolvimento a partir de um dump de
 produção (leitura apenas em produção).
 
+## Publicação
+
+Dois diretórios, de propósito:
+
+| | |
+|---|---|
+| `/var/www/grade-horaria-cursos` | trabalho — branches, testes, `node_modules` completo |
+| `/var/www/grade-horaria-app` | **o que o systemd executa** — worktree em HEAD destacado |
+
+O diretório publicado é um `git worktree` **destacado num commit**, nunca numa branch. Ele
+não acompanha o `git checkout` feito no diretório de trabalho: trocar a versão no ar é ato
+explícito, e o `HEAD` do worktree registra o que está publicado.
+
+```bash
+./scripts/deploy.sh              # publica o HEAD do diretório de trabalho
+./scripts/deploy.sh main         # publica uma branch
+./scripts/deploy.sh 790dfc4      # volta para um commit
+./scripts/deploy.sh --status     # o que está no ar, sem publicar
+```
+
+O script recusa publicar com o diretório de trabalho sujo, roda `npm ci --omit=dev` só
+quando as dependências mudaram e verifica se o serviço subiu, mostrando o comando de
+rollback se não subir.
+
+`grade-horaria-app/.env` é um link para o `.env` do diretório de trabalho — credencial em
+um lugar só. `grade-horaria-app/storage/` tem ACL de escrita para `www-data`, que é como a
+importação guarda a planilha entre a prévia e a confirmação.
+
 ## Testes
 
 `npm test` roda a suíte inteira contra o schema definido em `.env.test`
