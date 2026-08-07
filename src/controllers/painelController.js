@@ -47,10 +47,14 @@ const urlDaConsulta = (req, recorte = {}) => {
  * aula encerrada. Tambem nao entra em buscador: a URL e publica e permanente e
  * traz nome de professor, turma e sala do campus inteiro.
  */
-const exibir = envolver(async (req, res) => {
-    const recorte = validador.validarRecorte(req.query);
+/**
+ * Renderiza o quadro a partir de um recorte ja resolvido.
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @param {object} recorte
+ */
+const renderizar = async (req, res, recorte) => {
     const painel = await servico.montarPainel(recorte);
-
     const urlPublica = urlDaConsulta(req, recorte);
 
     // Cacheavel por pouco tempo, e nao `no-store`.
@@ -70,6 +74,41 @@ const exibir = envolver(async (req, res) => {
         urlPublica,
         qrSvg: qrcode.paraSvg(urlPublica, { titulo: `Grade completa: ${urlPublica}` }),
     });
+};
+
+/**
+ * GET /painel/:slug — painel salvo.
+ *
+ * E a forma preferida: o recorte mora no banco e pode ser corrigido pelo painel
+ * administrativo sem ninguem subir numa escada para mexer na TV.
+ *
+ * Slug desconhecido nao vira 404 seco: a TV ficaria com a pagina de erro do
+ * navegador ate alguem perceber. O quadro aparece pedindo configuracao, que e
+ * legivel de longe e diz o que fazer.
+ */
+const exibirSalvo = envolver(async (req, res) => {
+    const encontrado = await servico.painelPorSlug(String(req.params.slug || ''));
+
+    if (!encontrado) {
+        res.set('Cache-Control', 'no-store');
+        res.set('X-Robots-Tag', 'noindex, nofollow');
+        return res.status(404).render('publico/painel', {
+            ...(await servico.montarPainel({})),
+            configurar: true,
+            motivo: 'slug',
+            recorte: {},
+            tituloPagina: TITULO_BASE,
+            urlPublica: '',
+            qrSvg: '',
+        });
+    }
+
+    return renderizar(req, res, encontrado.recorte);
 });
 
-module.exports = { exibir, urlDaConsulta };
+/** GET /painel — recorte na propria URL. Mantido: ha TV em producao assim. */
+const exibir = envolver(async (req, res) => {
+    await renderizar(req, res, validador.validarRecorte(req.query));
+});
+
+module.exports = { exibir, exibirSalvo, urlDaConsulta };

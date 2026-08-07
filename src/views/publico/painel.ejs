@@ -66,7 +66,10 @@
                         <path d="M12 3.2 21 8v8l-9 4.8L3 16V8Z"/><path d="M12 12v8.8M3 8l9 4 9-4"/>
                     </svg>
                     <h2>Painel sem configuração</h2>
-                    <% if (motivo === 'campus') { %>
+                    <% if (motivo === 'slug') { %>
+                        <p>Este endereço não corresponde a nenhum painel ativo.</p>
+                        <code>Painel administrativo · TVs dos blocos</code>
+                    <% } else if (motivo === 'campus') { %>
                         <p>Falta escolher o campus no endereço desta tela.</p>
                         <code>?campus=…</code>
                     <% } else { %>

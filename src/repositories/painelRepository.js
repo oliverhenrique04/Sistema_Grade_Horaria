@@ -77,6 +77,8 @@ const montarFiltros = (recorte = {}, parametros = []) => {
     igual('a.dia_semana', recorte.diaSemana);
     listaDe('t.curso_id', recorte.cursosIds);
     listaDe('t.id', recorte.turmasIds);
+    listaDe('t.turno_id', recorte.turnosIds);
+    listaDe('a.dia_semana', recorte.diasIds);
     listaDe('a.local_id', recorte.locaisIds, {
         incluirNulo: recorte.incluirSemLocal !== false,
     });
@@ -199,6 +201,26 @@ const listarTurmas = async ({ periodoId, campusId } = {}) => {
 };
 
 /**
+ * Turnos que tem turma publicada no campus.
+ *
+ * Filtrar por turno recorta QUAIS TURMAS entram no painel — nao muda a faixa do
+ * dia, que sai do relogio. Um painel com "Noturno" marcado mostra as turmas do
+ * noturno na faixa que estiver corrente.
+ */
+const listarTurnos = async ({ periodoId, campusId } = {}) => {
+    const resultado = await db.query(
+        `SELECT DISTINCT tn.id, tn.nome, tn.ordem
+           FROM turmas t
+           JOIN turnos tn ON tn.id = t.turno_id AND tn.ativo
+          WHERE t.ativo AND NOT t.gerencial
+            AND t.periodo_letivo_id = $1 AND t.campus_id = $2
+          ORDER BY tn.ordem, tn.nome`,
+        [periodoId, campusId]
+    );
+    return resultado.rows;
+};
+
+/**
  * Locais ativos do campus. O ambiente virtual fica de fora: ele nao e um lugar
  * aonde alguem vai, e o painel de bloco existe para dizer aonde ir.
  */
@@ -213,12 +235,161 @@ const listarLocais = async ({ campusId } = {}) => {
     return resultado.rows;
 };
 
+// ---------------------------------------------------------------------------
+// Paineis salvos
+// ---------------------------------------------------------------------------
+
+/** Colunas do painel, sempre as mesmas, para nao divergirem entre consultas. */
+const COLUNAS_PAINEL = `
+    p.id, p.slug, p.titulo, p.campus_id, p.blocos, p.locais_ids, p.cursos_ids,
+    p.turmas_ids, p.turnos_ids, p.dias, p.incluir_sem_local, p.ativo,
+    p.criado_em, p.atualizado_em
+`;
+
+/**
+ * Paineis cadastrados, com o nome do campus resolvido.
+ * @param {{campusIds?:number[]}} [filtros] recorte de escopo do usuario
+ * @returns {Promise<Array<object>>}
+ */
+const listarPaineis = async ({ campusIds } = {}) => {
+    const parametros = [];
+    let condicao = '';
+
+    if (Array.isArray(campusIds)) {
+        parametros.push(campusIds);
+        condicao = ` WHERE p.campus_id = ANY($${parametros.length}::int[])`;
+    }
+
+    const resultado = await db.query(
+        `SELECT ${COLUNAS_PAINEL}, ca.nome AS campus_nome
+           FROM paineis p
+           JOIN campus ca ON ca.id = p.campus_id
+         ${condicao}
+          ORDER BY ca.nome, p.titulo`,
+        parametros
+    );
+    return resultado.rows;
+};
+
+const buscarPainelPorId = async (id) => {
+    const resultado = await db.query(
+        `SELECT ${COLUNAS_PAINEL}, ca.nome AS campus_nome
+           FROM paineis p JOIN campus ca ON ca.id = p.campus_id
+          WHERE p.id = $1 LIMIT 1`,
+        [id]
+    );
+    return resultado.rows[0] || null;
+};
+
+/** Painel ativo pelo slug — e por aqui que a TV chega. */
+const buscarPainelPorSlug = async (slug) => {
+    const resultado = await db.query(
+        `SELECT ${COLUNAS_PAINEL} FROM paineis p WHERE p.slug = $1 AND p.ativo LIMIT 1`,
+        [slug]
+    );
+    return resultado.rows[0] || null;
+};
+
+/** O slug ja pertence a outro painel? */
+const slugEmUso = async (slug, exceto = null) => {
+    const resultado = await db.query(
+        'SELECT 1 FROM paineis WHERE slug = $1 AND ($2::int IS NULL OR id <> $2) LIMIT 1',
+        [slug, exceto]
+    );
+    return resultado.rowCount > 0;
+};
+
+const CAMPOS_GRAVAVEIS = [
+    'slug',
+    'titulo',
+    'campus_id',
+    'blocos',
+    'locais_ids',
+    'cursos_ids',
+    'turmas_ids',
+    'turnos_ids',
+    'dias',
+    'incluir_sem_local',
+    'ativo',
+];
+
+/**
+ * Cria um painel. O objeto e montado campo a campo pelo servico — aqui nao
+ * entra nada que nao esteja em `CAMPOS_GRAVAVEIS`.
+ * @param {object} dados
+ * @returns {Promise<object>}
+ */
+const criarPainel = async (dados) => {
+    const valores = CAMPOS_GRAVAVEIS.map((campo) => dados[campo]);
+    const marcadores = CAMPOS_GRAVAVEIS.map((_, i) => `$${i + 1}`).join(', ');
+
+    const resultado = await db.query(
+        `INSERT INTO paineis (${CAMPOS_GRAVAVEIS.join(', ')})
+         VALUES (${marcadores}) RETURNING ${COLUNAS_PAINEL.replace(/p\./g, '')}`,
+        valores
+    );
+    return resultado.rows[0];
+};
+
+const atualizarPainel = async (id, dados) => {
+    const valores = CAMPOS_GRAVAVEIS.map((campo) => dados[campo]);
+    const atribuicoes = CAMPOS_GRAVAVEIS.map((campo, i) => `${campo} = $${i + 1}`).join(', ');
+
+    const resultado = await db.query(
+        `UPDATE paineis SET ${atribuicoes}
+          WHERE id = $${CAMPOS_GRAVAVEIS.length + 1}
+      RETURNING ${COLUNAS_PAINEL.replace(/p\./g, '')}`,
+        [...valores, id]
+    );
+    return resultado.rows[0] || null;
+};
+
+const alterarSituacaoPainel = async (id, ativo) => {
+    const resultado = await db.query(
+        `UPDATE paineis SET ativo = $2 WHERE id = $1 RETURNING ${COLUNAS_PAINEL.replace(/p\./g, '')}`,
+        [id, ativo]
+    );
+    return resultado.rows[0] || null;
+};
+
+/**
+ * Locais do campus que pertencem aos blocos informados.
+ *
+ * A expansao acontece na CONSULTA, e nao na gravacao: e o que faz um bloco que
+ * ganha uma sala nova passar a mostra-la sozinho, sem ninguem reeditar o
+ * painel. A letra sai do fim do nome ("101 C" -> "C"), que e a convencao ja
+ * usada pela instituicao.
+ *
+ * @param {{campusId:number, blocos:string[]}} filtros
+ * @returns {Promise<number[]>}
+ */
+const locaisDosBlocos = async ({ campusId, blocos } = {}) => {
+    if (!Array.isArray(blocos) || blocos.length === 0) return [];
+
+    const resultado = await db.query(
+        `SELECT id FROM locais
+          WHERE ativo AND campus_id = $1 AND tipo <> 'virtual'
+            AND substring(nome from '([A-Z])$') = ANY($2::text[])`,
+        [campusId, blocos]
+    );
+    return resultado.rows.map((linha) => Number(linha.id));
+};
+
 module.exports = {
     listarAulasDoDia,
     listarDiasComAula,
     periodoAtual,
+    listarPaineis,
+    buscarPainelPorId,
+    buscarPainelPorSlug,
+    slugEmUso,
+    criarPainel,
+    atualizarPainel,
+    alterarSituacaoPainel,
+    locaisDosBlocos,
     listarCampus,
     listarCursos,
     listarTurmas,
+    listarTurnos,
     listarLocais,
 };

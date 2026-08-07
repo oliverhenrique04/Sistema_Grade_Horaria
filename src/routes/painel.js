@@ -24,4 +24,9 @@ const router = express.Router();
 // sem isso o Chrome recusa a resposta com ERR_BLOCKED_BY_RESPONSE.
 router.get('/painel', permitirEmbutir, painelController.exibir);
 
+// Painel salvo. E o caminho preferido: o recorte mora no banco, e corrigir uma
+// TV nao exige chegar ate ela. A rota acima continua valendo porque ja ha
+// aparelho em producao configurado com o recorte na propria URL.
+router.get('/painel/:slug', permitirEmbutir, painelController.exibirSalvo);
+
 module.exports = router;

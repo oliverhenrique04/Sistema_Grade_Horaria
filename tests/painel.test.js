@@ -352,15 +352,250 @@ describe('painel de corredor', () => {
         });
     });
 
-    describe('permissões do gerador de links', () => {
-        test('admin e nap leem; coordenador não', () => {
-            expect(PERMISSOES.admin.paineis).toContain('ler');
-            expect(PERMISSOES.nap.paineis).toContain('ler');
+    describe('permissões dos painéis', () => {
+        test('admin e nap mantêm; coordenador não enxerga', () => {
+            expect(PERMISSOES.admin.paineis).toEqual(
+                expect.arrayContaining(['ler', 'criar', 'editar', 'inativar'])
+            );
+            expect(PERMISSOES.nap.paineis).toEqual(
+                expect.arrayContaining(['ler', 'criar', 'editar', 'inativar'])
+            );
             expect(PERMISSOES.coordenador.paineis).toEqual([]);
         });
+    });
 
-        test('nem admin nem nap gravam painel: a tela é só leitura', () => {
-            expect(PERMISSOES.nap.paineis).toEqual(['ler']);
+    describe('painel salvo', () => {
+        const { criarAgente, login, postComCsrf } = require('./helpers/app');
+        const SENHA = 'SenhaTeste@123';
+
+        const autenticar = async (perfil = 'admin', campusIds = []) => {
+            const usuario = await bd.criarUsuario({ perfil, senha: SENHA, campusIds });
+            const agente = criarAgente(app);
+            await login(agente, usuario.email, SENHA);
+            return agente;
+        };
+
+        describe('validação do formulário', () => {
+            test('o endereço sai do nome, sem acento nem espaço', () => {
+                const { dados } = validador.validarPainelSalvo({
+                    titulo: 'Bloco B - Ambulatório',
+                    campus_id: '1',
+                });
+                expect(dados.slug).toBe('bloco-b-ambulatorio');
+            });
+
+            test('o endereço informado à mão prevalece', () => {
+                const { dados } = validador.validarPainelSalvo({
+                    titulo: 'Bloco C',
+                    slug: 'tv-corredor-c',
+                    campus_id: '1',
+                });
+                expect(dados.slug).toBe('tv-corredor-c');
+            });
+
+            test('nome e campus são obrigatórios', () => {
+                const { erros } = validador.validarPainelSalvo({});
+                expect(erros.titulo).toBeTruthy();
+                expect(erros.campus_id).toBeTruthy();
+            });
+
+            test('blocos viram letras maiúsculas e o resto é descartado', () => {
+                const { dados } = validador.validarPainelSalvo({
+                    titulo: 'X',
+                    campus_id: '1',
+                    blocos: ['c', 'D', 'zz', ''],
+                });
+                expect(dados.blocos).toEqual(['C', 'D']);
+            });
+
+            test('dias fora de 1..6 não entram', () => {
+                const { dados } = validador.validarPainelSalvo({
+                    titulo: 'X',
+                    campus_id: '1',
+                    dias: ['0', '1', '6', '7', 'abc'],
+                });
+                expect(dados.dias).toEqual([1, 6]);
+            });
+
+            test('a caixa desmarcada vence o campo oculto que vem antes dela', () => {
+                // Caixa marcada envia ['0','1']; desmarcada envia so ['0'].
+                expect(
+                    validador.validarPainelSalvo({
+                        titulo: 'X',
+                        campus_id: '1',
+                        incluir_sem_local: ['0', '1'],
+                    }).dados.incluir_sem_local
+                ).toBe(true);
+
+                expect(
+                    validador.validarPainelSalvo({
+                        titulo: 'X',
+                        campus_id: '1',
+                        incluir_sem_local: '0',
+                    }).dados.incluir_sem_local
+                ).toBe(false);
+            });
+        });
+
+        describe('recorte gravado', () => {
+            test('lista vazia significa "todos", e não "nenhum"', () => {
+                const recorte = servico.recorteDoPainel({
+                    campus_id: 3,
+                    titulo: 'T',
+                    blocos: [],
+                    locais_ids: [],
+                    cursos_ids: [7],
+                    turmas_ids: [],
+                    turnos_ids: [],
+                    dias: [],
+                    incluir_sem_local: true,
+                });
+
+                expect(recorte.campusId).toBe(3);
+                expect(recorte.cursosIds).toEqual([7]);
+                expect(recorte.blocos).toBeUndefined();
+                expect(recorte.turmasIds).toBeUndefined();
+                expect(recorte.dias).toBeUndefined();
+            });
+
+            test('o resumo descreve o recorte em uma linha', () => {
+                expect(
+                    servico.resumoDoRecorte({
+                        blocos: ['C'],
+                        locais_ids: [],
+                        cursos_ids: [1, 2],
+                        turmas_ids: [],
+                        turnos_ids: [],
+                        dias: [1, 3],
+                    })
+                ).toBe('bloco C · 2 cursos · SEG QUA');
+
+                expect(
+                    servico.resumoDoRecorte({
+                        blocos: [],
+                        locais_ids: [],
+                        cursos_ids: [],
+                        turmas_ids: [],
+                        turnos_ids: [],
+                        dias: [],
+                    })
+                ).toBe('campus inteiro');
+            });
+        });
+
+        describe('ciclo completo pelo painel administrativo', () => {
+            let cenario;
+
+            beforeAll(async () => {
+                const campus = await bd.criarCampus({ nome: 'Campus Salvo' });
+                const curso = await bd.criarCurso({ nome: 'Curso Salvo', campusIds: [campus.id] });
+                const turma = await bd.criarTurma({
+                    nome: 'SLV01M1',
+                    codigo: 'SLV01M1',
+                    campusId: campus.id,
+                    cursoId: curso.id,
+                    turnoSlug: 'matutino',
+                    semestreCurricular: 1,
+                });
+                const disciplina = await bd.criarDisciplina({ nome: 'Disciplina Salva' });
+                // Duas salas do mesmo bloco: a expansao por letra tem que pegar
+                // as duas, inclusive a cadastrada depois do painel.
+                const sala = await bd.criarLocal({ campusId: campus.id, nome: '801 W' });
+
+                await bd.criarAula({
+                    turmaId: turma.id,
+                    disciplinaId: disciplina.id,
+                    localId: sala.id,
+                    diaSemana: 3,
+                    ordemHorario: 1,
+                });
+
+                cenario = { campus, curso, turma, sala };
+            });
+
+            test('cria, aparece na lista e responde em /painel/<slug>', async () => {
+                const agente = await autenticar('admin');
+
+                const criado = await postComCsrf(agente, '/admin/paineis', {
+                    titulo: 'Bloco W',
+                    campus_id: String(cenario.campus.id),
+                    blocos: 'W',
+                    dias: '3',
+                });
+                expect(criado.status).toBe(302);
+
+                const lista = await agente.get('/admin/paineis');
+                expect(lista.text).toContain('Bloco W');
+                expect(lista.text).toContain('/painel/bloco-w');
+
+                const tv = await request(app).get('/painel/bloco-w');
+                expect(tv.status).toBe(200);
+                expect(tv.text).toContain('Bloco W');
+                expect(tv.text).toContain('Disciplina Salva');
+            });
+
+            test('o bloco pega a sala cadastrada depois do painel', async () => {
+                const nova = await bd.criarLocal({ campusId: cenario.campus.id, nome: '802 W' });
+                const disciplina = await bd.criarDisciplina({ nome: 'Disciplina da Sala Nova' });
+
+                await bd.criarAula({
+                    turmaId: cenario.turma.id,
+                    disciplinaId: disciplina.id,
+                    localId: nova.id,
+                    diaSemana: 3,
+                    ordemHorario: 3,
+                });
+
+                // O painel guarda a LETRA, entao nao precisa ser reeditado.
+                const tv = await request(app).get('/painel/bloco-w');
+                expect(tv.text).toContain('Disciplina da Sala Nova');
+            });
+
+            test('endereço repetido é recusado com mensagem', async () => {
+                const agente = await autenticar('admin');
+                const resposta = await postComCsrf(agente, '/admin/paineis', {
+                    titulo: 'Bloco W',
+                    campus_id: String(cenario.campus.id),
+                });
+
+                expect(resposta.status).toBe(422);
+                expect(resposta.text).toContain('Já existe um painel');
+            });
+
+            test('painel desativado deixa de responder', async () => {
+                const agente = await autenticar('admin');
+                const painel = (
+                    await bd.query('SELECT id FROM paineis WHERE slug = $1', ['bloco-w'])
+                ).rows[0];
+
+                await postComCsrf(agente, `/admin/paineis/${painel.id}/situacao`, { ativo: '0' });
+
+                const tv = await request(app).get('/painel/bloco-w');
+                expect(tv.status).toBe(404);
+                expect(tv.text).toContain('sem configuração');
+
+                await postComCsrf(agente, `/admin/paineis/${painel.id}/situacao`, { ativo: '1' });
+                expect((await request(app).get('/painel/bloco-w')).status).toBe(200);
+            });
+
+            test('o nap só alcança os painéis dos campus vinculados a ele', async () => {
+                const outro = await bd.criarCampus({ nome: 'Campus de Outro NAP' });
+                const agente = await autenticar('nap', [outro.id]);
+
+                const lista = await agente.get('/admin/paineis');
+                expect(lista.status).toBe(200);
+                expect(lista.text).not.toContain('Bloco W');
+
+                const painel = (
+                    await bd.query('SELECT id FROM paineis WHERE slug = $1', ['bloco-w'])
+                ).rows[0];
+                expect((await agente.get(`/admin/paineis/${painel.id}/editar`)).status).toBe(403);
+            });
+
+            test('coordenador não entra na área', async () => {
+                const agente = await autenticar('coordenador');
+                expect((await agente.get('/admin/paineis')).status).toBe(403);
+            });
         });
     });
 

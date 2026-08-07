@@ -1,0 +1,110 @@
+<%- include('../../layouts/admin-inicio') %>
+
+<%
+/*
+ * As TVs cadastradas. Cada linha traz o endereco pronto para colar no aparelho
+ * e um resumo do recorte, para se reconhecer a tela sem abrir o formulario.
+ */
+%>
+
+<section class="painel-cartao" aria-labelledby="titulo-paineis">
+    <div class="painel-cartao-cabecalho">
+        <div>
+            <h2 class="h6 mb-1" id="titulo-paineis">TVs dos blocos</h2>
+            <p class="painel-indicador-nota mb-0">
+                Cada painel é uma tela. O endereço fica fixo no aparelho e o que ele mostra se
+                edita aqui — sem precisar chegar até a TV.
+            </p>
+        </div>
+
+        <% if (podeVer('paineis', 'criar')) { %>
+            <a class="btn btn-primary btn-sm" href="<%= withBase('/admin/paineis/novo') %>">
+                <i class="fa-solid fa-plus" aria-hidden="true"></i> Novo painel
+            </a>
+        <% } %>
+    </div>
+
+    <% if (paineis.length === 0) { %>
+        <%- include('../../partials/estado-vazio', {
+            icone: 'fa-tv',
+            titulo: 'Nenhuma TV cadastrada',
+            descricao: 'Crie um painel para cada tela: escolha o bloco, dê um nome e cole o endereço no aparelho.',
+            acaoUrl: podeVer('paineis', 'criar') ? withBase('/admin/paineis/novo') : '',
+            acaoTexto: 'Novo painel'
+        }) %>
+    <% } else { %>
+        <div class="table-responsive">
+            <table class="table table-sm align-middle painel-tabela">
+                <thead>
+                    <tr>
+                        <th scope="col">Painel</th>
+                        <th scope="col">O que mostra</th>
+                        <th scope="col">Endereço da TV</th>
+                        <th scope="col">Situação</th>
+                        <th scope="col" class="text-end">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% paineis.forEach((painel) => { %>
+                        <tr class="<%= painel.ativo ? '' : 'opacity-50' %>">
+                            <td>
+                                <strong><%= painel.titulo %></strong>
+                                <div class="painel-indicador-nota"><%= painel.campus_nome %></div>
+                            </td>
+                            <td><span class="painel-indicador-nota"><%= painel.resumo %></span></td>
+                            <td>
+                                <input class="form-control form-control-sm font-monospace"
+                                       type="text" readonly value="<%= painel.endereco %>"
+                                       onfocus="this.select()"
+                                       aria-label="Endereço da TV <%= painel.titulo %>"
+                                       style="min-width: 20rem">
+                            </td>
+                            <td>
+                                <%- include('../../partials/status-badge', { ativo: painel.ativo }) %>
+                            </td>
+                            <td class="text-end text-nowrap">
+                                <a class="btn btn-outline-secondary btn-sm"
+                                   href="<%= painel.caminho %>" target="_blank" rel="noopener"
+                                   title="Abrir o painel numa aba">
+                                    <i class="fa-solid fa-tv" aria-hidden="true"></i>
+                                    <span class="visually-hidden">Abrir</span>
+                                </a>
+
+                                <% if (podeVer('paineis', 'editar')) { %>
+                                    <a class="btn btn-outline-secondary btn-sm"
+                                       href="<%= withBase('/admin/paineis/' + painel.id + '/editar') %>">
+                                        <i class="fa-solid fa-pen" aria-hidden="true"></i>
+                                        <span class="visually-hidden">Editar</span>
+                                    </a>
+                                <% } %>
+
+                                <% if (podeVer('paineis', 'inativar')) { %>
+                                    <form class="d-inline" method="POST"
+                                          action="<%= withBase('/admin/paineis/' + painel.id + '/situacao') %>">
+                                        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                                        <input type="hidden" name="ativo" value="<%= painel.ativo ? '0' : '1' %>">
+                                        <button class="btn btn-outline-secondary btn-sm" type="submit"
+                                                title="<%= painel.ativo ? 'Desativar' : 'Reativar' %>">
+                                            <i class="fa-solid <%= painel.ativo ? 'fa-eye-slash' : 'fa-eye' %>"
+                                               aria-hidden="true"></i>
+                                            <span class="visually-hidden">
+                                                <%= painel.ativo ? 'Desativar' : 'Reativar' %>
+                                            </span>
+                                        </button>
+                                    </form>
+                                <% } %>
+                            </td>
+                        </tr>
+                    <% }) %>
+                </tbody>
+            </table>
+        </div>
+
+        <p class="painel-indicador-nota mb-0">
+            Painel desativado responde com o aviso de “sem configuração” na tela, em vez de
+            sumir: quem passar pela TV entende que ela não está fora do ar por acidente.
+        </p>
+    <% } %>
+</section>
+
+<%- include('../../layouts/admin-fim') %>

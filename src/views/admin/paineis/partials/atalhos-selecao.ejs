@@ -1,0 +1,21 @@
+<%
+/*
+ * Atalhos de um grupo de caixas: marcar todos, limpar e — quando a lista e
+ * longa — filtrar por texto.
+ *
+ * Sao acrescimos de conveniencia: sem JavaScript os botoes nao aparecem, e as
+ * caixas continuam funcionando uma a uma. Por isso o `hidden`, que o
+ * `paineis.js` remove ao assumir o grupo.
+ */
+const temBusca = typeof comBusca !== 'undefined' && comBusca;
+%>
+<div class="painel-atalhos" data-atalhos hidden>
+    <button class="btn btn-link btn-sm" type="button" data-marcar-todos>marcar todos</button>
+    <button class="btn btn-link btn-sm" type="button" data-limpar>limpar</button>
+    <span class="painel-atalhos-conta" data-conta aria-live="polite"></span>
+
+    <% if (temBusca) { %>
+        <input class="form-control form-control-sm painel-atalhos-busca" type="search"
+               placeholder="filtrar…" data-filtrar aria-label="Filtrar a lista">
+    <% } %>
+</div>

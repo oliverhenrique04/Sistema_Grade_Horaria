@@ -793,3 +793,177 @@ a.painel-indicador:hover {
     font-size: 0.85rem;
     color: #94a3b8;
 }
+
+/* --------------------------------------------------------------------------
+   Paineis de TV (/admin/paineis)
+
+   O formulario e longo por natureza — cinco eixos de recorte — entao o que ele
+   pede do CSS e legibilidade de varredura: grupos separados, o que esta marcado
+   visivel de relance, e listas longas que nao empurram o resto da pagina.
+   -------------------------------------------------------------------------- */
+
+.painel-formulario {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.painel-prefixo {
+    font-family: var(--bs-font-monospace, monospace);
+    font-size: 0.82rem;
+}
+
+/* --- blocos e suas salas -------------------------------------------------- */
+
+.painel-blocos {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+    gap: 0.75rem;
+}
+
+.painel-bloco {
+    border: 1px solid var(--bs-border-color);
+    border-radius: 0.6rem;
+    padding: 0.7rem 0.85rem;
+    background: var(--bs-body-bg);
+}
+
+.painel-bloco-topo {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+.painel-bloco-topo .form-check {
+    margin: 0;
+    flex: 1;
+}
+
+.painel-bloco-contagem {
+    font-size: 0.78rem;
+    color: var(--bs-secondary-color);
+    white-space: nowrap;
+}
+
+.painel-bloco-abrir {
+    padding: 0;
+    font-size: 0.78rem;
+    text-decoration: none;
+}
+
+.painel-bloco-salas {
+    margin-top: 0.6rem;
+    padding-top: 0.6rem;
+    border-top: 1px dashed var(--bs-border-color);
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(7rem, 1fr));
+    gap: 0.2rem 0.6rem;
+}
+
+/* --- grupos de selecao ---------------------------------------------------- */
+
+.painel-grupo {
+    border: 0;
+    padding: 0.9rem 0 0;
+    margin: 0.9rem 0 0;
+    border-top: 1px solid var(--bs-border-color);
+}
+
+.painel-grupo:first-of-type {
+    border-top: 0;
+    margin-top: 0;
+    padding-top: 0;
+}
+
+.painel-grupo legend {
+    float: none;
+    width: auto;
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 0.15rem;
+}
+
+.painel-atalhos {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.5rem;
+}
+
+.painel-atalhos .btn-link {
+    padding: 0;
+    font-size: 0.8rem;
+    text-decoration: none;
+}
+
+.painel-atalhos-conta {
+    font-size: 0.78rem;
+    color: var(--bs-secondary-color);
+}
+
+.painel-atalhos-busca {
+    max-width: 12rem;
+    margin-left: auto;
+}
+
+/* --- chips ---------------------------------------------------------------- */
+
+.painel-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
+
+/* Lista longa (turmas) rola dentro de si, para nao empurrar as acoes do
+   formulario para fora da tela. */
+.painel-chips-rolagem {
+    max-height: 14rem;
+    overflow-y: auto;
+    padding: 0.35rem;
+    border: 1px solid var(--bs-border-color);
+    border-radius: 0.6rem;
+}
+
+.painel-chip {
+    position: relative;
+    display: inline-flex;
+    cursor: pointer;
+}
+
+.painel-chip input {
+    position: absolute;
+    opacity: 0;
+    width: 1px;
+    height: 1px;
+}
+
+.painel-chip span {
+    display: inline-block;
+    padding: 0.28rem 0.7rem;
+    border: 1px solid var(--bs-border-color);
+    border-radius: 999px;
+    font-size: 0.82rem;
+    line-height: 1.3;
+    transition:
+        background-color 0.12s,
+        border-color 0.12s,
+        color 0.12s;
+}
+
+.painel-chip:hover span {
+    border-color: var(--bs-primary);
+}
+
+/* O estado marcado precisa ser obvio numa tela cheia de chips. */
+.painel-chip input:checked + span {
+    background: var(--bs-primary);
+    border-color: var(--bs-primary);
+    color: #fff;
+    font-weight: 600;
+}
+
+.painel-chip input:focus-visible + span {
+    outline: 2px solid var(--bs-primary);
+    outline-offset: 2px;
+}

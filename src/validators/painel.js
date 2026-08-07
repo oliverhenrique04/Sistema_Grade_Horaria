@@ -104,4 +104,119 @@ const validarRecorte = (query = {}) => {
     };
 };
 
-module.exports = { validarRecorte, esquema, MAXIMO_POR_LISTA, TITULO_MAXIMO };
+// ---------------------------------------------------------------------------
+// Painel salvo (formulario do painel administrativo)
+// ---------------------------------------------------------------------------
+
+/** Slug do painel: e o que aparece na URL da TV (`/painel/bloco-c`). */
+const SLUG_MAXIMO = 60;
+
+/**
+ * Transforma um titulo em slug: "Bloco B - Asa Sul" -> "bloco-b-asa-sul".
+ * @param {string} valor
+ * @returns {string}
+ */
+const paraSlug = (valor = '') =>
+    String(valor || '')
+        .normalize('NFD')
+        .replace(/[̀-ͯ]/g, '')
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, SLUG_MAXIMO);
+
+/** Lista de ids vinda de caixas de selecao (repetidas ou separadas por virgula). */
+const listaDeIdsDoCorpo = (valor) => {
+    if (valor === undefined || valor === null) return [];
+    return [
+        ...new Set(
+            (Array.isArray(valor) ? valor : [valor])
+                .flatMap((parte) => String(parte).split(','))
+                .map((parte) => parte.trim())
+                .filter((parte) => /^\d{1,10}$/.test(parte))
+                .map(Number)
+                .filter((numero) => numero >= 1 && numero <= MAX_INT)
+        ),
+    ].slice(0, MAXIMO_POR_LISTA);
+};
+
+/** Ultimo valor enviado para um nome de campo (o parser devolve array). */
+const ultimoValor = (valor, padrao) => {
+    if (valor === undefined || valor === null) return padrao;
+    const lista = Array.isArray(valor) ? valor : [valor];
+    return String(lista[lista.length - 1]);
+};
+
+/** Letras de bloco, como aparecem no fim do nome da sala ("101 C" -> "C"). */
+const listaDeBlocos = (valor) => {
+    if (valor === undefined || valor === null) return [];
+    return [
+        ...new Set(
+            (Array.isArray(valor) ? valor : [valor])
+                .flatMap((parte) => String(parte).split(','))
+                .map((parte) => parte.trim().toUpperCase())
+                .filter((parte) => /^[A-Z]$/.test(parte))
+        ),
+    ];
+};
+
+/**
+ * Valida o formulario de um painel salvo.
+ *
+ * Diferente da query string publica, aqui entrada invalida VIRA ERRO: quem
+ * preenche e um operador autenticado, na frente do formulario, e devolver a
+ * tela com o campo marcado ensina mais do que salvar um recorte pela metade.
+ *
+ * @param {Record<string, unknown>} corpo
+ * @returns {{dados:object, erros:Record<string,string>}}
+ */
+const validarPainelSalvo = (corpo = {}) => {
+    const erros = {};
+    const texto = (valor) => (typeof valor === 'string' ? valor.trim() : '');
+
+    const titulo = texto(corpo.titulo);
+    if (!titulo) erros.titulo = 'Informe o nome que aparece na TV.';
+    else if (titulo.length > TITULO_MAXIMO) {
+        erros.titulo = `Use no máximo ${TITULO_MAXIMO} caracteres.`;
+    }
+
+    const campusId = /^\d{1,10}$/.test(texto(corpo.campus_id)) ? Number(corpo.campus_id) : null;
+    if (!campusId) erros.campus_id = 'Escolha o campus.';
+
+    // Sem slug informado, deriva do titulo — o operador nao precisa saber o que
+    // e um slug para publicar uma TV.
+    const slug = paraSlug(texto(corpo.slug) || titulo);
+    if (!slug) erros.slug = 'Não foi possível gerar o endereço a partir do nome.';
+
+    const dias = listaDeIdsDoCorpo(corpo.dias).filter((dia) => dia >= 1 && dia <= 6);
+
+    return {
+        erros,
+        dados: {
+            slug,
+            titulo,
+            campus_id: campusId,
+            blocos: listaDeBlocos(corpo.blocos),
+            locais_ids: listaDeIdsDoCorpo(corpo.locais),
+            cursos_ids: listaDeIdsDoCorpo(corpo.cursos),
+            turmas_ids: listaDeIdsDoCorpo(corpo.turmas),
+            turnos_ids: listaDeIdsDoCorpo(corpo.turnos),
+            dias,
+            // Caixa de selecao com campo oculto antes: o navegador manda os dois
+            // quando marcada, e so o oculto quando nao. Vale sempre o ULTIMO.
+            incluir_sem_local: ultimoValor(corpo.incluir_sem_local, '1') !== '0',
+            ativo: ultimoValor(corpo.ativo, '1') !== '0',
+        },
+    };
+};
+
+module.exports = {
+    validarRecorte,
+    validarPainelSalvo,
+    paraSlug,
+    esquema,
+    MAXIMO_POR_LISTA,
+    TITULO_MAXIMO,
+    SLUG_MAXIMO,
+};

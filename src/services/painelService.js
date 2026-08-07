@@ -16,7 +16,7 @@
  *    numa pagina, o que ja acabou sai da frente do que ainda vai acontecer.
  */
 const repositorio = require('../repositories/painelRepository');
-const { nomeDoDia } = require('../utils/dias');
+const { nomeDoDia, siglaDoDia, DIAS } = require('../utils/dias');
 const { agruparPorBloco } = require('../utils/blocos');
 
 /** Fuso da instituicao. O processo pode rodar em UTC; a TV, nunca. */
@@ -411,12 +411,23 @@ const montarPainel = async (recorte = {}, opcoes = {}) => {
     if (!periodo) return { ...moldura, configurar: true, motivo: 'periodo' };
     if (!recorte.campusId) return { ...moldura, configurar: true, motivo: 'campus', periodo };
 
+    // O recorte por bloco vira lista de salas na CONSULTA, e nao na gravacao:
+    // assim um bloco que ganha uma sala nova passa a mostra-la sozinho.
+    const doBloco = await repositorio.locaisDosBlocos({
+        campusId: recorte.campusId,
+        blocos: recorte.blocos,
+    });
+    const locais = [...new Set([...(recorte.locaisIds || []), ...doBloco])];
+
     const consulta = {
         periodoId: Number(periodo.id),
         campusId: recorte.campusId,
         cursosIds: recorte.cursosIds,
         turmasIds: recorte.turmasIds,
-        locaisIds: recorte.locaisIds,
+        turnosIds: recorte.turnosIds,
+        diasIds: recorte.dias,
+        locaisIds: locais.length > 0 ? locais : undefined,
+        incluirSemLocal: recorte.incluirSemLocal,
     };
 
     const doDia = async (diaSemana) =>
@@ -493,9 +504,11 @@ const montarPainel = async (recorte = {}, opcoes = {}) => {
  * @param {(campusId:number) => boolean} [podeVerCampus]
  * @returns {Promise<object>}
  */
+const VAZIO = { cursos: [], turmas: [], turnos: [], blocos: [], dias: DIAS };
+
 const opcoesDoGerador = async ({ campusId } = {}, podeVerCampus = () => true) => {
     const periodo = await repositorio.periodoAtual();
-    if (!periodo) return { periodo: null, campus: [], cursos: [], turmas: [], blocos: [] };
+    if (!periodo) return { ...VAZIO, periodo: null, campus: [], campusEscolhido: null };
 
     const periodoId = Number(periodo.id);
     const campus = (await repositorio.listarCampus({ periodoId })).filter((item) =>
@@ -503,13 +516,13 @@ const opcoesDoGerador = async ({ campusId } = {}, podeVerCampus = () => true) =>
     );
 
     const escolhido = campus.find((item) => Number(item.id) === Number(campusId)) || null;
-    if (!escolhido)
-        return { periodo, campus, campusEscolhido: null, cursos: [], turmas: [], blocos: [] };
+    if (!escolhido) return { ...VAZIO, periodo, campus, campusEscolhido: null };
 
     const alvo = { periodoId, campusId: Number(escolhido.id) };
-    const [cursos, turmas, locais] = await Promise.all([
+    const [cursos, turmas, turnos, locais] = await Promise.all([
         repositorio.listarCursos(alvo),
         repositorio.listarTurmas(alvo),
+        repositorio.listarTurnos(alvo),
         repositorio.listarLocais({ campusId: Number(escolhido.id) }),
     ]);
 
@@ -519,13 +532,83 @@ const opcoesDoGerador = async ({ campusId } = {}, podeVerCampus = () => true) =>
         campusEscolhido: escolhido,
         cursos,
         turmas,
+        turnos,
+        dias: DIAS,
         blocos: agruparPorBloco(locais),
     };
+};
+
+/**
+ * Recorte de um painel salvo, no formato que `montarPainel` espera.
+ *
+ * Lista vazia vira `undefined` de proposito: no banco, `{}` significa "todos"
+ * naquele eixo, e um array vazio chegando ao SQL filtraria por nada.
+ *
+ * @param {object} painel linha de `paineis`
+ * @returns {object}
+ */
+const recorteDoPainel = (painel) => {
+    const lista = (valores) =>
+        Array.isArray(valores) && valores.length > 0 ? valores.map(Number) : undefined;
+
+    return {
+        campusId: Number(painel.campus_id),
+        titulo: painel.titulo,
+        blocos:
+            Array.isArray(painel.blocos) && painel.blocos.length > 0 ? painel.blocos : undefined,
+        locaisIds: lista(painel.locais_ids),
+        cursosIds: lista(painel.cursos_ids),
+        turmasIds: lista(painel.turmas_ids),
+        turnosIds: lista(painel.turnos_ids),
+        dias: lista(painel.dias),
+        incluirSemLocal: painel.incluir_sem_local !== false,
+    };
+};
+
+/** Painel ativo pelo slug, ja com o recorte resolvido. */
+const painelPorSlug = async (slug) => {
+    const painel = await repositorio.buscarPainelPorSlug(slug);
+    return painel ? { painel, recorte: recorteDoPainel(painel) } : null;
+};
+
+/**
+ * Resumo legivel do recorte, para a lista do painel administrativo.
+ * @param {object} painel
+ * @returns {string}
+ */
+const resumoDoRecorte = (painel) => {
+    const partes = [];
+    const quantos = (lista, singular, plural) =>
+        Array.isArray(lista) && lista.length > 0
+            ? `${lista.length} ${lista.length === 1 ? singular : plural}`
+            : null;
+
+    if (Array.isArray(painel.blocos) && painel.blocos.length > 0) {
+        partes.push(`bloco ${painel.blocos.join(', ')}`);
+    }
+    [
+        [painel.locais_ids, 'sala', 'salas'],
+        [painel.cursos_ids, 'curso', 'cursos'],
+        [painel.turmas_ids, 'turma', 'turmas'],
+        [painel.turnos_ids, 'turno', 'turnos'],
+    ].forEach(([lista, s, p]) => {
+        const texto = quantos(lista, s, p);
+        if (texto) partes.push(texto);
+    });
+
+    if (Array.isArray(painel.dias) && painel.dias.length > 0) {
+        partes.push(painel.dias.map((dia) => siglaDoDia(dia)).join(' '));
+    }
+
+    return partes.length > 0 ? partes.join(' · ') : 'campus inteiro';
 };
 
 module.exports = {
     montarPainel,
     opcoesDoGerador,
+    recorteDoPainel,
+    painelPorSlug,
+    resumoDoRecorte,
     densidadeDe,
     compactar,
     colapsarPorAula,

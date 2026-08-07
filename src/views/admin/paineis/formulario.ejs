@@ -1,0 +1,268 @@
+<%- include('../../layouts/admin-inicio') %>
+
+<%
+/*
+ * Formulario de um painel de TV.
+ *
+ * A tela e organizada pela pergunta que o operador realmente faz, nesta ordem:
+ * como se chama, onde a TV esta, e o que ela deve mostrar. Cada eixo do recorte
+ * diz em texto o que significa deixar em branco — "nada marcado = tudo" e a
+ * regra que mais confunde quem chega.
+ *
+ * Sem JavaScript o formulario funciona inteiro: as caixas sao caixas, e o
+ * `paineis.js` so acrescenta os atalhos (marcar tudo, bloco que marca as salas,
+ * busca nas listas longas).
+ */
+const erro = (campo) => erros[campo] || '';
+%>
+
+<form method="POST" action="<%= acao %>" class="painel-formulario" data-painel-form>
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+    <!-- 1. Identificacao -------------------------------------------------- -->
+    <section class="painel-cartao" aria-labelledby="titulo-identificacao">
+        <div class="painel-cartao-cabecalho">
+            <div>
+                <h2 class="h6 mb-1" id="titulo-identificacao">Identificação</h2>
+                <p class="painel-indicador-nota mb-0">
+                    O nome aparece em corpo grande no alto da TV e vira o endereço dela.
+                </p>
+            </div>
+        </div>
+
+        <div class="painel-filtros">
+            <div class="painel-filtros-campo">
+                <label class="form-label" for="campo-titulo">Nome exibido na TV</label>
+                <input class="form-control <%= erro('titulo') ? 'is-invalid' : '' %>"
+                       type="text" id="campo-titulo" name="titulo" required
+                       maxlength="<%= limiteTitulo %>" placeholder="Bloco C"
+                       value="<%= valores.titulo %>" data-gera-slug>
+                <%- include('../../partials/campo-erro', { erros: erros, campo: 'titulo' }) %>
+            </div>
+
+            <div class="painel-filtros-campo">
+                <label class="form-label" for="campo-campus">Campus</label>
+                <select class="form-select <%= erro('campus_id') ? 'is-invalid' : '' %>"
+                        id="campo-campus" name="campus_id" required data-submete-ao-mudar>
+                    <option value="">Selecione o campus</option>
+                    <% opcoes.campus.forEach((unidade) => { %>
+                        <option value="<%= unidade.id %>"
+                                <%= valores.campus_id === unidade.id ? 'selected' : '' %>>
+                            <%= unidade.nome %>
+                        </option>
+                    <% }) %>
+                </select>
+                <%- include('../../partials/campo-erro', { erros: erros, campo: 'campus_id' }) %>
+            </div>
+
+            <div class="painel-filtros-campo">
+                <label class="form-label" for="campo-slug">
+                    Endereço <span class="text-body-secondary">(gerado do nome)</span>
+                </label>
+                <div class="input-group">
+                    <span class="input-group-text painel-prefixo">…/painel/</span>
+                    <input class="form-control font-monospace <%= erro('slug') ? 'is-invalid' : '' %>"
+                           type="text" id="campo-slug" name="slug" value="<%= valores.slug %>"
+                           placeholder="bloco-c" data-slug>
+                </div>
+                <%- include('../../partials/campo-erro', { erros: erros, campo: 'slug' }) %>
+            </div>
+        </div>
+    </section>
+
+    <% if (!valores.campus_id) { %>
+        <section class="painel-cartao">
+            <p class="alert alert-info mb-0">
+                Escolha o campus para liberar os filtros de bloco, curso, turno e turma.
+            </p>
+        </section>
+    <% } else { %>
+
+    <!-- 2. Onde a TV esta -------------------------------------------------- -->
+    <section class="painel-cartao" aria-labelledby="titulo-onde">
+        <div class="painel-cartao-cabecalho">
+            <div>
+                <h2 class="h6 mb-1" id="titulo-onde">Onde a TV está</h2>
+                <p class="painel-indicador-nota mb-0">
+                    Marque o bloco inteiro — ele passa a incluir sozinho as salas que forem
+                    cadastradas depois. Precisando de precisão, abra o bloco e escolha as salas.
+                </p>
+            </div>
+        </div>
+
+        <% if (opcoes.blocos.length === 0) { %>
+            <p class="painel-indicador-nota mb-0">Nenhuma sala cadastrada neste campus.</p>
+        <% } %>
+
+        <div class="painel-blocos">
+            <% opcoes.blocos.forEach((grupo) => { %>
+                <% const idBloco = 'bloco-' + (grupo.letra || 'outros'); %>
+                <div class="painel-bloco" data-bloco-grupo>
+                    <div class="painel-bloco-topo">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="<%= idBloco %>"
+                                   name="blocos" value="<%= grupo.letra || '' %>"
+                                   <%= grupo.letra ? '' : 'disabled' %>
+                                   <%= marcados.blocos.has(grupo.letra) ? 'checked' : '' %>
+                                   data-bloco-todo>
+                            <label class="form-check-label fw-semibold" for="<%= idBloco %>">
+                                <%= grupo.letra ? 'Bloco ' + grupo.letra : grupo.bloco %>
+                            </label>
+                        </div>
+                        <span class="painel-bloco-contagem">
+                            <%= formatadores.plural(grupo.locais.length, 'sala') %>
+                        </span>
+                        <button class="btn btn-link btn-sm painel-bloco-abrir" type="button"
+                                data-bloco-abrir aria-expanded="false">
+                            salas
+                        </button>
+                    </div>
+
+                    <div class="painel-bloco-salas" data-bloco-salas hidden>
+                        <% grupo.locais.forEach((local) => { %>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="locais"
+                                       value="<%= local.id %>" id="local-<%= local.id %>"
+                                       <%= marcados.locais.has(local.id) ? 'checked' : '' %>
+                                       data-bloco-sala>
+                                <label class="form-check-label" for="local-<%= local.id %>">
+                                    <%= local.nome %>
+                                </label>
+                            </div>
+                        <% }) %>
+                    </div>
+                </div>
+            <% }) %>
+        </div>
+
+        <%
+            /* O campo oculto vem ANTES da caixa: caixa desmarcada nao e enviada
+               pelo navegador, e sem ele "desmarcar e salvar" nao teria efeito. */
+        %>
+        <input type="hidden" name="incluir_sem_local" value="0">
+
+        <div class="form-check mt-3">
+            <input class="form-check-input" type="checkbox" id="campo-sem-local"
+                   name="incluir_sem_local" value="1"
+                   <%= valores.incluir_sem_local ? 'checked' : '' %>>
+            <label class="form-check-label" for="campo-sem-local">
+                Incluir aulas ainda sem sala definida
+            </label>
+            <p class="painel-indicador-nota mb-0">
+                Elas aparecem com “a definir”. Desmarcando, a TV só mostra o que já foi
+                ensalado — e fica vazia enquanto o ensalamento não terminar.
+            </p>
+        </div>
+    </section>
+
+    <!-- 3. O que mostrar --------------------------------------------------- -->
+    <section class="painel-cartao" aria-labelledby="titulo-oque">
+        <div class="painel-cartao-cabecalho">
+            <div>
+                <h2 class="h6 mb-1" id="titulo-oque">O que mostrar</h2>
+                <p class="painel-indicador-nota mb-0">
+                    Cada filtro deixado em branco significa <strong>todos</strong>. Um painel sem
+                    nada marcado mostra o campus inteiro.
+                </p>
+            </div>
+        </div>
+
+        <fieldset class="painel-grupo" data-grupo="cursos">
+            <legend class="form-label">Cursos</legend>
+            <%- include('partials/atalhos-selecao') %>
+            <div class="painel-chips">
+                <% opcoes.cursos.forEach((curso) => { %>
+                    <label class="painel-chip">
+                        <input type="checkbox" name="cursos" value="<%= curso.id %>"
+                               <%= marcados.cursos.has(curso.id) ? 'checked' : '' %>>
+                        <span><%= curso.sigla || curso.nome %></span>
+                    </label>
+                <% }) %>
+            </div>
+        </fieldset>
+
+        <fieldset class="painel-grupo" data-grupo="turnos">
+            <legend class="form-label">Turnos</legend>
+            <p class="painel-indicador-nota">
+                Recorta <em>quais turmas</em> entram. Não muda a faixa do dia — essa vem do
+                relógio, e a TV troca de manhã para tarde e noite sozinha.
+            </p>
+            <%- include('partials/atalhos-selecao') %>
+            <div class="painel-chips">
+                <% opcoes.turnos.forEach((turno) => { %>
+                    <label class="painel-chip">
+                        <input type="checkbox" name="turnos" value="<%= turno.id %>"
+                               <%= marcados.turnos.has(turno.id) ? 'checked' : '' %>>
+                        <span><%= turno.nome %></span>
+                    </label>
+                <% }) %>
+            </div>
+        </fieldset>
+
+        <fieldset class="painel-grupo" data-grupo="dias">
+            <legend class="form-label">Dias da semana</legend>
+            <p class="painel-indicador-nota">
+                Para uma TV que só faz sentido em certos dias. Fora deles, o painel já mostra o
+                próximo dia coberto.
+            </p>
+            <%- include('partials/atalhos-selecao') %>
+            <div class="painel-chips">
+                <% opcoes.dias.forEach((dia) => { %>
+                    <label class="painel-chip">
+                        <input type="checkbox" name="dias" value="<%= dia.valor %>"
+                               <%= marcados.dias.has(dia.valor) ? 'checked' : '' %>>
+                        <span><%= dia.sigla %></span>
+                    </label>
+                <% }) %>
+            </div>
+        </fieldset>
+
+        <fieldset class="painel-grupo" data-grupo="turmas">
+            <legend class="form-label">
+                Turmas <span class="text-body-secondary">(mais preciso que curso)</span>
+            </legend>
+            <%- include('partials/atalhos-selecao', { comBusca: true }) %>
+            <div class="painel-chips painel-chips-rolagem">
+                <% opcoes.turmas.forEach((turma) => { %>
+                    <label class="painel-chip" data-busca="<%= turma.codigo %> <%= turma.curso_sigla %>">
+                        <input type="checkbox" name="turmas" value="<%= turma.id %>"
+                               <%= marcados.turmas.has(turma.id) ? 'checked' : '' %>>
+                        <span><%= turma.codigo %></span>
+                    </label>
+                <% }) %>
+            </div>
+        </fieldset>
+    </section>
+
+    <% } %>
+
+    <!-- 4. Acoes ------------------------------------------------------------ -->
+    <section class="painel-cartao">
+        <% if (registro) { %>
+            <label class="form-label" for="campo-endereco">Endereço desta TV</label>
+            <input class="form-control font-monospace" type="text" id="campo-endereco"
+                   value="<%= endereco %>" onfocus="this.select()" readonly>
+            <p class="painel-indicador-nota mt-2">
+                Cole no navegador da TV, em tela cheia. Funciona por <code>http</code> e por
+                <code>https</code>.
+            </p>
+        <% } %>
+
+        <div class="painel-filtros-acoes mt-3">
+            <button class="btn btn-primary" type="submit">
+                <i class="fa-solid fa-floppy-disk" aria-hidden="true"></i>
+                <%= registro ? 'Salvar alterações' : 'Criar painel' %>
+            </button>
+
+            <% if (registro) { %>
+                <a class="btn btn-outline-secondary" href="<%= caminho %>" target="_blank" rel="noopener">
+                    <i class="fa-solid fa-tv" aria-hidden="true"></i> Abrir o painel
+                </a>
+            <% } %>
+
+            <a class="btn btn-outline-secondary" href="<%= withBase('/admin/paineis') %>">Voltar</a>
+        </div>
+    </section>
+</form>
+
+<%- include('../../layouts/admin-fim') %>

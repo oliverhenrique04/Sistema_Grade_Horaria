@@ -233,8 +233,27 @@ situação — porque é a convenção que as pessoas já leem de relance, a tr�
 instrução. A tela é 1080×1920 e o layout inteiro assume esse formato.
 
 O recorte vem na URL (`?campus=1&locais=26,27&cursos=…&turmas=…&titulo=Bloco+C`); a faixa
-do dia vem do relógio do servidor, todo dia, sem ninguém tocar na TV. `/admin/paineis` monta
-esse endereço — só GET, sem gravar nada: um painel novo custa um link novo, não um registro.
+do dia vem do relógio do servidor, todo dia, sem ninguém tocar na TV. Cada TV é um **registro** (`paineis`, migration 006) e aponta para `/painel/<slug>`; o recorte
+mora no banco e se edita em `/admin/paineis`, sem chegar até o aparelho. A URL antiga
+(`/painel?campus=1&locais=…`) continua valendo, porque há TV em produção configurada assim.
+
+Como o recorte é montado:
+
+- **Bloco é guardado como LETRA** (`paineis.blocos`), não como lista de salas, e é expandido na
+  consulta. É isso que faz um bloco que ganha sala nova passar a mostrá-la sozinho — a URL
+  antiga congelava os ids e exigia reeditar.
+- **Cada eixo vazio significa "todos"**, não "nenhum": um painel recém-criado mostra o campus
+  inteiro. Os eixos são bloco, sala, curso, turma, turno e dia da semana.
+- **Turno recorta quais turmas entram**, e não a faixa do dia — essa continua vindo do relógio.
+  O formulário diz isso em texto, porque é a confusão previsível.
+- **Dia da semana** serve à TV que só faz sentido em certos dias; fora deles o painel já mostra
+  o próximo dia coberto, reaproveitando a virada que já existia.
+- Os arrays são lidos inteiros, sempre no contexto do painel, e nunca consultados ao contrário
+  ("em que painéis este curso aparece?") — por isso `int[]`, e não seis tabelas de ligação.
+
+Slug desconhecido ou painel desativado respondem **404 com o aviso de "sem configuração"** na
+própria tela, e não a página de erro do navegador: uma TV em branco no corredor não diz a
+ninguém o que fazer.
 
 Decisões que sustentam o desenho:
 
@@ -333,11 +352,14 @@ na view é conveniência, nunca controle de acesso. O recurso `importacao` é ex
 `admin`: uma carga reescreve turmas e aulas de todos os cursos e campus de uma vez, o que
 não cabe no escopo de coordenador nem de nap.
 
-O recurso `paineis` (gerador de links das TVs) é de `admin` e `nap`, só leitura: é o NAP que
+O recurso `paineis` (as TVs dos blocos) é de `admin` e `nap`, com todas as ações: é o NAP que
 conhece os blocos, as salas e onde cada TV está pendurada. Coordenador fica de fora — o
-recorte de um painel é por prédio e por campus, não por curso. O escopo por campus ali é
-conveniência de listagem, não controle de acesso: `/painel` é público e honra qualquer id
-válido na URL, exibindo o que a consulta pública da grade já exibia.
+recorte de um painel é por prédio e por campus, não por curso. O `nap` só alcança os painéis
+dos campus vinculados a ele, e isso é conferido **painel a painel no controller**, porque
+depende do registro alvo.
+
+O painel exibido (`/painel/...`) continua público: quem tem o endereço vê a grade daquele
+recorte, que é a mesma já aberta na consulta pública.
 
 ## Padrões de código
 

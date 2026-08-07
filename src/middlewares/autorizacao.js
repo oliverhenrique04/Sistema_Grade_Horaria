@@ -99,8 +99,9 @@ const PERMISSOES = Object.freeze({
 
     nap: montarPerfil({
         ...permissoesLeitura(LEITURA_OPERACIONAL),
-        // Gera os links das TVs dos blocos do proprio campus.
-        paineis: ['ler'],
+        // Mantem as TVs dos blocos do proprio campus. O recorte por campus e
+        // conferido painel a painel no controller.
+        paineis: todasAcoes(),
         // Mantem o cadastro de salas do proprio campus.
         locais: todasAcoes(),
         // Apenas ajusta a alocacao de local da aula. A restricao de quais campos
