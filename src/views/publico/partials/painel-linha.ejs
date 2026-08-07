@@ -1,0 +1,53 @@
+<%
+    /*
+     * Uma linha do painel. `linha` chega pronta do servico: horario ja
+     * compactado, situacao ja decidida, turmas ja resolvidas.
+     *
+     * Duas escolhas de exibicao moram aqui porque sao de apresentacao pura:
+     * quantas etiquetas de turma cabem antes do contador, e quando o nome da
+     * sala e comprido demais para o corpo reservado aos numeros.
+     */
+    const CABEM = 3;
+    const visiveis = linha.turmas.slice(0, CABEM);
+    const excedentes = linha.turmas.length - visiveis.length;
+    const salaLonga = linha.local && linha.local.length > 7;
+%>
+<article class="linha" data-situacao="<%= linha.situacao %>" style="--i: <%= ordem %>">
+    <p class="linha-inicio"><%= linha.inicio %></p>
+    <p class="linha-fim">→ <%= linha.fim %></p>
+
+    <h2 class="linha-disciplina"><%= linha.disciplina %></h2>
+
+    <%
+        /* `div`, e nao `p`: a lista de turmas e um `ul`, que nao pode morar
+           dentro de um paragrafo. O navegador desmontaria a lista e a linha
+           perderia o alinhamento. */
+    %>
+    <div class="linha-meta">
+        <ul class="linha-turmas">
+            <% visiveis.forEach(function (codigo) { %>
+                <li><%= codigo %></li>
+            <% }) %>
+            <% if (excedentes > 0) { %>
+                <li class="mais">+<%= excedentes %></li>
+            <% } %>
+        </ul>
+        <% if (linha.professor) { %>
+            <span class="sep" aria-hidden="true">·</span>
+            <span class="linha-professor"><%= linha.professor %></span>
+        <% } %>
+    </div>
+
+    <% if (linha.local) { %>
+        <p class="linha-sala <%= salaLonga ? 'longa' : '' %>"><%= linha.local %></p>
+    <% } else { %>
+        <p class="linha-sala vazia">a definir</p>
+    <% } %>
+
+    <div class="linha-situacao">
+        <span class="selo" data-situacao="<%= linha.situacao %>">
+            <% if (linha.pulsa) { %><i class="ponto" aria-hidden="true"></i><% } %>
+            <span><%= linha.situacaoRotulo %></span>
+        </span>
+    </div>
+</article>

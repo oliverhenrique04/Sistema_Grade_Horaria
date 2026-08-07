@@ -1,0 +1,10 @@
+IBM Plex Sans Condensed e IBM Plex Mono
+Copyright (c) 2017 IBM Corp.
+Licenciados sob a SIL Open Font License 1.1 — https://scripts.sil.org/OFL
+
+Subconjunto latino, baixado de fonts.gstatic.com.
+
+Por que os arquivos moram aqui, e nao numa CDN: a TV do corredor liga antes da
+rede da instituicao. Se a primeira pintura dependesse de fonts.googleapis.com,
+o painel apareceria em Arial e a grade de larguras fixas quebraria justamente
+na hora em que ninguem esta la para recarregar a pagina.

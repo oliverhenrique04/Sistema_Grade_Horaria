@@ -27,7 +27,7 @@ const CDN_FONTES = ['https://fonts.gstatic.com', 'https://cdnjs.cloudflare.com',
  * do escape automatico do EJS (`<%= %>`) — nunca use `<%- %>` com dado vindo
  * do usuario.
  */
-const diretivasCsp = () => ({
+const diretivasCsp = (seguro) => ({
     defaultSrc: ["'self'"],
     baseUri: ["'self'"],
     objectSrc: ["'none'"],
@@ -40,9 +40,44 @@ const diretivasCsp = () => ({
     fontSrc: ["'self'", ...CDN_FONTES],
     imgSrc: ["'self'", 'data:', 'https:'],
     connectSrc: ["'self'"],
-    // Em desenvolvimento a aplicacao roda em http; forcar https quebraria os assets.
-    upgradeInsecureRequests: config.producao ? [] : null,
+    upgradeInsecureRequests: seguro ? [] : null,
 });
+
+/**
+ * CSP e HSTS decididos POR REQUISICAO, e nao pelo ambiente.
+ *
+ * A aplicacao precisa atender o mesmo conteudo por http e por https: as TVs dos
+ * blocos costumam alcancar o servidor por um endereco interno sem TLS, enquanto
+ * o publico entra pelo endereco publico com TLS. Dois cabecalhos quebram esse
+ * arranjo quando emitidos as cegas numa resposta http:
+ *
+ * - `upgrade-insecure-requests` faz o navegador reescrever para https TODOS os
+ *   pedidos da pagina, inclusive o CSS, o JS e as fontes do proprio servidor.
+ *   Numa TV que chegou por http o painel apareceria sem folha de estilo.
+ * - `Strict-Transport-Security` fixa https para o host inteiro pelos proximos
+ *   meses. Basta a TV abrir uma vez por https para nunca mais conseguir http.
+ *   (O navegador ignora HSTS recebido por http, mas nao ha por que emiti-lo.)
+ *
+ * `req.secure` respeita o `trust proxy`: atras do nginx ele reflete o
+ * `X-Forwarded-Proto` real, e nao a conexao local em texto claro.
+ */
+const cspPorEsquema = () => {
+    const comUpgrade = helmet.contentSecurityPolicy({
+        useDefaults: true,
+        directives: diretivasCsp(true),
+    });
+    const semUpgrade = helmet.contentSecurityPolicy({
+        useDefaults: true,
+        directives: diretivasCsp(false),
+    });
+
+    return (req, res, next) => (req.secure ? comUpgrade : semUpgrade)(req, res, next);
+};
+
+const hstsPorEsquema = () => {
+    const hsts = helmet.hsts();
+    return (req, res, next) => (req.secure ? hsts(req, res, next) : next());
+};
 
 /**
  * Aplica helmet e os parsers de body com limite de tamanho.
@@ -52,14 +87,17 @@ const diretivasCsp = () => ({
 const aplicarSeguranca = (app) => {
     app.use(
         helmet({
-            contentSecurityPolicy: { useDefaults: true, directives: diretivasCsp() },
-            // HSTS so faz sentido quando a aplicacao e servida por https.
-            hsts: config.producao ? undefined : false,
+            // Os dois abaixo dependem do esquema da requisicao; ver `cspPorEsquema`.
+            contentSecurityPolicy: false,
+            hsts: false,
             crossOriginEmbedderPolicy: false,
             crossOriginResourcePolicy: { policy: 'same-site' },
             referrerPolicy: { policy: 'same-origin' },
         })
     );
+
+    app.use(cspPorEsquema());
+    if (config.producao) app.use(hstsPorEsquema());
 
     // Formularios: `extended: false` evita objetos aninhados vindos da query string.
     app.use(express.urlencoded({ extended: false, limit: config.limitePayload }));
@@ -99,4 +137,11 @@ const limitadorLogin = rateLimit({
     },
 });
 
-module.exports = { aplicarSeguranca, limitadorLogin, MENSAGEM_LIMITE };
+module.exports = {
+    aplicarSeguranca,
+    limitadorLogin,
+    diretivasCsp,
+    cspPorEsquema,
+    hstsPorEsquema,
+    MENSAGEM_LIMITE,
+};

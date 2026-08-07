@@ -36,6 +36,32 @@ const normalizarBasePath = (valor = '') => {
     return comBarra.replace(/\/+$/, '');
 };
 
+/**
+ * Endereco publico da aplicacao: APENAS esquema e host (`https://unieuro.edu.br`).
+ *
+ * Existe para um caso concreto: a TV do bloco costuma alcancar o servidor por um
+ * endereco interno sem TLS, mas o QR do painel e lido pelo celular do aluno, que
+ * pode estar fora da rede da instituicao. Sem isso o QR carregaria o endereco
+ * interno, que o celular nao resolve.
+ *
+ * O caminho e descartado de proposito: o prefixo da aplicacao continua vindo de
+ * `BASE_PATH`, e aceitar os dois produziria `/grades/grades`.
+ *
+ * Vazio (o padrao) mantem o comportamento de derivar tudo da requisicao.
+ */
+const normalizarUrlPublica = (valor = '') => {
+    const bruto = String(valor || '').trim();
+    if (!bruto) return '';
+
+    try {
+        const url = new URL(bruto);
+        if (url.protocol !== 'http:' && url.protocol !== 'https:') return '';
+        return `${url.protocol}//${url.host}`;
+    } catch {
+        return '';
+    }
+};
+
 const producao = ambiente === 'production';
 
 if (!process.env.DATABASE_URL) {
@@ -54,6 +80,7 @@ const config = {
     teste: ambiente === 'test',
     porta: inteiro(process.env.PORT, 3000),
     basePath: normalizarBasePath(process.env.BASE_PATH),
+    urlPublica: normalizarUrlPublica(process.env.URL_PUBLICA),
     banco: {
         url: process.env.DATABASE_URL,
         ssl: booleano(process.env.DB_SSL, false),

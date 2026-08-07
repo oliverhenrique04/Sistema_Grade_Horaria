@@ -15,6 +15,7 @@ const professores = require('./admin/professores');
 const locais = require('./admin/locais');
 const usuarios = require('./admin/usuarios');
 const aulas = require('./admin/aulas');
+const paineis = require('./admin/paineis');
 const importacao = require('./admin/importacao');
 
 const router = express.Router();
@@ -42,5 +43,6 @@ router.use('/professores', professores);
 router.use('/locais', locais);
 router.use('/usuarios', usuarios);
 router.use('/aulas', aulas);
+router.use('/paineis', paineis);
 
 module.exports = router;

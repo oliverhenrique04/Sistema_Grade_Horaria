@@ -97,6 +97,16 @@ const GRUPOS = [
                 url: '/admin/horarios',
                 recurso: 'horarios',
             },
+            {
+                // "TVs dos blocos", e nao "Painel": o grupo "Grade horária" ja
+                // tem um item chamado Painel (o dashboard), e dois "Painel" no
+                // mesmo menu nao se distinguem de relance.
+                chave: 'paineis',
+                rotulo: 'TVs dos blocos',
+                icone: 'fa-tv',
+                url: '/admin/paineis',
+                recurso: 'paineis',
+            },
         ],
     },
     {

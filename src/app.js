@@ -10,6 +10,7 @@ const { contextoBase, flash } = require('./middlewares/contexto');
 const { periodoLetivoAtual } = require('./middlewares/periodoLetivo');
 const { naoEncontrado, tratadorGlobal } = require('./middlewares/erros');
 const rotas = require('./routes');
+const rotaPainel = require('./routes/painel');
 
 const RAIZ = path.resolve(__dirname, '..');
 
@@ -45,6 +46,13 @@ const criarApp = () => {
             maxAge: config.producao ? '7d' : 0,
         })
     );
+
+    // Antes da sessao, de proposito: o painel das TVs e publico, nao tem
+    // formulario e nao guarda nada entre requisicoes. Passando pela sessao, o
+    // middleware de CSRF gravaria um token a cada pedido e criaria uma linha em
+    // `session` por recarga — uma por minuto, por TV. So depende de
+    // `contextoBase` (asset/withBase), que ja rodou.
+    app.use('/', rotaPainel);
 
     app.use(criarMiddlewareSessao());
     app.use(flash);

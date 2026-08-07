@@ -34,6 +34,7 @@ const RECURSOS = [
     'aulas',
     'dashboard',
     'importacao',
+    'paineis',
 ];
 
 /** Acoes possiveis sobre um recurso. */
@@ -45,9 +46,13 @@ const ACOES = ['ler', 'criar', 'editar', 'inativar'];
  * `importacao` fica de fora: uma carga do cubo reescreve turmas, disciplinas e
  * aulas de todos os cursos e campus de uma vez, o que nao cabe em nenhum dos
  * dois escopos. E exclusiva do administrador.
+ *
+ * `paineis` tambem: o gerador de links das TVs e liberado nominalmente a `nap`
+ * logo abaixo, porque o recorte de um painel e por predio e por campus. O
+ * coordenador, que enxerga por curso, nao tem o que fazer ali.
  */
 const LEITURA_OPERACIONAL = RECURSOS.filter(
-    (recurso) => recurso !== 'usuarios' && recurso !== 'importacao'
+    (recurso) => recurso !== 'usuarios' && recurso !== 'importacao' && recurso !== 'paineis'
 );
 
 const todasAcoes = () => [...ACOES];
@@ -94,6 +99,8 @@ const PERMISSOES = Object.freeze({
 
     nap: montarPerfil({
         ...permissoesLeitura(LEITURA_OPERACIONAL),
+        // Gera os links das TVs dos blocos do proprio campus.
+        paineis: ['ler'],
         // Mantem o cadastro de salas do proprio campus.
         locais: todasAcoes(),
         // Apenas ajusta a alocacao de local da aula. A restricao de quais campos

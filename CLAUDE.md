@@ -225,6 +225,98 @@ O ensalamento do TOTVS é assim, e a interface precisa dar conta dele:
   para manter o vínculo quando a aula é criada ou editada à mão. O campo oculto
   `turmas_atendidas_enviado` distingue "nenhuma turma marcada" de "campo não enviado".
 
+## Painel de corredor (TVs dos blocos)
+
+`/painel` é uma segunda página pública, feita para as **TVs verticais instaladas em cada
+bloco**. Empresta a gramática do painel de voo de aeroporto — horário, destino, portão,
+situação — porque é a convenção que as pessoas já leem de relance, a três metros, sem
+instrução. A tela é 1080×1920 e o layout inteiro assume esse formato.
+
+O recorte vem na URL (`?campus=1&locais=26,27&cursos=…&turmas=…&titulo=Bloco+C`); a faixa
+do dia vem do relógio do servidor, todo dia, sem ninguém tocar na TV. `/admin/paineis` monta
+esse endereço — só GET, sem gravar nada: um painel novo custa um link novo, não um registro.
+
+Decisões que sustentam o desenho:
+
+- **A faixa do dia sai do relógio, não do turno.** No banco real o turno "Matutino" tem
+  horários até 18:10 e o "Noturno" começa 13:50 — o turno diz a que grade a turma pertence,
+  não a que horas a aula acontece. A faixa vem de `horarios_turno.hora_inicio` e a janela vai
+  do primeiro horário com aula até o fim da última daquela faixa. Encerrado o dia, o painel
+  vira para o próximo dia letivo, pulando domingo. O relógio passa pelo `Intl` no fuso
+  `America/Sao_Paulo`: o processo pode rodar em UTC, a TV nunca.
+- **A compactação acontece duas vezes.** Primeiro por `aula_id` — a disciplina compartilhada
+  chega repetida uma vez por turma que a cursa, e volta a ser uma linha com as turmas
+  listadas. Depois por horários seguidos: três slots de 50 min viram "08:00 – 10:40". Só se
+  juntam aulas com disciplina, professor, local **e conjunto de turmas** idênticos; juntar por
+  conteúdo colaria aulas distintas de mesmo nome. Medido numa quarta em Águas Claras: 196
+  linhas da view → 112 aulas → **34 blocos** na manhã.
+- **A junção nunca atravessa a fronteira de uma faixa.** O turno Integral tem 17:20–18:10 e
+  18:20–19:10 com exatos 10 min de vão; juntados, o bloco seria classificado como tarde pelo
+  início e sumiria do quadro da noite enquanto acontece.
+- **Aula encerrada só ocupa espaço enquanto sobra espaço.** Cabendo na página (18 linhas), o
+  que já terminou fica, porque dá contexto. Não cabendo, sai da frente do que ainda vai
+  acontecer — e com frequência isso dispensa a paginação. Se *tudo* terminou, o quadro volta
+  a mostrar tudo: tela vazia diria menos que a grade encerrada do turno.
+- **Aula sem sala continua no quadro**, com "a definir". Hoje 9 das 1477 aulas têm local (o
+  cubo do TOTVS não exporta sala), então um link de bloco que excluísse as demais mostraria
+  uma TV vazia até o ensalamento terminar. O painel entra no ar e vai estreitando sozinho
+  conforme o NAP aloca.
+- **EAD não aparece.** A coluna `modalidade` vale `presencial` nas 1477 aulas porque o ERP não
+  a preenche; o que existe é um **local** de `tipo = 'virtual'`. O filtro é por aí, com
+  `modalidade <> 'ead'` como critério secundário para quando o TOTVS passar a preencher.
+- **O período letivo não viaja na URL.** Uma TV fica anos no ar; `periodo=1` colado atrás dela
+  mostraria 2026.2 para sempre. Vem sempre de `periodos_letivos.atual`.
+- **`LINHAS_POR_PAGINA` mora no service**, não no CSS: decide quantas páginas existem e se as
+  encerradas saem. O CSS conhece o mesmo número para dar a altura da linha, e
+  `tests/painel.test.js` confere que os dois não divergem.
+- **Bloco é derivado, não modelado.** A instituição já codifica o prédio na última letra do
+  nome da sala ("101 C"); `src/utils/blocos.js` agrupa por ela no gerador. O que viaja na URL
+  continua sendo a lista de ids de locais — nada de migration para um conceito que o cadastro
+  já expressa.
+- **Fontes auto-hospedadas** em `public/fontes/` (IBM Plex, OFL). A TV liga antes da rede da
+  instituição: dependendo de CDN, a primeira pintura cai em Arial e a grade quebra justamente
+  quando não há ninguém para recarregar.
+- **QR próprio**, em `src/utils/qrcode.js` (modo byte, nível M, versões 1–10, saída SVG). Um
+  QR errado renderiza lindamente e não lê, então `tests/qrcode.test.js` compara a matriz
+  inteira — as oito máscaras de cada texto — contra vetores de um codificador de referência.
+- A rota responde `Cache-Control: no-store` e `X-Robots-Tag: noindex`: o conteúdo muda com o
+  relógio, e é uma URL pública e permanente com nome de professor, turma e sala.
+
+### http e https no mesmo servidor
+
+A TV do bloco costuma alcançar o servidor por um endereço interno **sem TLS**, enquanto o
+público entra pelo endereço público **com TLS**. Os dois precisam funcionar, e três coisas
+tinham que mudar para isso:
+
+- **CSP e HSTS passaram a ser decididos por requisição**, não pelo ambiente
+  (`src/middlewares/seguranca.js`). `upgrade-insecure-requests` numa resposta http faria o
+  navegador buscar por https o CSS, o JS e as fontes do próprio servidor — a TV mostraria o
+  painel sem folha de estilo. E um único `Strict-Transport-Security` aceito fixa https para o
+  host inteiro por meses: bastaria a TV abrir uma vez por https para nunca mais conseguir
+  http. `req.secure` respeita o `trust proxy`, então atrás do nginx reflete o
+  `X-Forwarded-Proto` real.
+- **URLs absolutas saem de `req.protocol`/`req.host`** (`src/utils/urls.js`), não dos
+  cabeçalhos `x-forwarded-*` crus. Os dois respeitam o `trust proxy`, então seguem a
+  configuração se ela for endurecida; ler o cabeçalho na mão aceita o valor de qualquer
+  cliente independentemente dela. Nada fixa um esquema — nem por padrão.
+- **`URL_PUBLICA`** (opcional, só esquema e host) resolve o descasamento: a TV chega por
+  `http://10.0.0.5:3000` e o QR ainda aponta para `https://unieuro.edu.br`, que é o endereço
+  que o celular do aluno resolve. Vazia, tudo deriva da requisição. Vale só para o QR: o
+  endereço que o gerador imprime é o da TV, e o campo é editável para o operador trocar o
+  host quando os dois diferem.
+
+**`/painel` é montado antes da sessão** (`src/app.js`). Ele é público, não tem formulário e
+não guarda nada entre requisições; passando pela sessão, o middleware de CSRF gravaria um
+token a cada pedido e criaria uma linha em `session` **por recarga** — uma por minuto, por TV.
+Servido por http em produção nem o cookie `secure` seria guardado, então a linha nunca seria
+reaproveitada. Medido: 8 pedidos ao painel criavam 5 sessões e agora criam zero.
+
+`public/js/painel.js` faz só quatro coisas: escala a tela, anda com o relógio, alterna as
+páginas e recarrega a cada 60 s. Todas as páginas vêm prontas do servidor — uma tela ligada
+por meses não pode remontar DOM a cada minuto. A recarga confere que o servidor responde
+antes de trocar a página (recarregar às cegas numa queda de rede deixaria a TV na tela de
+erro do navegador) e recua 60 → 120 → 300 s enquanto a rede não volta.
+
 ## Autenticação e autorização
 
 Login por e-mail e senha (bcrypt, custo 12). Sessões no PostgreSQL (`connect-pg-simple`),
@@ -240,6 +332,12 @@ Toda permissão é verificada no backend, em `src/middlewares/autorizacao.js`. E
 na view é conveniência, nunca controle de acesso. O recurso `importacao` é exclusivo do
 `admin`: uma carga reescreve turmas e aulas de todos os cursos e campus de uma vez, o que
 não cabe no escopo de coordenador nem de nap.
+
+O recurso `paineis` (gerador de links das TVs) é de `admin` e `nap`, só leitura: é o NAP que
+conhece os blocos, as salas e onde cada TV está pendurada. Coordenador fica de fora — o
+recorte de um painel é por prédio e por campus, não por curso. O escopo por campus ali é
+conveniência de listagem, não controle de acesso: `/painel` é público e honra qualquer id
+válido na URL, exibindo o que a consulta pública da grade já exibia.
 
 ## Padrões de código
 

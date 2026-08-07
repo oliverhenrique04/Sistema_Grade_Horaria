@@ -1,0 +1,178 @@
+<%- include('../../layouts/admin-inicio') %>
+
+<%
+/*
+ * Gerador de links das TVs dos blocos.
+ *
+ * Um formulario GET: o proprio endereco da pagina carrega o recorte, entao
+ * recarregar, salvar nos favoritos ou mandar por e-mail funciona sem estado no
+ * servidor. Sem POST, sem token CSRF, sem registro no banco — um painel novo
+ * custa um link novo.
+ */
+%>
+
+<section class="painel-cartao" aria-labelledby="titulo-paineis">
+    <div class="painel-cartao-cabecalho">
+        <div>
+            <h2 class="h6 mb-1" id="titulo-paineis">TVs dos blocos</h2>
+            <p class="painel-indicador-nota mb-0">
+                Monte o endereço que fica fixo no navegador de cada TV. O link não guarda turno
+                nem dia: o painel troca sozinho de faixa conforme o relógio do servidor.
+            </p>
+        </div>
+    </div>
+
+    <% if (!opcoes.periodo) { %>
+        <p class="alert alert-warning mb-0">
+            Nenhum período letivo ativo. Cadastre um período antes de gerar links.
+        </p>
+    <% } else { %>
+        <form method="GET" action="<%= withBase('/admin/paineis') %>" class="painel-filtros">
+            <div class="painel-filtros-campo">
+                <label class="form-label" for="campo-campus">Campus</label>
+                <select class="form-select form-select-sm" id="campo-campus" name="campus"
+                        data-submete-ao-mudar>
+                    <option value="">Selecione o campus</option>
+                    <% opcoes.campus.forEach((unidade) => { %>
+                        <option value="<%= unidade.id %>"
+                                <%= recorte.campusId === unidade.id ? 'selected' : '' %>>
+                            <%= unidade.nome %>
+                        </option>
+                    <% }) %>
+                </select>
+            </div>
+
+            <div class="painel-filtros-campo">
+                <label class="form-label" for="campo-titulo">
+                    Nome exibido na TV
+                    <span class="text-body-secondary">(até <%= limiteTitulo %> caracteres)</span>
+                </label>
+                <input class="form-control form-control-sm" type="text" id="campo-titulo"
+                       name="titulo" maxlength="<%= limiteTitulo %>"
+                       placeholder="Bloco C" value="<%= recorte.titulo || '' %>">
+            </div>
+
+            <% if (temRecorte) { %>
+                <fieldset class="painel-filtros-campo w-100">
+                    <legend class="form-label">Locais — onde a TV está</legend>
+                    <p class="painel-indicador-nota">
+                        Aulas ainda sem sala continuam no quadro, marcadas como “a definir”.
+                        Hoje quase toda a grade chega do TOTVS sem sala; sem elas a TV nasceria
+                        vazia e só encheria quando o ensalamento terminasse.
+                    </p>
+
+                    <% if (opcoes.blocos.length === 0) { %>
+                        <p class="text-body-secondary mb-0">Nenhum local cadastrado neste campus.</p>
+                    <% } %>
+
+                    <% opcoes.blocos.forEach((grupo) => { %>
+                        <div class="mb-3">
+                            <p class="fw-semibold mb-1">
+                                <%= grupo.letra ? 'Bloco ' + grupo.letra : grupo.bloco %>
+                            </p>
+                            <div class="d-flex flex-wrap gap-3">
+                                <% grupo.locais.forEach((local) => { %>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox"
+                                               name="locais" value="<%= local.id %>"
+                                               id="local-<%= local.id %>"
+                                               <%= marcados.locais.has(local.id) ? 'checked' : '' %>>
+                                        <label class="form-check-label" for="local-<%= local.id %>">
+                                            <%= local.nome %>
+                                        </label>
+                                    </div>
+                                <% }) %>
+                            </div>
+                        </div>
+                    <% }) %>
+                </fieldset>
+
+                <fieldset class="painel-filtros-campo w-100">
+                    <legend class="form-label">
+                        Cursos <span class="text-body-secondary">(opcional)</span>
+                    </legend>
+                    <p class="painel-indicador-nota">
+                        Sem marcar nada, a TV mostra todos os cursos do campus.
+                    </p>
+                    <div class="d-flex flex-wrap gap-3">
+                        <% opcoes.cursos.forEach((curso) => { %>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox"
+                                       name="cursos" value="<%= curso.id %>"
+                                       id="curso-<%= curso.id %>"
+                                       <%= marcados.cursos.has(curso.id) ? 'checked' : '' %>>
+                                <label class="form-check-label" for="curso-<%= curso.id %>">
+                                    <%= curso.sigla || curso.nome %>
+                                </label>
+                            </div>
+                        <% }) %>
+                    </div>
+                </fieldset>
+
+                <fieldset class="painel-filtros-campo w-100">
+                    <legend class="form-label">
+                        Turmas <span class="text-body-secondary">(opcional, até <%= limiteLista %>)</span>
+                    </legend>
+                    <div class="painel-filtros-campo">
+                        <label class="form-label" for="campo-turmas">Selecione as turmas</label>
+                        <select class="form-select form-select-sm" id="campo-turmas" name="turmas"
+                                multiple size="8" data-buscavel="turma">
+                            <% opcoes.turmas.forEach((turma) => { %>
+                                <option value="<%= turma.id %>"
+                                        <%= marcados.turmas.has(turma.id) ? 'selected' : '' %>>
+                                    <%= turma.codigo %> · <%= turma.curso_sigla %>
+                                </option>
+                            <% }) %>
+                        </select>
+                    </div>
+                </fieldset>
+            <% } %>
+
+            <div class="painel-filtros-acoes">
+                <button class="btn btn-primary btn-sm" type="submit">
+                    <i class="fa-solid fa-link" aria-hidden="true"></i> Gerar link
+                </button>
+                <a class="btn btn-outline-secondary btn-sm" href="<%= withBase('/admin/paineis') %>">
+                    <i class="fa-solid fa-eraser" aria-hidden="true"></i> Limpar
+                </a>
+            </div>
+        </form>
+    <% } %>
+</section>
+
+<% if (temRecorte) { %>
+    <section class="painel-cartao" aria-labelledby="titulo-link">
+        <div class="painel-cartao-cabecalho">
+            <h2 class="h6 mb-0" id="titulo-link">Endereço desta TV</h2>
+        </div>
+
+        <label class="form-label" for="campo-endereco">
+            Cole no navegador da TV, em tela cheia
+        </label>
+        <%
+            /* Editável de propósito: o endereço sai de como VOCÊ abriu este
+               painel, e a TV pode alcançar o servidor por outro — um endereço
+               interno, muitas vezes sem https. Trocar o host aqui antes de
+               copiar é mais simples do que configurar um segundo domínio. */
+        %>
+        <input class="form-control font-monospace" type="text" id="campo-endereco"
+               value="<%= enderecoPainel %>"
+               onfocus="this.select()"
+               aria-describedby="ajuda-endereco">
+
+        <p class="painel-indicador-nota mt-2" id="ajuda-endereco">
+            Funciona por <code>http</code> e por <code>https</code>: se a TV chega ao servidor
+            por um endereço interno sem certificado, troque o host acima antes de copiar.
+            Parâmetro inválido não derruba a página — ele some e a TV mostra o recorte mais
+            amplo, nunca uma tela de erro.
+        </p>
+
+        <div class="painel-filtros-acoes mt-3">
+            <a class="btn btn-primary btn-sm" href="<%= caminhoPainel %>" target="_blank" rel="noopener">
+                <i class="fa-solid fa-tv" aria-hidden="true"></i> Abrir o painel
+            </a>
+        </div>
+    </section>
+<% } %>
+
+<%- include('../../layouts/admin-fim') %>

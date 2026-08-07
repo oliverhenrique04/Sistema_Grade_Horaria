@@ -1,0 +1,1012 @@
+/* ==========================================================================
+   Painel de corredor — as TVs de cada bloco (Unieuro / NUTED)
+
+   A tela e 1080x1920: vertical. Em pe o corpo rende 18 linhas numa coluna
+   unica, mais do que a TV deitada conseguia em duas, e sem partir a leitura ao
+   meio. Toda a folha assume esse formato.
+
+   Nao e uma pagina web: e um dispositivo. Por isso o tema e proprio e fixo, e
+   nao acompanha preferencia do leitor — quem olha esta a tres metros, de
+   passagem, sem tocar em nada.
+
+   As medidas em px sao absolutas de proposito. A pagina inteira e escalada por
+   `--escala` em `painel.js`, de modo que a proporcao sobrevive a 1280x720,
+   1080x1920 e 4K sem uma unica media query.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   Fontes proprias. A TV liga antes da rede da instituicao: se a primeira
+   pintura dependesse de uma CDN, a grade quebraria em Arial justamente quando
+   nao ha ninguem para recarregar. `font-display: block` evita o lampejo.
+   -------------------------------------------------------------------------- */
+
+@font-face {
+    font-family: 'Plex Condensed';
+    font-style: normal;
+    font-weight: 400;
+    font-display: block;
+    src: url('../fontes/plex-condensed-400.woff2') format('woff2');
+}
+
+@font-face {
+    font-family: 'Plex Condensed';
+    font-style: normal;
+    font-weight: 600;
+    font-display: block;
+    src: url('../fontes/plex-condensed-600.woff2') format('woff2');
+}
+
+@font-face {
+    font-family: 'Plex Condensed';
+    font-style: normal;
+    font-weight: 700;
+    font-display: block;
+    src: url('../fontes/plex-condensed-700.woff2') format('woff2');
+}
+
+@font-face {
+    font-family: 'Plex Mono';
+    font-style: normal;
+    font-weight: 500;
+    font-display: block;
+    src: url('../fontes/plex-mono-500.woff2') format('woff2');
+}
+
+@font-face {
+    font-family: 'Plex Mono';
+    font-style: normal;
+    font-weight: 600;
+    font-display: block;
+    src: url('../fontes/plex-mono-600.woff2') format('woff2');
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    overflow: hidden;
+    background: #01030a;
+}
+
+.apenas-leitor {
+    position: absolute !important;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* --------------------------------------------------------------------------
+   A tela
+   -------------------------------------------------------------------------- */
+
+.tv {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 1080px;
+    height: 1920px;
+    transform-origin: top left;
+    transform: scale(var(--escala, 1));
+    display: grid;
+    grid-template-rows: 214px 1fr 168px;
+    overflow: hidden;
+    font-family: 'Plex Condensed', system-ui, sans-serif;
+    color: var(--tinta);
+    isolation: isolate;
+
+    --tinta: #f2f6f9;
+    --tinta-2: #a9bac6;
+    --tinta-3: #748895;
+    --fio: rgba(255, 255, 255, 0.07);
+}
+
+/* Uma paleta por faixa do dia. O fundo e o acento mudam; a tinta, nunca. */
+.tv[data-faixa='manha'] {
+    --fundo: #06121a;
+    --fundo-2: #0a2230;
+    --acento: #ffb03a;
+    --acento-2: #ff6f3c;
+    --astro: radial-gradient(
+        circle,
+        #fff5dc 0%,
+        #ffc95e 34%,
+        #ff9a3c 62%,
+        rgba(255, 128, 44, 0) 72%
+    );
+}
+
+.tv[data-faixa='tarde'] {
+    --fundo: #150a10;
+    --fundo-2: #2b1410;
+    --acento: #ffc24a;
+    --acento-2: #f2603c;
+    --astro: radial-gradient(
+        circle,
+        #fff0cf 0%,
+        #ffb04a 32%,
+        #f2603c 60%,
+        rgba(242, 96, 60, 0) 72%
+    );
+}
+
+.tv[data-faixa='noite'] {
+    --fundo: #03050d;
+    --fundo-2: #0a1024;
+    --acento: #8e9dff;
+    --acento-2: #bd8cff;
+    /* borda nitida: a lua e um disco, nao um borrao */
+    --astro: radial-gradient(circle at 38% 34%, #ffffff 0%, #e8edff 44%, #c2cef4 74%, #a9b7e6 100%);
+}
+
+.tv::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -3;
+    background: linear-gradient(172deg, var(--fundo-2) 0%, var(--fundo) 44%, #01030a 100%);
+}
+
+/* --------------------------------------------------------------------------
+   Ceu: o efeito do turno.
+
+   So `transform` e `opacity` sao animados — as duas propriedades que o
+   navegador compoe na GPU sem repintar. Nada de canvas e nada de timer de
+   quadro: a pagina fica ligada meses, e um laco de animacao em JS acumularia
+   trabalho ate a TV engasgar.
+   -------------------------------------------------------------------------- */
+
+.ceu {
+    position: absolute;
+    inset: 0;
+    z-index: -2;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.ceu > * {
+    position: absolute;
+}
+
+/* O astro fica na quina, quase todo fora da tela: entra como luz, nunca como
+   objeto por cima da lista. */
+.astro {
+    width: 520px;
+    height: 520px;
+    border-radius: 50%;
+    background: var(--astro);
+    opacity: 0.42;
+}
+
+.tv[data-faixa='manha'] .astro {
+    right: -230px;
+    top: -210px;
+    animation: subir 120s ease-in-out infinite alternate;
+}
+
+.tv[data-faixa='tarde'] .astro {
+    right: -280px;
+    top: -200px;
+    width: 620px;
+    height: 620px;
+    opacity: 0.38;
+    animation: descer 120s ease-in-out infinite alternate;
+}
+
+.tv[data-faixa='noite'] .astro {
+    right: -86px;
+    top: -104px;
+    width: 300px;
+    height: 300px;
+    opacity: 0.6;
+    animation: respirar 22s ease-in-out infinite;
+}
+
+.tv[data-faixa='noite'] .astro::after {
+    content: '';
+    position: absolute;
+    inset: -50%;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(190, 205, 255, 0.16), transparent 62%);
+}
+
+@keyframes subir {
+    from {
+        transform: translate3d(0, 60px, 0) scale(0.96);
+    }
+    to {
+        transform: translate3d(-30px, -18px, 0) scale(1.04);
+    }
+}
+
+@keyframes descer {
+    from {
+        transform: translate3d(-30px, -30px, 0) scale(1.03);
+    }
+    to {
+        transform: translate3d(20px, 60px, 0) scale(0.97);
+    }
+}
+
+@keyframes respirar {
+    0%,
+    100% {
+        opacity: 0.6;
+    }
+    50% {
+        opacity: 0.82;
+    }
+}
+
+.raios {
+    inset: -40%;
+    background: conic-gradient(
+        from 0deg,
+        transparent 0deg 8deg,
+        rgba(255, 200, 110, 0.07) 9deg 11deg,
+        transparent 12deg 26deg
+    );
+    -webkit-mask-image: radial-gradient(circle at 92% 5%, #000 0%, transparent 36%);
+    mask-image: radial-gradient(circle at 92% 5%, #000 0%, transparent 36%);
+    animation: girar 240s linear infinite;
+}
+
+.tv[data-faixa='noite'] .raios {
+    display: none;
+}
+
+@keyframes girar {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.bruma {
+    inset: 0;
+    opacity: 0.5;
+    background:
+        radial-gradient(110% 34% at 50% 106%, rgba(255, 150, 70, 0.2), transparent 62%),
+        radial-gradient(70% 22% at 8% 0%, rgba(120, 190, 255, 0.12), transparent 70%);
+    animation: derivar 90s ease-in-out infinite alternate;
+}
+
+.tv[data-faixa='noite'] .bruma {
+    background:
+        radial-gradient(110% 34% at 50% 108%, rgba(110, 130, 255, 0.16), transparent 64%),
+        radial-gradient(64% 22% at 14% 4%, rgba(180, 130, 255, 0.14), transparent 72%);
+}
+
+@keyframes derivar {
+    from {
+        transform: translate3d(-26px, 0, 0);
+    }
+    to {
+        transform: translate3d(26px, -12px, 0);
+    }
+}
+
+.estrelas {
+    inset: -10%;
+    opacity: 0;
+    background-image:
+        radial-gradient(1.6px 1.6px at 24px 32px, rgba(255, 255, 255, 0.9), transparent 100%),
+        radial-gradient(1.2px 1.2px at 168px 96px, rgba(220, 230, 255, 0.75), transparent 100%),
+        radial-gradient(1.9px 1.9px at 96px 200px, rgba(255, 255, 255, 0.65), transparent 100%),
+        radial-gradient(1.1px 1.1px at 260px 148px, rgba(200, 215, 255, 0.7), transparent 100%);
+    background-size: 260px 210px;
+    animation: cintilar 9s ease-in-out infinite;
+}
+
+.tv[data-faixa='noite'] .estrelas {
+    opacity: 1;
+}
+
+.estrelas.lenta {
+    background-size: 430px 350px;
+    animation: cintilar 14s ease-in-out infinite reverse;
+}
+
+@keyframes cintilar {
+    0%,
+    100% {
+        opacity: 0.5;
+        transform: translate3d(0, 0, 0);
+    }
+    50% {
+        opacity: 0.95;
+        transform: translate3d(10px, 6px, 0);
+    }
+}
+
+/* O veu garante o contraste do texto aconteca o que acontecer no ceu. A
+   segunda camada escurece justamente a quina onde mora o astro. */
+.veu {
+    inset: 0;
+    background:
+        radial-gradient(52% 26% at 100% 0%, rgba(3, 6, 12, 0.5), transparent 70%),
+        linear-gradient(
+            180deg,
+            rgba(3, 6, 12, 0.5) 0%,
+            rgba(3, 6, 12, 0.68) 44%,
+            rgba(3, 6, 12, 0.8) 100%
+        );
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .astro,
+    .raios,
+    .bruma,
+    .estrelas,
+    .ponto,
+    .barra i,
+    .linha {
+        animation: none !important;
+    }
+}
+
+/* --------------------------------------------------------------------------
+   Cabecalho
+   -------------------------------------------------------------------------- */
+
+.cabecalho {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-content: center;
+    gap: 4px 24px;
+    padding: 0 36px;
+    border-bottom: 1px solid var(--fio);
+}
+
+.cab-marca {
+    grid-column: 1;
+    font-family: 'Plex Mono', monospace;
+    font-size: 20px;
+    font-weight: 500;
+    letter-spacing: 0.19em;
+    text-transform: uppercase;
+    color: var(--acento);
+    margin: 0;
+}
+
+.cab-titulo {
+    grid-column: 1;
+    font-size: 68px;
+    font-weight: 600;
+    letter-spacing: -0.008em;
+    line-height: 1.02;
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.cab-data {
+    grid-column: 1;
+    font-size: 26px;
+    color: var(--tinta-2);
+    margin: 4px 0 0;
+}
+
+.cab-data::first-letter {
+    text-transform: uppercase;
+}
+
+.cab-relogio {
+    grid-column: 2;
+    grid-row: 1 / 3;
+    align-self: end;
+    margin: 0;
+    font-family: 'Plex Mono', monospace;
+    font-variant-numeric: tabular-nums;
+    font-size: 76px;
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    display: flex;
+    align-items: baseline;
+}
+
+.cab-relogio span {
+    font-size: 30px;
+    font-weight: 500;
+    color: var(--tinta-3);
+    margin-left: 4px;
+}
+
+.cab-faixa {
+    grid-column: 2;
+    grid-row: 3;
+    justify-self: end;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 6px 0 0;
+    padding: 7px 18px 7px 14px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--fio);
+}
+
+.cab-faixa svg {
+    width: 32px;
+    height: 32px;
+    display: block;
+    color: var(--acento);
+}
+
+.cab-faixa-nome {
+    font-size: 24px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.cab-faixa-janela {
+    font-family: 'Plex Mono', monospace;
+    font-size: 21px;
+    color: var(--tinta-2);
+    font-variant-numeric: tabular-nums;
+}
+
+.cab-faixa-janela::before {
+    content: '·';
+    margin-right: 10px;
+    color: var(--tinta-3);
+}
+
+/* --------------------------------------------------------------------------
+   Quadro: uma coluna, sempre
+   -------------------------------------------------------------------------- */
+
+.quadro {
+    display: flex;
+    flex-direction: column;
+    padding: 20px 36px 12px;
+    min-height: 0;
+}
+
+.colunas {
+    display: grid;
+    grid-template-columns: 178px minmax(0, 1fr) 196px;
+    align-items: center;
+    gap: 0 22px;
+    padding: 0 10px 9px 18px;
+    border-bottom: 1px solid var(--fio);
+    font-family: 'Plex Mono', monospace;
+    font-size: 16px;
+    font-weight: 500;
+    letter-spacing: 0.17em;
+    text-transform: uppercase;
+    color: var(--tinta-3);
+}
+
+.colunas .dir {
+    text-align: right;
+}
+
+.pagina {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+}
+
+.pagina[hidden] {
+    display: none;
+}
+
+/* A linha e uma grade 3x2: o horario ancora a esquerda, a sala e a situacao
+   ancoram a direita, e a disciplina ocupa o meio elastico. */
+.linha {
+    position: relative;
+    display: grid;
+    grid-template-columns: 178px minmax(0, 1fr) 196px;
+    align-content: center;
+    gap: 2px 22px;
+    flex: 1 1 0;
+    min-height: 0;
+    /* Cresce para preencher a tela, mas so ate certo ponto: com tres aulas na
+       faixa, linhas de 400 px pareceriam erro de renderizacao. */
+    max-height: 160px;
+    overflow: hidden;
+    line-height: 1.2;
+    padding: 0 10px 0 18px;
+    border-bottom: 1px solid var(--fio);
+    animation: entrar 0.34s cubic-bezier(0.2, 0.7, 0.3, 1) both;
+    animation-delay: calc(var(--i, 0) * 20ms);
+    transform-origin: top center;
+}
+
+@keyframes entrar {
+    from {
+        opacity: 0;
+        transform: perspective(900px) rotateX(-46deg);
+    }
+    to {
+        opacity: 1;
+        transform: perspective(900px) rotateX(0);
+    }
+}
+
+.linha::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 5px;
+    bottom: 5px;
+    width: 5px;
+    border-radius: 3px;
+    background: transparent;
+}
+
+/* Numa faixa inteira quase todas as linhas estao "em aula" ao mesmo tempo —
+   destacar todas seria nao destacar nenhuma. O realce forte, em cor propria,
+   fica para o que esta prestes a comecar, que e o que move gente no corredor. */
+.linha[data-situacao='agora']::before,
+.linha[data-situacao='terminando']::before {
+    background: color-mix(in srgb, var(--acento) 62%, transparent);
+}
+
+.linha[data-situacao='breve'] {
+    background: linear-gradient(
+        90deg,
+        color-mix(in srgb, var(--acento-2) 20%, transparent),
+        transparent 72%
+    );
+}
+
+.linha[data-situacao='breve']::before {
+    background: var(--acento-2);
+    box-shadow: 0 0 18px color-mix(in srgb, var(--acento-2) 65%, transparent);
+}
+
+.linha[data-situacao='fim'] {
+    opacity: 0.4;
+}
+
+.linha-inicio {
+    grid-column: 1;
+    grid-row: 1;
+    margin: 0;
+    font-family: 'Plex Mono', monospace;
+    font-variant-numeric: tabular-nums;
+    font-size: 36px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+}
+
+.linha-fim {
+    grid-column: 1;
+    grid-row: 2;
+    margin: 0;
+    font-family: 'Plex Mono', monospace;
+    font-variant-numeric: tabular-nums;
+    font-size: 21px;
+    color: var(--tinta-2);
+}
+
+/* O ritmo da linha e sagrado: nome comprido corta com reticencias em vez de
+   empurrar a linha de baixo. */
+.linha-disciplina {
+    grid-column: 2;
+    grid-row: 1;
+    margin: 0;
+    font-size: 31px;
+    font-weight: 600;
+    line-height: 1.1;
+    letter-spacing: -0.004em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.linha-meta {
+    grid-column: 2;
+    grid-row: 2;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 20px;
+    line-height: 1.25;
+    color: var(--tinta-2);
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+/* o nome do professor e o unico item elastico: e ele que corta */
+.linha-professor {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.linha-meta .sep {
+    color: var(--tinta-3);
+}
+
+/* Nunca quebra linha: a altura da linha e fixa e uma etiqueta a mais nao pode
+   empurrar a disciplina para fora do lugar. */
+.linha-turmas {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    flex: none;
+}
+
+.linha-turmas li {
+    font-family: 'Plex Mono', monospace;
+    font-size: 19px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    padding: 2px 8px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.09);
+    border: 1px solid var(--fio);
+    white-space: nowrap;
+}
+
+.linha-turmas li.mais {
+    background: transparent;
+    color: var(--tinta-3);
+}
+
+/* A sala e o "portao" do painel: e a unica informacao que faz alguem mudar de
+   direcao no corredor. */
+.linha-sala {
+    grid-column: 3;
+    grid-row: 1;
+    margin: 0;
+    text-align: right;
+    font-family: 'Plex Mono', monospace;
+    font-variant-numeric: tabular-nums;
+    font-size: 38px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* "Auditorio" e "Skill Lab" nao cabem no corpo reservado aos numeros de sala;
+   encolher o nome comprido e melhor do que cortar o dado que a pessoa veio
+   buscar. */
+.linha-sala.longa {
+    font-size: 27px;
+}
+
+.linha-sala.vazia {
+    font-family: 'Plex Condensed', sans-serif;
+    font-size: 25px;
+    font-weight: 400;
+    color: var(--tinta-3);
+}
+
+.linha-situacao {
+    grid-column: 3;
+    grid-row: 2;
+    text-align: right;
+}
+
+.selo {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 19px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    border-radius: 7px;
+    border: 1px solid var(--fio);
+    color: var(--tinta-2);
+    white-space: nowrap;
+}
+
+.selo[data-situacao='breve'] {
+    color: #14100c;
+    background: var(--acento-2);
+    border-color: transparent;
+}
+
+.selo[data-situacao='agora'],
+.selo[data-situacao='terminando'] {
+    color: var(--acento);
+    border-color: color-mix(in srgb, var(--acento) 40%, transparent);
+}
+
+.selo[data-situacao='depois'],
+.selo[data-situacao='fim'] {
+    color: var(--tinta-3);
+    border-color: transparent;
+    font-weight: 500;
+}
+
+.ponto {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: currentColor;
+    flex: none;
+}
+
+.selo[data-situacao='agora'] .ponto,
+.selo[data-situacao='terminando'] .ponto {
+    animation: pulsar 2.4s ease-in-out infinite;
+}
+
+@keyframes pulsar {
+    0%,
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.35;
+        transform: scale(0.82);
+    }
+}
+
+/* --------------------------------------------------------------------------
+   Densidade: tres regimes, escolhidos pela altura que cada linha recebe
+   -------------------------------------------------------------------------- */
+
+/* Folgado (7 a 13 linhas): sobra altura, a tipografia cresce e o nome comprido
+   ganha a segunda linha. */
+.quadro[data-densidade='folgada'] .linha-disciplina,
+.quadro[data-densidade='escassa'] .linha-disciplina {
+    font-size: 34px;
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+
+.quadro[data-densidade='folgada'] .linha-meta {
+    font-size: 22px;
+}
+
+/* Escasso (ate 6 linhas): a lista nao estica ate o rodape. O bloco inteiro,
+   cabecalho de colunas junto, centraliza — assim o vazio vira composicao em
+   vez de parecer quadro cortado. */
+.quadro[data-densidade='escassa'] {
+    justify-content: center;
+}
+
+.quadro[data-densidade='escassa'] .pagina {
+    flex: 0 0 auto;
+}
+
+/* Aqui a linha tem altura propria (a lista nao estica), entao `flex: 1 1 0`
+   colapsaria tudo para zero. */
+.quadro[data-densidade='escassa'] .linha {
+    flex: 0 0 auto;
+    min-height: 190px;
+    max-height: none;
+}
+
+.quadro[data-densidade='escassa'] .linha-disciplina {
+    font-size: 42px;
+}
+
+.quadro[data-densidade='escassa'] .linha-inicio {
+    font-size: 44px;
+}
+
+.quadro[data-densidade='escassa'] .linha-fim {
+    font-size: 24px;
+}
+
+.quadro[data-densidade='escassa'] .linha-sala {
+    font-size: 46px;
+}
+
+.quadro[data-densidade='escassa'] .linha-sala.longa {
+    font-size: 32px;
+}
+
+/* "a definir" nao e um numero de sala: cresce menos que eles, senao a ausencia
+   de dado vira a maior coisa da linha. */
+.quadro[data-densidade='folgada'] .linha-sala.vazia {
+    font-size: 27px;
+}
+
+.quadro[data-densidade='escassa'] .linha-sala.vazia {
+    font-size: 30px;
+}
+
+.quadro[data-densidade='escassa'] .linha-meta {
+    font-size: 26px;
+}
+
+.quadro[data-densidade='escassa'] .linha-turmas li {
+    font-size: 24px;
+}
+
+.quadro[data-densidade='escassa'] .selo {
+    font-size: 22px;
+    padding: 4px 12px;
+}
+
+/* --------------------------------------------------------------------------
+   Estados sem aula
+   -------------------------------------------------------------------------- */
+
+.aviso {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    text-align: center;
+    color: var(--tinta-2);
+}
+
+.aviso h2 {
+    font-size: 58px;
+    font-weight: 600;
+    color: var(--tinta);
+    margin: 0;
+}
+
+.aviso p {
+    font-size: 30px;
+    max-width: 22ch;
+    margin: 0;
+}
+
+.aviso svg {
+    width: 92px;
+    height: 92px;
+    color: var(--acento);
+    opacity: 0.85;
+}
+
+.aviso code {
+    font-family: 'Plex Mono', monospace;
+    font-size: 24px;
+    color: var(--acento);
+}
+
+/* --------------------------------------------------------------------------
+   Rodape
+   -------------------------------------------------------------------------- */
+
+.rodape {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-content: center;
+    gap: 12px 28px;
+    padding: 0 36px;
+    border-top: 1px solid var(--fio);
+}
+
+.legenda {
+    grid-column: 1;
+    display: flex;
+    gap: 24px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: 20px;
+    color: var(--tinta-2);
+}
+
+.legenda li {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+}
+
+.legenda i {
+    width: 14px;
+    height: 14px;
+    border-radius: 4px;
+    display: block;
+}
+
+.legenda .l-agora i {
+    background: color-mix(in srgb, var(--acento) 62%, transparent);
+}
+
+.legenda .l-breve i {
+    background: var(--acento-2);
+}
+
+.legenda .l-fim i {
+    background: rgba(255, 255, 255, 0.16);
+}
+
+.rodape-estado {
+    grid-column: 1;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin: 0;
+    font-family: 'Plex Mono', monospace;
+    font-size: 18px;
+    color: var(--tinta-3);
+    font-variant-numeric: tabular-nums;
+}
+
+.barra {
+    position: relative;
+    width: 190px;
+    height: 4px;
+    border-radius: 2px;
+    background: rgba(255, 255, 255, 0.1);
+    overflow: hidden;
+}
+
+.barra i {
+    position: absolute;
+    inset: 0;
+    transform-origin: left;
+    background: var(--acento);
+    animation: correr var(--giro, 14s) linear infinite;
+}
+
+@keyframes correr {
+    from {
+        transform: scaleX(0);
+    }
+    to {
+        transform: scaleX(1);
+    }
+}
+
+/* Sem rede o painel avisa em vez de mentir uma grade velha em silencio. */
+.rodape-estado .desatualizado {
+    color: var(--acento-2);
+}
+
+.qr {
+    grid-column: 2;
+    grid-row: 1 / 3;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    opacity: 0.9;
+}
+
+.qr-texto {
+    text-align: right;
+    font-size: 18px;
+    line-height: 1.24;
+    color: var(--tinta-2);
+    margin: 0;
+}
+
+.qr-texto b {
+    display: block;
+    color: var(--tinta);
+    font-weight: 600;
+}
+
+.qr-codigo {
+    width: 108px;
+    height: 108px;
+    padding: 6px;
+    border-radius: 8px;
+    background: #fff;
+    flex: none;
+}
+
+.qr-codigo svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
