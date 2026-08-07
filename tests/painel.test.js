@@ -496,6 +496,32 @@ describe('painel de corredor', () => {
             expect(resposta.headers['cross-origin-resource-policy']).toBe('cross-origin');
         });
 
+        test('o CSS, o JS e as fontes acompanham o documento no CORP', async () => {
+            // Liberar so o HTML nao basta: dentro de um iframe de outra origem
+            // cada subrecurso e verificado por conta propria, e com `same-site`
+            // o Chrome recusa CSS e JS com ERR_BLOCKED_BY_RESPONSE.NotSameSite —
+            // a TV mostra a pagina crua, sem estilo e sem relogio.
+            const recursos = [
+                '/painel?campus=1',
+                '/css/painel.css',
+                '/js/painel.js',
+                '/fontes/plex-condensed-600.woff2',
+            ];
+
+            for (const caminho of recursos) {
+                const resposta = await request(app).get(caminho);
+                expect(resposta.status).toBe(200);
+                expect(resposta.headers['cross-origin-resource-policy']).toBe('cross-origin');
+            }
+        });
+
+        test('o restante de public/ continua same-site', async () => {
+            const resposta = await request(app).get('/css/admin.css');
+
+            expect(resposta.status).toBe(200);
+            expect(resposta.headers['cross-origin-resource-policy']).toBe('same-site');
+        });
+
         test('o resto do sistema continua recusando embutimento', async () => {
             // Afrouxar vale so para o painel, que nao tem sessao nem clique.
             const publica = await comoProxy('/', 'https');
