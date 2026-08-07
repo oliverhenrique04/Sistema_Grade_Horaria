@@ -53,7 +53,14 @@ const exibir = envolver(async (req, res) => {
 
     const urlPublica = urlDaConsulta(req, recorte);
 
-    res.set('Cache-Control', 'no-store, must-revalidate');
+    // Cacheavel por pouco tempo, e nao `no-store`.
+    //
+    // Um player de sinalizacao baixa o conteudo para exibir — e o proprio nome
+    // do produto diz isso. `no-store` proibe guardar a resposta, e um player
+    // que grava antes de mostrar simplesmente nao mostra. Trinta segundos
+    // mantem o quadro fresco (a pagina se recarrega a cada 60 s) sem proibir
+    // que alguem o guarde.
+    res.set('Cache-Control', 'public, max-age=30');
     res.set('X-Robots-Tag', 'noindex, nofollow');
 
     res.render('publico/painel', {

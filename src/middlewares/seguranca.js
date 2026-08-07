@@ -101,18 +101,34 @@ const hstsPorEsquema = () => {
 const permitirEmbutir = (req, res, next) => {
     res.removeHeader('X-Frame-Options');
 
-    const csp = res.getHeader('Content-Security-Policy');
-    if (typeof csp === 'string') {
-        res.setHeader(
-            'Content-Security-Policy',
-            csp.replace(/frame-ancestors[^;]*/, 'frame-ancestors *')
-        );
-    }
+    // A CSP inteira sai, e nao so o `frame-ancestors`.
+    //
+    // Esta pagina existe para ser consumida por um player de sinalizacao de
+    // terceiros, que costuma injetar script proprio na pagina para controlar
+    // rodizio, escala e telemetria. Um `script-src 'self'` bloqueia essa
+    // injecao e o player desiste da pagina — foi comparando com uma pagina que
+    // funciona no mesmo aparelho (g1.globo.com, que manda apenas
+    // `upgrade-insecure-requests`) que a diferenca apareceu.
+    //
+    // O que se perde aqui e pequeno: o painel nao tem formulario, nao tem
+    // sessao e todo o texto sai por `<%= %>`, que o EJS escapa. Login, /admin
+    // e a consulta publica seguem com a politica inteira.
+    res.removeHeader('Content-Security-Policy');
 
     // A casca do aplicativo e de outra origem: sem isso o recurso e recusado
     // quando ele o busca, e a janela que o abriu fica isolada dele.
     res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
     res.setHeader('Cross-Origin-Opener-Policy', 'unsafe-none');
+
+    // Endurecimentos que so fazem sentido numa pagina de aplicacao e que um
+    // player embutido pode nao esperar. Nenhum deles protege nada aqui.
+    [
+        'Origin-Agent-Cluster',
+        'Referrer-Policy',
+        'X-Download-Options',
+        'X-DNS-Prefetch-Control',
+        'X-Permitted-Cross-Domain-Policies',
+    ].forEach((cabecalho) => res.removeHeader(cabecalho));
 
     next();
 };

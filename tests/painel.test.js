@@ -387,11 +387,14 @@ describe('painel de corredor', () => {
             }
         });
 
-        test('não entra em buscador nem em cache', async () => {
+        test('não entra em buscador, e o cache é curto', async () => {
             const resposta = await request(app).get('/painel?campus=1');
 
             expect(resposta.headers['x-robots-tag']).toContain('noindex');
-            expect(resposta.headers['cache-control']).toContain('no-store');
+            // Curto o bastante para o quadro nao envelhecer (a pagina se
+            // recarrega a cada 60 s) e permissivo o bastante para o player de
+            // sinalizacao poder guardar a resposta antes de exibir.
+            expect(resposta.headers['cache-control']).toContain('max-age=30');
         });
 
         test('traz o QR da consulta pública', async () => {
@@ -423,14 +426,16 @@ describe('painel de corredor', () => {
 
         test('não força upgrade dos próprios assets numa página http', async () => {
             // `upgrade-insecure-requests` numa resposta http faria o navegador
-            // buscar CSS, JS e fontes por https no mesmo host — e a TV mostraria
-            // o painel sem folha de estilo.
-            const inseguro = await comoProxy('/painel?campus=1', 'http');
+            // buscar CSS, JS e fontes por https no mesmo host — e a pagina
+            // apareceria sem folha de estilo. O painel nao tem CSP nenhuma (ver
+            // o teste do player), entao a garantia e conferida na consulta
+            // publica, que compartilha o mesmo middleware.
+            const inseguro = await comoProxy('/', 'http');
             expect(inseguro.headers['content-security-policy']).not.toContain(
                 'upgrade-insecure-requests'
             );
 
-            const seguro = await comoProxy('/painel?campus=1', 'https');
+            const seguro = await comoProxy('/', 'https');
             expect(seguro.headers['content-security-policy']).toContain(
                 'upgrade-insecure-requests'
             );
@@ -492,8 +497,26 @@ describe('painel de corredor', () => {
             const resposta = await comoProxy('/painel?campus=1', 'http');
 
             expect(resposta.headers['x-frame-options']).toBeUndefined();
-            expect(resposta.headers['content-security-policy']).toContain('frame-ancestors *');
             expect(resposta.headers['cross-origin-resource-policy']).toBe('cross-origin');
+        });
+
+        test('não impõe CSP ao player que embute a página', async () => {
+            // O player injeta script proprio para controlar rodizio e escala;
+            // `script-src 'self'` bloqueia a injecao e ele desiste da pagina.
+            const resposta = await comoProxy('/painel?campus=1', 'http');
+
+            expect(resposta.headers['content-security-policy']).toBeUndefined();
+            expect(resposta.headers['origin-agent-cluster']).toBeUndefined();
+            expect(resposta.headers['referrer-policy']).toBeUndefined();
+        });
+
+        test('a resposta pode ser guardada pelo player', async () => {
+            // `no-store` proibiria guardar, e um player que baixa antes de
+            // exibir nao exibiria nada.
+            const resposta = await comoProxy('/painel?campus=1', 'http');
+
+            expect(resposta.headers['cache-control']).not.toContain('no-store');
+            expect(resposta.headers['cache-control']).toContain('max-age=');
         });
 
         test('o CSS, o JS e as fontes acompanham o documento no CORP', async () => {
