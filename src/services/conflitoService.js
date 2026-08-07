@@ -10,7 +10,8 @@
  *                   (turma gerencial e a excecao: nela so a repeticao da mesma
  *                   disciplina e conflito - ver `conflitoDeTurma`);
  *  2. Professor   - o mesmo professor nao pode dar duas aulas simultaneas, ainda
- *                   que em cursos, turmas ou campus diferentes;
+ *                   que em cursos, turmas ou campus diferentes (excecao: aula
+ *                   `ead`, que nao prende ninguem a hora nem a lugar);
  *  3. Local       - o mesmo local nao pode receber duas aulas simultaneas
  *                   (excecao: locais do tipo `virtual`, usados por EAD);
  *  4. Turno       - o horario escolhido precisa pertencer ao turno da turma;
@@ -42,6 +43,9 @@ const { faixaHoraria } = require('../utils/formatadores');
 
 /** Unico dia masculino da faixa util (sabado): "no sabado" e nao "na sabado". */
 const DIAS_MASCULINOS = new Set([ULTIMO_DIA]);
+
+/** Modalidade que nao ocupa agenda de professor nem espaco fisico. */
+const MODALIDADE_EAD = 'ead';
 
 /**
  * Dia da semana com preposicao: "na terça-feira", "no sábado".
@@ -361,6 +365,15 @@ const conflitoDeTurma = async (
 
 /**
  * Conflitos de agenda do professor, em qualquer turma, curso ou campus.
+ *
+ * EAD NAO DISPUTA AGENDA. Uma aula a distancia nao prende o professor a um
+ * lugar nem a uma hora — ele pode reger a presencial e ainda responder pela
+ * EAD no mesmo tempo de relogio. Vale nos dois sentidos: a aula EAD que esta
+ * sendo gravada nao colide com nada, e a EAD que ja existe nao barra a
+ * presencial que chega depois (ver `conflitantesDeProfessor`).
+ *
+ * `hibrido` fica de fora da excecao: tem encontro presencial e disputa agenda.
+ *
  * @param {{query: Function}} executor
  * @param {object} dadosAula
  * @param {{ignorarAulaId?: number|null, bloquear?: boolean, contexto?: object|null}} [opcoes]
@@ -373,6 +386,7 @@ const conflitosDeProfessor = async (
 ) => {
     const dados = normalizar(dadosAula);
     if (!dados.professorId || !dados.horarioTurnoId || !dados.diaSemana) return [];
+    if (dados.modalidade === MODALIDADE_EAD) return [];
 
     const encontradas = await aulaRepository.conflitantesDeProfessor(
         {

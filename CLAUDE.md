@@ -135,6 +135,9 @@ Regras que o banco garante sozinho:
   `conflitoService`. Conflitos de professor e de local dependem da faixa real de horário
   (turnos diferentes podem coincidir no relógio) e são detectados lá, em transação — o de
   professor barra a gravação, o de local apenas informa (ver alocação de sala).
+- **Aula `ead` não disputa agenda de professor**, nos dois sentidos: a EAD que está sendo
+  gravada não colide com nada, e a EAD já existente não barra a presencial que chega
+  depois. `hibrido` não entra na exceção — tem encontro presencial.
 - `periodos_letivos`: índice único parcial garante no máximo um período marcado como atual.
 - `turmas`: o código é único por **período letivo + campus** — o ERP repete o mesmo
   `CODTURMA` em filiais diferentes, e são turmas distintas.

@@ -570,6 +570,11 @@ const travaDeLeitura = (bloquear) => (bloquear ? 'FOR NO KEY UPDATE OF a' : '');
 /**
  * Aulas ativas do professor que ocupam a mesma faixa de horario, em qualquer
  * turma, curso ou campus.
+ *
+ * Aula EAD fica de fora: ela nao prende o professor a um lugar e a uma hora,
+ * entao nao disputa agenda com a aula presencial. `hibrido` continua contando —
+ * tem encontro presencial.
+ *
  * @param {{professorId:number, diaSemana:number, horarioTurnoId:number,
  *          ignorarAulaId?:number|null, bloquear?:boolean}} parametrosBusca
  * @param {{query: Function}} [executor]
@@ -592,6 +597,7 @@ const conflitantesDeProfessor = async (
             AND a.ativo
             AND a.professor_id = $2
             AND a.dia_semana = $3
+            AND a.modalidade <> 'ead'
             AND ${SOBREPOE}
             AND ($4::int IS NULL OR a.id <> $4)
           ORDER BY h.hora_inicio, a.id

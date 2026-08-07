@@ -306,6 +306,117 @@ describe('conflito de professor', () => {
 
         expect(aula.dia_semana).toBe(TERCA);
     });
+
+    describe('aula EAD nao disputa a agenda do professor', () => {
+        /**
+         * Mesmo professor, mesmo dia e mesma faixa, em duas turmas — o cenario
+         * que normalmente acusa conflito.
+         */
+        const mesmoTempo = async () => {
+            const { turma, disciplina, professor } = await cenarioBasico();
+            const outraTurma = await bd.criarTurma({ codigo: 'ADS03', turnoSlug: 'matutino' });
+            const horario = await bd.horarioDoTurno('matutino', 3);
+            return { turma, outraTurma, disciplina, professor, horario };
+        };
+
+        test('a EAD entra quando o professor ja tem presencial no mesmo horario', async () => {
+            const { turma, outraTurma, disciplina, professor, horario } = await mesmoTempo();
+
+            await aulaService.criar({
+                turmaId: turma.id,
+                disciplinaId: disciplina.id,
+                professorId: professor.id,
+                diaSemana: SEGUNDA,
+                horarioTurnoId: horario.id,
+                modalidade: 'presencial',
+            });
+
+            const ead = await aulaService.criar({
+                turmaId: outraTurma.id,
+                disciplinaId: disciplina.id,
+                professorId: professor.id,
+                diaSemana: SEGUNDA,
+                horarioTurnoId: horario.id,
+                modalidade: 'ead',
+            });
+
+            expect(ead.modalidade).toBe('ead');
+            expect(ead.professor_id).toBe(professor.id);
+        });
+
+        test('a presencial entra quando o professor ja tem EAD no mesmo horario', async () => {
+            const { turma, outraTurma, disciplina, professor, horario } = await mesmoTempo();
+
+            await aulaService.criar({
+                turmaId: turma.id,
+                disciplinaId: disciplina.id,
+                professorId: professor.id,
+                diaSemana: SEGUNDA,
+                horarioTurnoId: horario.id,
+                modalidade: 'ead',
+            });
+
+            const presencial = await aulaService.criar({
+                turmaId: outraTurma.id,
+                disciplinaId: disciplina.id,
+                professorId: professor.id,
+                diaSemana: SEGUNDA,
+                horarioTurnoId: horario.id,
+                modalidade: 'presencial',
+            });
+
+            expect(presencial.modalidade).toBe('presencial');
+        });
+
+        test('a pre-visualizacao tambem nao acusa nada', async () => {
+            const { turma, outraTurma, disciplina, professor, horario } = await mesmoTempo();
+
+            await aulaService.criar({
+                turmaId: turma.id,
+                disciplinaId: disciplina.id,
+                professorId: professor.id,
+                diaSemana: SEGUNDA,
+                horarioTurnoId: horario.id,
+            });
+
+            const conflitos = await aulaService.prevendoConflitos({
+                turmaId: outraTurma.id,
+                disciplinaId: disciplina.id,
+                professorId: professor.id,
+                diaSemana: SEGUNDA,
+                horarioTurnoId: horario.id,
+                modalidade: 'ead',
+            });
+
+            expect(tipos(conflitos)).not.toContain('professor');
+        });
+
+        test('hibrido continua disputando: tem encontro presencial', async () => {
+            const { turma, outraTurma, disciplina, professor, horario } = await mesmoTempo();
+
+            await aulaService.criar({
+                turmaId: turma.id,
+                disciplinaId: disciplina.id,
+                professorId: professor.id,
+                diaSemana: SEGUNDA,
+                horarioTurnoId: horario.id,
+                modalidade: 'presencial',
+            });
+
+            const erro = await capturarConflito(() =>
+                aulaService.criar({
+                    turmaId: outraTurma.id,
+                    disciplinaId: disciplina.id,
+                    professorId: professor.id,
+                    diaSemana: SEGUNDA,
+                    horarioTurnoId: horario.id,
+                    modalidade: 'hibrido',
+                })
+            );
+
+            expect(tipos(erro.detalhes)).toContain('professor');
+        });
+    });
 });
 
 // ---------------------------------------------------------------------------
