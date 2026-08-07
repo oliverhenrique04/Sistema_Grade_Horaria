@@ -80,6 +80,44 @@ const hstsPorEsquema = () => {
 };
 
 /**
+ * Libera o embutimento da pagina em iframe de outra origem.
+ *
+ * Os aplicativos de sinalizacao das TVs nao abrem a URL como pagina: eles a
+ * embutem num iframe dentro da propria casca, que e de outra origem. Com
+ * `frame-ancestors 'self'` e `X-Frame-Options: SAMEORIGIN` o Chrome recusa a
+ * resposta inteira e a TV mostra `ERR_BLOCKED_BY_RESPONSE`.
+ *
+ * Afrouxar isso e seguro NESTA pagina, e so nela: o painel e publico, nao
+ * emite cookie, nao tem formulario e nao tem nada em que clicar. A protecao
+ * contra clickjacking existe para impedir que um site hostil induza um clique
+ * autenticado — aqui nao ha sessao nem clique, e o conteudo ja esta aberto na
+ * consulta publica. Login e /admin continuam com os cabecalhos estritos.
+ *
+ * Aplique DEPOIS de `cspPorEsquema`, que e quem monta o cabecalho reescrito
+ * aqui.
+ *
+ * @type {import('express').RequestHandler}
+ */
+const permitirEmbutir = (req, res, next) => {
+    res.removeHeader('X-Frame-Options');
+
+    const csp = res.getHeader('Content-Security-Policy');
+    if (typeof csp === 'string') {
+        res.setHeader(
+            'Content-Security-Policy',
+            csp.replace(/frame-ancestors[^;]*/, 'frame-ancestors *')
+        );
+    }
+
+    // A casca do aplicativo e de outra origem: sem isso o recurso e recusado
+    // quando ele o busca, e a janela que o abriu fica isolada dele.
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    res.setHeader('Cross-Origin-Opener-Policy', 'unsafe-none');
+
+    next();
+};
+
+/**
  * Aplica helmet e os parsers de body com limite de tamanho.
  * Deve ser chamado antes da sessao e das rotas.
  * @param {import('express').Express} app
@@ -143,5 +181,6 @@ module.exports = {
     diretivasCsp,
     cspPorEsquema,
     hstsPorEsquema,
+    permitirEmbutir,
     MENSAGEM_LIMITE,
 };

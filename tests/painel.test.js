@@ -484,6 +484,27 @@ describe('painel de corredor', () => {
             expect(resposta.headers['set-cookie']).toBeUndefined();
         });
 
+        test('pode ser embutido em iframe de outra origem', async () => {
+            // Os aplicativos de sinalizacao das TVs nao abrem a URL como
+            // pagina: embutem num iframe da propria casca, de outra origem. Com
+            // `frame-ancestors 'self'` o Chrome recusa a resposta inteira e a
+            // TV mostra ERR_BLOCKED_BY_RESPONSE.
+            const resposta = await comoProxy('/painel?campus=1', 'http');
+
+            expect(resposta.headers['x-frame-options']).toBeUndefined();
+            expect(resposta.headers['content-security-policy']).toContain('frame-ancestors *');
+            expect(resposta.headers['cross-origin-resource-policy']).toBe('cross-origin');
+        });
+
+        test('o resto do sistema continua recusando embutimento', async () => {
+            // Afrouxar vale so para o painel, que nao tem sessao nem clique.
+            const publica = await comoProxy('/', 'https');
+
+            expect(publica.headers['x-frame-options']).toBe('SAMEORIGIN');
+            expect(publica.headers['content-security-policy']).toContain("frame-ancestors 'self'");
+            expect(publica.headers['cross-origin-resource-policy']).toBe('same-site');
+        });
+
         test('a consulta pública do aluno continua respondendo nos dois esquemas', async () => {
             for (const esquema of ['http', 'https']) {
                 const resposta = await comoProxy('/', esquema);

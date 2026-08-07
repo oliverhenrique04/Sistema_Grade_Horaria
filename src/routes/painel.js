@@ -12,11 +12,16 @@
 const express = require('express');
 
 const painelController = require('../controllers/painelController');
+const { permitirEmbutir } = require('../middlewares/seguranca');
 
 const router = express.Router();
 
 // O recorte vem na URL; a faixa do dia vem do relogio do servidor, todo dia,
 // sem ninguem tocar na TV.
-router.get('/painel', painelController.exibir);
+//
+// `permitirEmbutir` so vale aqui: os aplicativos de sinalizacao das TVs
+// mostram a pagina dentro de um iframe da propria casca, de outra origem, e
+// sem isso o Chrome recusa a resposta com ERR_BLOCKED_BY_RESPONSE.
+router.get('/painel', permitirEmbutir, painelController.exibir);
 
 module.exports = router;
