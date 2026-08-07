@@ -114,6 +114,12 @@ const ESTILO_AVISO = {
             <span class="painel-indicador-valor"><%= numero(aulas.atualizadas) %></span>
             <span class="painel-indicador-rotulo">atualizadas</span>
         </p>
+        <% if (aulas.ead > 0) { %>
+            <p class="painel-indicador">
+                <span class="painel-indicador-valor"><%= numero(aulas.ead) %></span>
+                <span class="painel-indicador-rotulo">EAD (entram inativas, fora da grade)</span>
+            </p>
+        <% } %>
         <% if (aulas.inativadas > 0) { %>
             <p class="painel-indicador importacao-indicador-alerta">
                 <span class="painel-indicador-valor"><%= numero(aulas.inativadas) %></span>

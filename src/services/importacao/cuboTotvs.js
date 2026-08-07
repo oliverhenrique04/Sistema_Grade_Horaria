@@ -39,6 +39,36 @@
  *  Disciplina        CODDISC + DISCIPLINA + CH_DISPLINA.
  *  Professor         CHAPA (matricula) + NOME; TIPO_PROF vira o papel.
  *  Dia e horario     SEMANA + HORAINICIAL/HORAFINAL.
+ *  Presencial x EAD  AULAS_SEMANA (ou TOTAL_HORAS / 4,5) — ver abaixo.
+ *
+ * ---------------------------------------------------------------------------
+ * PRESENCIAL E EAD
+ * ---------------------------------------------------------------------------
+ * As disciplinas sao hibridas: o cubo lista todos os tempos do bloco, mas so
+ * parte deles e aula presencial. Quantos, o proprio cubo diz em `AULAS_SEMANA`
+ * — que e o numero de aulas presenciais por semana e vale por PROFESSOR (numa
+ * clinica com cinco docentes cada linha traz o seu). Para a oferta vale o
+ * maior: e o professor que cobre o bloco inteiro.
+ *
+ * Exportacoes antigas nao trazem a coluna; nelas `TOTAL_HORAS / 4,5` da o mesmo
+ * numero (conferido em 2.756 de 2.756 linhas da carga de 06/08).
+ *
+ * QUAIS tempos sao presenciais o cubo nao diz — so quantos. Duas regras
+ * resolvem, nesta ordem:
+ *
+ *  1. Nenhuma aula presencial comeca as 18:10; esse tempo e sempre EAD.
+ *     As 07:10 vale o mesmo, exceto em Odontologia, que comeca cedo.
+ *  2. Do que sobra, ficam presenciais os ULTIMOS tempos do bloco, na
+ *     quantidade que `AULAS_SEMANA` indicar. Os demais viram EAD.
+ *
+ * As aulas EAD sao gravadas INATIVAS: continuam rastreaveis pela origem, nao
+ * aparecem na grade e nao entram no calculo de conflito.
+ *
+ * Duas salvaguardas impedem que a regra apague disciplina da grade:
+ *  - oferta sem `AULAS_SEMANA` (professor que nao compoe salario) fica toda
+ *    presencial;
+ *  - oferta cujos tempos caem TODOS em 18:10/07:10 fica toda presencial.
+ * Ambas viram aviso na previa.
  */
 const { texto, chave, titulo, limitar } = require('../../utils/textos');
 const { valorDaSigla } = require('../../utils/dias');
@@ -97,6 +127,18 @@ const MODALIDADES = { PRESENCIAL: 'presencial', EAD: 'ead', HIBRIDO: 'hibrido' }
 
 /** Prefixo das turmas gerenciais no TOTVS. */
 const PREFIXO_GERENCIAL = 'GP';
+
+/** Uma aula presencial por semana equivale a este tanto de `TOTAL_HORAS`. */
+const HORAS_POR_AULA_SEMANAL = 4.5;
+
+/** Nenhuma aula presencial comeca as 18:10 — o turno da noite abre as 19:00. */
+const HORARIO_EAD_NOTURNO = '18:10';
+
+/** Nem as 07:10, salvo nos cursos que realmente comecam nesse horario. */
+const HORARIO_EAD_DIURNO = '07:10';
+
+/** Siglas de curso que comecam as 07:10. */
+const SIGLAS_INICIO_CEDO = new Set(['ODO']);
 
 /**
  * Converte "HH:MM" (ou a fracao de dia que o Excel usa para horas) em minutos.
@@ -223,6 +265,50 @@ const siglaDoCodigo = (codigo) => {
 };
 
 /**
+ * Numero de aulas presenciais por semana declarado na linha.
+ *
+ * `AULAS_SEMANA` e a coluna nova do cubo. Exportacoes anteriores nao a trazem e
+ * caem no `TOTAL_HORAS`, que e sempre multiplo de 4,5 — uma aula semanal.
+ *
+ * @param {Record<string, any>} bruta linha crua da planilha
+ * @returns {number|null}
+ */
+const aulasPresenciaisDaLinha = (bruta) => {
+    const direto = inteiroPositivo(bruta.AULAS_SEMANA);
+    if (direto !== null) return direto;
+
+    const horas = Number(bruta.TOTAL_HORAS);
+    if (!Number.isFinite(horas) || horas <= 0) return null;
+
+    const aulas = horas / HORAS_POR_AULA_SEMANAL;
+    return Number.isInteger(aulas) && aulas > 0 ? aulas : null;
+};
+
+/**
+ * O curso da turma comeca as 07:10?
+ * @param {object} turma acumulador da turma, ja com `curso` resolvido
+ * @returns {boolean}
+ */
+const comecaCedo = (turma) => {
+    if (!turma) return false;
+    const curso = turma.curso || {};
+    if (SIGLAS_INICIO_CEDO.has(chave(curso.sigla || siglaDoCodigo(turma.codigo)))) return true;
+    return chave(curso.nome).includes('ODONTOLOG');
+};
+
+/**
+ * O horario e sempre EAD, independente do que `AULAS_SEMANA` disser?
+ * @param {object} turma
+ * @param {string} horaInicio "HH:MM"
+ * @returns {boolean}
+ */
+const horarioSempreEad = (turma, horaInicio) => {
+    if (horaInicio === HORARIO_EAD_NOTURNO) return true;
+    if (horaInicio === HORARIO_EAD_DIURNO) return !comecaCedo(turma);
+    return false;
+};
+
+/**
  * Elemento mais frequente de uma lista (o primeiro a alcancar o topo vence).
  * @param {any[]} valores
  * @returns {any|null}
@@ -268,6 +354,7 @@ const normalizarLinha = (bruta) => {
         disciplinaCodigo: texto(bruta.CODDISC),
         disciplinaNome: texto(bruta.DISCIPLINA),
         cargaHoraria: inteiroPositivo(bruta.CH_DISPLINA),
+        aulasPresenciais: aulasPresenciaisDaLinha(bruta),
         turnoSlug: TURNOS[chave(bruta['TURNO DISCIPLINA'])] || null,
         cursoNome: texto(bruta.CURSO),
         cursoCodigo: texto(bruta.CODCURSO),
@@ -625,6 +712,10 @@ const interpretar = (linhasBrutas = []) => {
                 minutoFim: linha.minutoFim,
                 turnoSlug: linha.turnoSlug || turma.turnoSlug,
                 modalidade: linha.modalidade,
+                // Presencial ate prova em contrario; a classificacao acontece
+                // depois, quando a oferta inteira ja foi lida.
+                presencial: true,
+                aulasPresenciais: null,
                 professores: [],
                 linhas: [],
             });
@@ -633,6 +724,12 @@ const interpretar = (linhasBrutas = []) => {
 
         const aula = aulas.get(origemChave);
         aula.linhas.push(linha.linha);
+
+        // `AULAS_SEMANA` vale por professor; para a oferta vale o maior, que e
+        // o docente que cobre o bloco inteiro.
+        if (linha.aulasPresenciais !== null) {
+            aula.aulasPresenciais = Math.max(aula.aulasPresenciais ?? 0, linha.aulasPresenciais);
+        }
 
         if (linha.chapa && !aula.professores.some((item) => item.matricula === linha.chapa)) {
             aula.professores.push({ matricula: linha.chapa, papel: linha.papel });
@@ -657,15 +754,99 @@ const interpretar = (linhasBrutas = []) => {
     });
 
     // -----------------------------------------------------------------------
+    // Presencial x EAD (ver o cabecalho do arquivo)
+    //
+    // A decisao e por OFERTA, nao por aula: `AULAS_SEMANA` conta o bloco todo
+    // da semana, que pode estar espalhado em mais de um dia.
+    // -----------------------------------------------------------------------
+    const aulasDaOferta = new Map();
+    aulas.forEach((aula) => {
+        const grupo = aulasDaOferta.get(aula.ofertaId);
+        if (grupo) grupo.push(aula);
+        else aulasDaOferta.set(aula.ofertaId, [aula]);
+    });
+
+    let totalEad = 0;
+    const semQuantidade = [];
+    const soEmHorarioEad = [];
+
+    aulasDaOferta.forEach((doGrupo) => {
+        const turma = turmas.get(doGrupo[0].turmaRef);
+
+        const ordenadas = [...doGrupo].sort(
+            (a, b) => a.diaSemana - b.diaSemana || a.horaInicio.localeCompare(b.horaInicio)
+        );
+
+        // Regra 1: os horarios que nunca recebem aula presencial.
+        const candidatas = ordenadas.filter((aula) => !horarioSempreEad(turma, aula.horaInicio));
+
+        // Salvaguarda: a oferta inteira cai em 18:10/07:10. Marcar tudo como EAD
+        // apagaria a disciplina da grade — melhor manter e avisar.
+        if (candidatas.length === 0) {
+            soEmHorarioEad.push(ordenadas[0]);
+            return;
+        }
+
+        // Regra 2: dos tempos que sobraram ficam presenciais os ULTIMOS, na
+        // quantidade declarada. Sem a quantidade, todos eles ficam.
+        const quantidade = ordenadas.reduce(
+            (maior, aula) =>
+                aula.aulasPresenciais === null
+                    ? maior
+                    : Math.max(maior ?? 0, aula.aulasPresenciais),
+            null
+        );
+
+        if (quantidade === null) semQuantidade.push(ordenadas[0]);
+
+        const quantas =
+            quantidade === null ? candidatas.length : Math.min(quantidade, candidatas.length);
+        const presenciais = new Set(quantas > 0 ? candidatas.slice(-quantas) : []);
+
+        ordenadas.forEach((aula) => {
+            if (presenciais.has(aula)) return;
+            aula.presencial = false;
+            aula.modalidade = 'ead';
+            totalEad += 1;
+        });
+    });
+
+    // -----------------------------------------------------------------------
     // Avisos de qualidade: o que o operador precisa saber antes de gravar
     // -----------------------------------------------------------------------
     // Disciplinas simultaneas do ponto de vista do ALUNO: contam tanto as aulas
     // proprias da turma quanto as compartilhadas que ela cursa. Normalmente sao
     // estagios ou optativas em que o aluno escolhe uma; a grade mostra as opcoes
     // lado a lado. O aviso existe para o coordenador conferir, nao para barrar.
+    if (totalEad > 0) {
+        registrarAviso(
+            'aula_ead',
+            `${totalEad} aula(s) identificadas como EAD e gravadas inativas — não entram na grade nem no cálculo de conflito.`
+        );
+    }
+
+    if (semQuantidade.length > 0) {
+        registrarAviso(
+            'oferta_sem_aulas_semana',
+            `${semQuantidade.length} disciplina(s) sem AULAS_SEMANA na planilha — todos os tempos entram como presenciais.`,
+            semQuantidade.slice(0, 20).map((aula) => `${aula.disciplinaNome} (${aula.horaInicio})`)
+        );
+    }
+
+    if (soEmHorarioEad.length > 0) {
+        registrarAviso(
+            'oferta_so_em_horario_ead',
+            `${soEmHorarioEad.length} disciplina(s) só têm tempos às ${HORARIO_EAD_NOTURNO}/${HORARIO_EAD_DIURNO} — mantidas presenciais para não sumirem da grade.`,
+            soEmHorarioEad.slice(0, 20).map((aula) => `${aula.disciplinaNome} (${aula.horaInicio})`)
+        );
+    }
+
     const choques = new Map();
 
     aulas.forEach((aula) => {
+        // O choque e entre aulas presenciais; EAD nao ocupa a agenda do aluno.
+        if (!aula.presencial) return;
+
         const turmaDaAula = turmas.get(aula.turmaRef);
         if (!turmaDaAula) return;
 
@@ -804,6 +985,8 @@ const interpretar = (linhasBrutas = []) => {
             turmas: turmas.size,
             turmasGerenciais: [...turmas.values()].filter((turma) => turma.gerencial).length,
             aulas: aulas.size,
+            aulasPresenciais: aulas.size - totalEad,
+            aulasEad: totalEad,
             disciplinas: disciplinas.size,
             professores: professores.size,
         },
@@ -817,7 +1000,11 @@ module.exports = {
     turnoDoCodigo,
     siglaDoCodigo,
     codigoGerencial,
+    aulasPresenciaisDaLinha,
+    horarioSempreEad,
     paraMinutos,
     paraHora,
     COLUNAS_OBRIGATORIAS,
+    HORARIO_EAD_NOTURNO,
+    HORARIO_EAD_DIURNO,
 };

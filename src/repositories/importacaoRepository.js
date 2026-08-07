@@ -598,11 +598,11 @@ const gravarAulas = async (itens = [], executor = db) => {
             (turma_id, disciplina_id, professor_id, local_id, dia_semana, horario_turno_id,
              modalidade, ativo, origem, origem_chave)
          SELECT u.turma_id, u.disciplina_id, u.professor_id, NULL, u.dia_semana,
-                u.horario_turno_id, u.modalidade, TRUE, 'totvs', u.origem_chave
+                u.horario_turno_id, u.modalidade, u.ativo, 'totvs', u.origem_chave
            FROM UNNEST($1::int[], $2::int[], $3::int[], $4::int[], $5::int[],
-                       $6::varchar[], $7::varchar[])
+                       $6::varchar[], $7::varchar[], $8::boolean[])
                 AS u(turma_id, disciplina_id, professor_id, dia_semana, horario_turno_id,
-                     modalidade, origem_chave)
+                     modalidade, origem_chave, ativo)
          ON CONFLICT (origem, origem_chave) WHERE origem_chave IS NOT NULL
          DO UPDATE SET
                 turma_id = EXCLUDED.turma_id,
@@ -611,8 +611,8 @@ const gravarAulas = async (itens = [], executor = db) => {
                 dia_semana = EXCLUDED.dia_semana,
                 horario_turno_id = EXCLUDED.horario_turno_id,
                 modalidade = EXCLUDED.modalidade,
-                ativo = TRUE
-         RETURNING id, origem_chave, (xmax = 0) AS inserida`,
+                ativo = EXCLUDED.ativo
+         RETURNING id, origem_chave, ativo, (xmax = 0) AS inserida`,
         [
             itens.map((item) => item.turmaId),
             itens.map((item) => item.disciplinaId),
@@ -621,6 +621,8 @@ const gravarAulas = async (itens = [], executor = db) => {
             itens.map((item) => item.horarioTurnoId),
             itens.map((item) => item.modalidade),
             itens.map((item) => item.origemChave),
+            // Aula EAD e gravada inativa; `ativo` ausente mantem o padrao antigo.
+            itens.map((item) => item.ativo !== false),
         ]
     );
     return resultado.rows;

@@ -221,6 +221,256 @@ describe('Importacao do cubo do TOTVS', () => {
     });
 
     // -----------------------------------------------------------------------
+    describe('presencial e EAD', () => {
+        /**
+         * Bloco de uma disciplina so: `tempos` linhas seguidas na mesma turma,
+         * variando apenas o horario.
+         */
+        const bloco = (tempos, extra = {}) =>
+            montarCubo(
+                tempos.map(([inicio, fim]) => ({
+                    HORAINICIAL: inicio,
+                    HORAFINAL: fim,
+                    ...extra,
+                }))
+            );
+
+        const porHora = (resultado) =>
+            Object.fromEntries(resultado.aulas.map((aula) => [aula.horaInicio, aula.presencial]));
+
+        it('mantem os ultimos tempos do bloco, na quantidade que AULAS_SEMANA declara', () => {
+            const { linhas } = lerPrimeiraAba(
+                bloco(
+                    [
+                        ['08:00', '08:50'],
+                        ['08:50', '09:40'],
+                        ['09:50', '10:40'],
+                        ['10:40', '11:30'],
+                    ],
+                    { AULAS_SEMANA: 2 }
+                )
+            );
+
+            const resultado = cubo.interpretar(linhas);
+
+            expect(porHora(resultado)).toEqual({
+                '08:00': false,
+                '08:50': false,
+                '09:50': true,
+                '10:40': true,
+            });
+            expect(resultado.totais.aulasPresenciais).toBe(2);
+            expect(resultado.totais.aulasEad).toBe(2);
+        });
+
+        it('marca a aula EAD com a modalidade correspondente', () => {
+            const { linhas } = lerPrimeiraAba(
+                bloco(
+                    [
+                        ['08:00', '08:50'],
+                        ['08:50', '09:40'],
+                    ],
+                    { AULAS_SEMANA: 1 }
+                )
+            );
+
+            const { aulas } = cubo.interpretar(linhas);
+            const primeira = aulas.find((aula) => aula.horaInicio === '08:00');
+
+            expect(primeira.presencial).toBe(false);
+            expect(primeira.modalidade).toBe('ead');
+        });
+
+        it('cai para TOTAL_HORAS / 4,5 quando a planilha nao traz AULAS_SEMANA', () => {
+            const { linhas } = lerPrimeiraAba(
+                bloco(
+                    [
+                        ['08:00', '08:50'],
+                        ['08:50', '09:40'],
+                        ['09:50', '10:40'],
+                    ],
+                    { TOTAL_HORAS: 4.5 }
+                )
+            );
+
+            expect(porHora(cubo.interpretar(linhas))).toEqual({
+                '08:00': false,
+                '08:50': false,
+                '09:50': true,
+            });
+        });
+
+        it('nunca deixa aula presencial as 18:10, mesmo se a quantidade permitisse', () => {
+            const { linhas } = lerPrimeiraAba(
+                bloco(
+                    [
+                        ['18:10', '19:00'],
+                        ['19:00', '19:50'],
+                        ['19:50', '20:40'],
+                    ],
+                    {
+                        CODTURMA: 'DIR01N1',
+                        'TURNO DISCIPLINA': 'NOTURNO',
+                        AULAS_SEMANA: 3,
+                    }
+                )
+            );
+
+            expect(porHora(cubo.interpretar(linhas))).toEqual({
+                '18:10': false,
+                '19:00': true,
+                '19:50': true,
+            });
+        });
+
+        it('trata as 07:10 como EAD, exceto em Odontologia', () => {
+            const tempos = [
+                ['07:10', '08:00'],
+                ['08:00', '08:50'],
+            ];
+
+            const { linhas: comuns } = lerPrimeiraAba(bloco(tempos));
+            expect(porHora(cubo.interpretar(comuns))).toEqual({
+                '07:10': false,
+                '08:00': true,
+            });
+
+            const { linhas: odonto } = lerPrimeiraAba(
+                bloco(tempos, {
+                    CODTURMA: 'ODO03I1',
+                    CURSO: 'ODONTOLOGIA',
+                    CODCURSO: '10020',
+                    'TURNO DISCIPLINA': 'INTEGRAL',
+                })
+            );
+            expect(porHora(cubo.interpretar(odonto))).toEqual({
+                '07:10': true,
+                '08:00': true,
+            });
+        });
+
+        it('mantem presencial a disciplina que so tem tempo em horario de EAD', () => {
+            const { linhas } = lerPrimeiraAba(
+                bloco([['18:10', '19:00']], {
+                    CODTURMA: 'DIR01N1',
+                    'TURNO DISCIPLINA': 'NOTURNO',
+                    AULAS_SEMANA: 1,
+                })
+            );
+
+            const resultado = cubo.interpretar(linhas);
+
+            // Marcar como EAD apagaria a disciplina da grade — melhor avisar.
+            expect(resultado.aulas[0].presencial).toBe(true);
+            expect(resultado.avisos.map((aviso) => aviso.tipo)).toContain(
+                'oferta_so_em_horario_ead'
+            );
+        });
+
+        it('deixa tudo presencial quando a planilha nao declara a quantidade', () => {
+            const { linhas } = lerPrimeiraAba(
+                bloco([
+                    ['08:00', '08:50'],
+                    ['08:50', '09:40'],
+                ])
+            );
+
+            const resultado = cubo.interpretar(linhas);
+
+            expect(porHora(resultado)).toEqual({ '08:00': true, '08:50': true });
+            expect(resultado.totais.aulasEad).toBe(0);
+            expect(resultado.avisos.map((aviso) => aviso.tipo)).toContain(
+                'oferta_sem_aulas_semana'
+            );
+        });
+
+        it('usa o maior AULAS_SEMANA entre os professores da mesma aula', () => {
+            // Co-docencia: cada professor traz a sua carga; vale a do que cobre
+            // o bloco inteiro.
+            const { linhas } = lerPrimeiraAba(
+                montarCubo([
+                    { HORAINICIAL: '08:00', HORAFINAL: '08:50', AULAS_SEMANA: 1, CHAPA: '000100' },
+                    { HORAINICIAL: '08:00', HORAFINAL: '08:50', AULAS_SEMANA: 2, CHAPA: '000200' },
+                    { HORAINICIAL: '08:50', HORAFINAL: '09:40', AULAS_SEMANA: 1, CHAPA: '000100' },
+                    { HORAINICIAL: '08:50', HORAFINAL: '09:40', AULAS_SEMANA: 2, CHAPA: '000200' },
+                    { HORAINICIAL: '09:50', HORAFINAL: '10:40', AULAS_SEMANA: 2, CHAPA: '000200' },
+                ])
+            );
+
+            expect(porHora(cubo.interpretar(linhas))).toEqual({
+                '08:00': false,
+                '08:50': true,
+                '09:50': true,
+            });
+        });
+
+        it('grava a aula EAD inativa e fora da grade da turma', async () => {
+            const relatorio = await importacaoService.aplicar(
+                bloco(
+                    [
+                        ['08:00', '08:50'],
+                        ['08:50', '09:40'],
+                        ['09:50', '10:40'],
+                    ],
+                    { AULAS_SEMANA: 1 }
+                )
+            );
+
+            expect(relatorio.aulas.gravadas).toBe(3);
+            expect(relatorio.aulas.presenciais).toBe(1);
+            expect(relatorio.aulas.ead).toBe(2);
+            // A sala so e cobrada das aulas que acontecem presencialmente.
+            expect(relatorio.aulas.semLocal).toBe(1);
+
+            const gravadas = await bd.query(
+                `SELECT h.hora_inicio, a.ativo, a.modalidade
+                   FROM aulas a JOIN horarios_turno h ON h.id = a.horario_turno_id
+                  ORDER BY h.hora_inicio`
+            );
+
+            expect(
+                gravadas.rows.map((linha) => [
+                    String(linha.hora_inicio),
+                    linha.ativo,
+                    linha.modalidade,
+                ])
+            ).toEqual([
+                ['08:00:00', false, 'ead'],
+                ['08:50:00', false, 'ead'],
+                ['09:50:00', true, 'presencial'],
+            ]);
+
+            // A grade da turma enxerga apenas a aula presencial.
+            expect(
+                await contar(
+                    `SELECT COUNT(*)::int AS total
+                       FROM vw_aulas_das_turmas v
+                       JOIN aulas a ON a.id = v.aula_id AND a.ativo`
+                )
+            ).toBe(1);
+        });
+
+        it('reimportar mantem a classificacao, sem duplicar', async () => {
+            const planilha = () =>
+                bloco(
+                    [
+                        ['08:00', '08:50'],
+                        ['08:50', '09:40'],
+                    ],
+                    { AULAS_SEMANA: 1 }
+                );
+
+            await importacaoService.aplicar(planilha());
+            const segunda = await importacaoService.aplicar(planilha());
+
+            expect(segunda.aulas.novas).toBe(0);
+            expect(segunda.aulas.ead).toBe(1);
+            expect(await contar('SELECT COUNT(*)::int AS total FROM aulas')).toBe(2);
+            expect(await contar('SELECT COUNT(*)::int AS total FROM aulas WHERE ativo')).toBe(1);
+        });
+    });
+
+    // -----------------------------------------------------------------------
     describe('simulacao', () => {
         it('nao grava nada e informa o que aconteceria', async () => {
             const antes = await totalPorTabela();

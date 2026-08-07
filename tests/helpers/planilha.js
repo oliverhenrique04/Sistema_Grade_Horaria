@@ -228,6 +228,8 @@ const COLUNAS_CUBO = [
     'DTFIM_DISCIPLINA',
     'CH_DISPLINA',
     'SEMANA',
+    'AULAS_SEMANA',
+    'TOTAL_HORAS',
 ];
 
 /** Valores padrao de uma linha do cubo, sobrescritos pelo que o teste informar. */
@@ -255,6 +257,10 @@ const LINHA_PADRAO = {
     DTFIM_DISCIPLINA: '19/12/2026',
     CH_DISPLINA: 40,
     SEMANA: 'Segunda-Feira',
+    // Sem quantidade declarada toda aula entra presencial — e o que faziam as
+    // exportacoes anteriores a coluna AULAS_SEMANA.
+    AULAS_SEMANA: null,
+    TOTAL_HORAS: null,
 };
 
 /**

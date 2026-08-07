@@ -615,6 +615,7 @@ const gravarAulas = async (
     const assistentes = new Map();
     let semHorario = 0;
     let ajustadas = 0;
+    let ead = 0;
 
     interpretacao.aulas.forEach((aula) => {
         const turma = turmas.get(aula.turmaRef);
@@ -638,9 +639,13 @@ const gravarAulas = async (
         if (!horario) semHorario += 1;
         if (ajustado) ajustadas += 1;
 
-        const slot = horario
-            ? `${turma.id}|${aula.diaSemana}|${horario.id}|${disciplina.id}`
-            : null;
+        // `ux_aula_turma_slot` so vale para aula ativa: a aula EAD entra inativa
+        // e por isso nao disputa o slot nem e barrada por quem ja o ocupa.
+        const presencial = aula.presencial !== false;
+        const slot =
+            horario && presencial
+                ? `${turma.id}|${aula.diaSemana}|${horario.id}|${disciplina.id}`
+                : null;
 
         const conflitante = slot ? slotOcupado.get(slot) : null;
         if (conflitante && conflitante.origem_chave !== aula.origemChave) {
@@ -652,6 +657,7 @@ const gravarAulas = async (
         }
 
         if (slot) slotOcupado.set(slot, { origem_chave: aula.origemChave });
+        if (!presencial) ead += 1;
 
         const principal = aula.professorPrincipal
             ? professores.get(aula.professorPrincipal.matricula)
@@ -665,6 +671,7 @@ const gravarAulas = async (
             horarioTurnoId: horario ? horario.id : null,
             modalidade: aula.modalidade,
             origemChave: aula.origemChave,
+            ativo: presencial,
         });
 
         assistentes.set(
@@ -723,6 +730,7 @@ const gravarAulas = async (
     contadores.registrar('aulasCriadas', novas);
     contadores.registrar('aulasAtualizadas', gravadas.length - novas);
     contadores.registrar('aulasInativadas', inativadas);
+    contadores.registrar('aulasEad', ead);
     contadores.registrar('professoresPorAula', vinculos.length);
     contadores.registrar('turmasPorAula', turmasVinculadasAsAulas);
 
@@ -734,6 +742,8 @@ const gravarAulas = async (
         ajustadas,
         recusadas,
         inativadas,
+        ead,
+        presenciais: aGravar.length - ead,
         jaExistiam: porOrigem.size,
     };
 };
@@ -906,8 +916,11 @@ const executar = async (interpretacao, opcoes = {}) => {
                 gravadas: aulas.gravadas,
                 novas: aulas.novas,
                 atualizadas: aulas.atualizadas,
+                presenciais: aulas.presenciais,
+                ead: aulas.ead,
                 semHorario: aulas.semHorario,
-                semLocal: aulas.gravadas,
+                // A aula EAD entra inativa e nao precisa de sala.
+                semLocal: aulas.presenciais,
                 recusadas: aulas.recusadas.length,
                 inativadas: aulas.inativadas,
             },
