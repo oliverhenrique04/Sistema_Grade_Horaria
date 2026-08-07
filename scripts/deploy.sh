@@ -57,6 +57,15 @@ if [[ "$ATUAL" == "$SHA" ]]; then
     exit 0
 fi
 
+# Antes de mexer no worktree: sem poder reiniciar, o deploy pararia no meio e
+# deixaria arquivo novo rodando em processo velho.
+if ! sudo -n true 2>/dev/null; then
+    if ! sudo -v; then
+        vermelho 'Sem permissao para reiniciar o servico — nada foi alterado.'
+        exit 1
+    fi
+fi
+
 echo "publicando  $(git -C "$REPO" rev-parse --short "$SHA")  $(git -C "$REPO" log -1 --format=%s "$SHA")"
 
 # `--detach` de proposito: o deploy aponta para um commit, nunca para uma
