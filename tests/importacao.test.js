@@ -1212,7 +1212,6 @@ describe('Importacao do cubo do TOTVS', () => {
             });
 
             expect(resultado.alteradas).toBe(4);
-            expect(resultado.recusadas).toEqual([]);
 
             const semLocal = await contar(
                 'SELECT COUNT(*)::int AS total FROM aulas WHERE local_id IS NULL'
@@ -1387,7 +1386,7 @@ describe('Importacao do cubo do TOTVS', () => {
             ).toBe(4);
         });
 
-        it('deixa como estava a aula que geraria choque de sala', async () => {
+        it('aloca o lote inteiro mesmo com a sala ja ocupada em um dos horarios', async () => {
             const turma = await turmaComAulas();
             const local = await bd.criarLocal({ campusId: turma.campus_id });
 
@@ -1406,16 +1405,14 @@ describe('Importacao do cubo do TOTVS', () => {
                 apenasSemLocal: true,
             });
 
-            // As demais entram; a conflitante fica de fora, com o motivo.
-            expect(resultado.alteradas).toBe(3);
-            expect(resultado.recusadas).toHaveLength(1);
-            expect(resultado.recusadas[0].motivo).toMatch(/sala|local/i);
+            // Choque de sala deixou de recusar: o recorte inteiro recebe o local.
+            expect(resultado.alteradas).toBe(4);
 
             const semLocal = await contar(
                 'SELECT COUNT(*)::int AS total FROM aulas WHERE local_id IS NULL AND turma_id = $1',
                 [turma.id]
             );
-            expect(semLocal).toBe(1);
+            expect(semLocal).toBe(0);
         });
 
         it('nao altera aula que a turma apenas assiste', async () => {

@@ -931,25 +931,8 @@ const definirLocalEmLote = assincrono(async (req, res) => {
         );
     } else if (resultado.total === 0) {
         req.flash('info', 'Nenhuma aula corresponde ao filtro escolhido.');
-    } else if (resultado.recusadas.length === 0) {
+    } else {
         req.flash('info', 'Todas as aulas selecionadas já usam este local.');
-    }
-
-    if (resultado.recusadas.length > 0) {
-        // O operador precisa saber QUAIS aulas ficaram de fora e por que, para
-        // resolver caso a caso — um numero solto nao ajudaria em nada.
-        req.flash(
-            'aviso',
-            `${plural(resultado.recusadas.length, 'aula')} não ${
-                resultado.recusadas.length === 1 ? 'pôde' : 'puderam'
-            } receber este local: ` +
-                resultado.recusadas
-                    .slice(0, 4)
-                    .map((item) => `${item.disciplina} (${item.faixa})`)
-                    .join('; ') +
-                (resultado.recusadas.length > 4 ? ' e outras.' : '.')
-        );
-        req.flash('aviso', resultado.recusadas[0].motivo);
     }
 
     return res.redirect(destinoDeRetorno(req, turmaId));

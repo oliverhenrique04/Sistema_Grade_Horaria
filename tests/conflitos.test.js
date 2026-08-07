@@ -312,7 +312,11 @@ describe('conflito de professor', () => {
 // Regra 3 - local
 // ---------------------------------------------------------------------------
 describe('conflito de local', () => {
-    test('o mesmo local nao recebe duas aulas simultaneas', async () => {
+    /**
+     * Duas turmas de turnos diferentes na mesma sala, no mesmo tempo de relogio
+     * (matutino 08:00 e integral 08:00 sao registros distintos do mesmo horario).
+     */
+    const salaDisputada = async () => {
         const campus = await bd.criarCampus({ nome: 'Águas Claras' });
         const local = await bd.criarLocal({ campusId: campus.id, nome: '201 C', tipo: 'sala' });
         const turmaA = await bd.criarTurma({
@@ -338,20 +342,61 @@ describe('conflito de local', () => {
             horarioTurnoId: integral2.id,
         });
 
+        return { local, turmaA, disciplina, matutino2 };
+    };
+
+    test('sala ja ocupada nao impede gravar a aula', async () => {
+        const { local, turmaA, disciplina, matutino2 } = await salaDisputada();
+
+        // A grade vem do TOTVS sem sala e o NAP aloca depois; travar aqui
+        // deixaria a aula sem sala sem saida pelo painel.
+        const aula = await aulaService.criar({
+            turmaId: turmaA.id,
+            disciplinaId: disciplina.id,
+            localId: local.id,
+            diaSemana: QUARTA,
+            horarioTurnoId: matutino2.id,
+        });
+
+        expect(aula.local_id).toBe(local.id);
+    });
+
+    test('a ocupacao da sala continua sendo detectada e informada', async () => {
+        const { local, turmaA, disciplina, matutino2 } = await salaDisputada();
+
+        // Deixou de barrar, mas nao deixou de avisar: a pre-visualizacao do
+        // formulario mostra o choque para o operador decidir.
+        const conflitos = await aulaService.prevendoConflitos({
+            turmaId: turmaA.id,
+            disciplinaId: disciplina.id,
+            localId: local.id,
+            diaSemana: QUARTA,
+            horarioTurnoId: matutino2.id,
+        });
+
+        expect(tipos(conflitos)).toEqual(['local']);
+        expect(conflitos[0].mensagem).toBe(
+            'O local 201 C já está ocupado na quarta-feira, das 08:00 às 08:50, pela turma ENF03.'
+        );
+    });
+
+    test('sala de outro campus continua recusada', async () => {
+        const { turmaA, disciplina, matutino2 } = await salaDisputada();
+        const outroCampus = await bd.criarCampus({ nome: 'Asa Sul' });
+        const salaDeLa = await bd.criarLocal({ campusId: outroCampus.id, nome: 'B12' });
+
+        // Erro de cadastro, nao disputa de agenda: segue impedindo.
         const erro = await capturarConflito(() =>
             aulaService.criar({
                 turmaId: turmaA.id,
                 disciplinaId: disciplina.id,
-                localId: local.id,
+                localId: salaDeLa.id,
                 diaSemana: QUARTA,
                 horarioTurnoId: matutino2.id,
             })
         );
 
-        expect(tipos(erro.detalhes)).toEqual(['local']);
-        expect(erro.detalhes[0].mensagem).toBe(
-            'O local 201 C já está ocupado na quarta-feira, das 08:00 às 08:50, pela turma ENF03.'
-        );
+        expect(tipos(erro.detalhes)).toEqual(['campus']);
     });
 
     test('local do tipo virtual aceita varias turmas ao mesmo tempo', async () => {

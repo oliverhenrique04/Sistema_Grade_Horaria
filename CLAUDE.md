@@ -105,7 +105,8 @@ Regras que o banco garante sozinho:
   horário. Duas disciplinas **diferentes** no mesmo horário passam pelo banco porque turma
   gerencial oferta em paralelo; o choque de agenda das demais turmas é barrado no
   `conflitoService`. Conflitos de professor e de local dependem da faixa real de horário
-  (turnos diferentes podem coincidir no relógio) e são validados lá, em transação.
+  (turnos diferentes podem coincidir no relógio) e são detectados lá, em transação — o de
+  professor barra a gravação, o de local apenas informa (ver alocação de sala).
 - `periodos_letivos`: índice único parcial garante no máximo um período marcado como atual.
 - `turmas`: o código é único por **período letivo + campus** — o ERP repete o mesmo
   `CODTURMA` em filiais diferentes, e são turmas distintas.
@@ -166,14 +167,14 @@ editam aula, inclusive o `nap`.
 
 Duas decisões que valem registrar:
 
-- **Um conflito não cancela o lote.** Diferente de `criarEmLote`, onde meia grade seria
-  pior que nenhuma, aqui se preenche um campo operacional de aulas que já existem: as que
-  conflitam ficam como estavam e voltam listadas, com o motivo. Travar trinta por causa de
-  duas trocaria um problema pequeno por um grande.
-- **Só conflitos de local contam.** A grade importada traz choques de turma e de professor
-  anteriores à alocação; barrar a sala por causa deles deixaria salas vazias sem que o
-  operador pudesse resolver dali. Filtram-se os tipos `local` e `campus`; local inexistente,
-  inativo ou de outro campus recusa a operação inteira, de uma vez.
+- **Sala ocupada não impede alocar.** O conflito de tipo `local` é detectado e mostrado,
+  mas não barra a gravação — em lugar nenhum: nem no lote, nem no formulário, nem no
+  montador (`CONFLITOS_QUE_NAO_BLOQUEIAM`, em `aulaService`). A grade chega do TOTVS sem
+  sala e o NAP aloca depois; travar no choque deixaria a aula sem sala sem que o operador
+  pudesse resolver dali, e nem todo ambiente é exclusivo — laboratório com bancadas,
+  clínica, auditório e quadra recebem mais de uma turma ao mesmo tempo.
+- **Local inválido ainda recusa**, e recusa a operação inteira antes de tocar em qualquer
+  aula: inexistente, inativo ou de outro campus é erro de cadastro, não disputa de agenda.
 - **Aula herdada não é alterada** pela turma que só a assiste: ela pertence à turma
   gerencial, e mudar ali valeria para todas as turmas do grupo.
 

@@ -45,13 +45,20 @@ const CAMPOS_EDITAVEIS = [
 const VIOLACAO_UNICIDADE = '23505';
 
 /**
- * Conflitos que dependem do local da aula.
+ * Conflitos que NAO impedem gravar.
  *
- * `local` e a sala ocupada por outra turma no mesmo horario; `campus` e a sala
- * de outro campus. Choque de turma ou de professor nao muda quando se troca a
- * sala: sao problemas anteriores, tratados em outro lugar.
+ * Sala ocupada e informacao, nao impedimento. A grade chega do TOTVS sem sala
+ * nenhuma e o NAP aloca depois; travar a alocacao no choque deixaria a aula sem
+ * sala sem que o operador pudesse resolver dali — e nem todo ambiente e
+ * exclusivo (laboratorio com bancadas, clinica, auditorio, quadra recebem mais
+ * de uma turma ao mesmo tempo).
+ *
+ * O conflito continua sendo DETECTADO e mostrado — na pre-visualizacao do
+ * formulario e no painel — apenas nao barra a gravacao. Sala de outro campus,
+ * local inativo e local inexistente continuam recusando: sao erro de cadastro,
+ * nao disputa de agenda.
  */
-const TIPOS_DE_CONFLITO_DE_LOCAL = new Set(['local', 'campus']);
+const CONFLITOS_QUE_NAO_BLOQUEIAM = new Set(['local']);
 
 /**
  * Converte a linha detalhada do banco no formato consumido pelas views da grade.
@@ -133,12 +140,16 @@ const resumoConflitos = (conflitos) =>
         : `${conflitos.length} conflitos impedem salvar esta aula.`;
 
 /**
- * Lanca `ErroConflito` quando ha conflitos, com a lista completa em `detalhes`.
+ * Lanca `ErroConflito` quando ha conflito impeditivo, com a lista em `detalhes`.
+ *
+ * Sala ocupada nao entra na conta — ver `CONFLITOS_QUE_NAO_BLOQUEIAM`.
  * @param {import('./conflitoService').Conflito[]} conflitos
  */
 const falharSeConflitar = (conflitos) => {
-    if (conflitos.length > 0) {
-        throw new ErroConflito(resumoConflitos(conflitos), conflitos);
+    const impeditivos = conflitos.filter((item) => !CONFLITOS_QUE_NAO_BLOQUEIAM.has(item.tipo));
+
+    if (impeditivos.length > 0) {
+        throw new ErroConflito(resumoConflitos(impeditivos), impeditivos);
     }
 };
 
@@ -610,18 +621,20 @@ const criarEmLote = async (listaDeDados, usuario = null) => {
  *
  * COMPORTAMENTO DIFERENTE DE `criarEmLote`, DE PROPOSITO: ali um conflito
  * cancela o lote inteiro, porque criar meia grade seria pior do que nao criar.
- * Aqui a operacao preenche um campo operacional em aulas que ja existem, e
- * travar as vinte por causa de duas seria trocar um problema pequeno por um
- * grande. As aulas que conflitam ficam como estavam e voltam na resposta, com o
- * motivo, para o operador resolver caso a caso.
+ * Aqui a operacao so preenche um campo operacional de aulas que ja existem.
+ *
+ * Sala ja ocupada nao recusa a aula (ver `CONFLITOS_QUE_NAO_BLOQUEIAM`): o lote
+ * aplica o local a todo o recorte. O que ainda recusa e o local invalido —
+ * inexistente, inativo ou de outro campus —, e recusa a operacao inteira, antes
+ * de tocar em qualquer aula.
  *
  * @param {number} turmaId
  * @param {{localId:number|null, disciplinas?:number[], dias?:number[],
  *          horarios?:number[], apenasSemLocal?:boolean}} escolha lista vazia em
  *        qualquer eixo significa "todos".
  * @param {object|null} [usuario]
- * @returns {Promise<{alteradas:number, ignoradas:number, recusadas:Array<{aulaId:number,
- *          disciplina:string, motivo:string}>, total:number}>}
+ * @returns {Promise<{total:number, alteradas:number, ignoradas:number}>}
+ * @throws {ErroValidacao} local inexistente, inativo ou de outro campus
  */
 const definirLocalEmLote = async (turmaId, escolha, usuario = null) => {
     const dados = validar(schemaLocalEmLote, escolha, 'Não foi possível aplicar o local.');
@@ -683,37 +696,10 @@ const definirLocalEmLote = async (turmaId, escolha, usuario = null) => {
             }
         }
 
-        const recusadas = [];
         let alteradas = 0;
 
         for (const aula of aulas) {
             if (Number(aula.local_id) === dados.localId) continue;
-
-            const entrada = mesclar(paraEntrada(aula), { localId: dados.localId });
-
-            // Sequencial: cada aula precisa enxergar as anteriores para que duas
-            // aulas simultaneas nao recebam a mesma sala nesta mesma passada.
-            const todos = await conflitoService.verificarConflitos(cliente, entrada, {
-                ignorarAulaId: aula.id,
-                bloquear: true,
-            });
-
-            // SO os conflitos que a troca de local pode causar. A grade
-            // importada tem choques de turma e de professor que ja existiam
-            // antes — barrar a alocacao por causa deles deixaria a sala vazia
-            // sem que o operador pudesse fazer nada a respeito daqui.
-            const conflitos = todos.filter((item) => TIPOS_DE_CONFLITO_DE_LOCAL.has(item.tipo));
-
-            if (conflitos.length > 0) {
-                recusadas.push({
-                    aulaId: aula.id,
-                    disciplina: aula.disciplina_nome,
-                    dia: aula.dia_semana,
-                    faixa: faixaHoraria(aula.hora_inicio, aula.hora_fim),
-                    motivo: conflitos[0].mensagem,
-                });
-                continue;
-            }
 
             await aulaRepository.definirLocal(aula.id, dados.localId, cliente);
             alteradas += 1;
@@ -722,8 +708,7 @@ const definirLocalEmLote = async (turmaId, escolha, usuario = null) => {
         return {
             total: aulas.length,
             alteradas,
-            ignoradas: aulas.length - alteradas - recusadas.length,
-            recusadas,
+            ignoradas: aulas.length - alteradas,
         };
     });
 };
