@@ -103,6 +103,13 @@
         </main>
 
         <footer class="rodape">
+            <%
+                /* A marca fica no rodape, do lado oposto ao QR: presente, sem
+                   competir com o quadro nem com o codigo, que e o unico
+                   elemento acionavel da tela. */
+            %>
+            <p class="marca" role="img" aria-label="NUTED — Núcleo de Tecnologias Educacionais"></p>
+
             <% if (!configurar && !vazio) { %>
                 <ul class="legenda">
                     <li class="l-agora"><i aria-hidden="true"></i> Em aula</li>
