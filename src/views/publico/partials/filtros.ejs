@@ -78,19 +78,18 @@
                 <% }) %>
             </select>
         </div>
-
-        <div class="campo">
-            <label class="campo-rotulo" for="filtro-turma">Turma</label>
-            <select class="campo-controle" id="filtro-turma" name="turma" aria-label="Filtrar por turma">
-                <option value="">Todas as turmas</option>
-                <% opcoes.turmas.forEach(function (turma) { %>
-                    <option value="<%= turma.id %>" <%= filtrosAplicados.turmaId === turma.id ? 'selected' : '' %>>
-                        <%= turma.nome %>
-                    </option>
-                <% }) %>
-            </select>
-        </div>
     </div>
+
+    <%
+        // A escolha de turma nao aparece: o aluno chega pelo curso e pelo
+        // semestre, e a lista de turmas de um curso e ruido para ele. O filtro
+        // continua valendo pela query string (`?turma=`), entao link salvo e
+        // link compartilhado seguem funcionando — e por isso o valor viaja num
+        // campo oculto, para nao se perder quando outro filtro e trocado.
+    %>
+    <% if (filtrosAplicados.turmaId) { %>
+        <input type="hidden" name="turma" value="<%= filtrosAplicados.turmaId %>">
+    <% } %>
 
     <div class="filtros-acoes">
         <button class="botao botao-primario" type="submit">
