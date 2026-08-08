@@ -930,21 +930,27 @@ body {
     background: rgba(255, 255, 255, 0.16);
 }
 
+/* A marca ocupa a primeira coluna do rodape, entao esta linha ficou com menos
+   espaco. Nada aqui pode quebrar em duas linhas nem ser cortado: `nowrap` nos
+   textos e uma barra menor mantem "pagina 1 de 2 ... atualiza a cada 60 s"
+   inteiro na largura que sobrou. */
 .rodape-estado {
     grid-column: 2;
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: 14px;
     margin: 0;
     font-family: 'Plex Mono', monospace;
     font-size: 18px;
     color: var(--tinta-3);
     font-variant-numeric: tabular-nums;
+    white-space: nowrap;
 }
 
 .barra {
     position: relative;
-    width: 190px;
+    flex: none;
+    width: 120px;
     height: 4px;
     border-radius: 2px;
     background: rgba(255, 255, 255, 0.1);
