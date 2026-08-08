@@ -117,6 +117,31 @@
     const indicador = document.getElementById('indicadorPagina');
     let atual = 0;
 
+    /** Folga sobre a cascata inteira de entrada (18 linhas x 20 ms + 340 ms). */
+    const ASSENTAR_MS = 1500;
+    let assentamento = null;
+
+    /**
+     * Tira a animacao de entrada do caminho depois que ela ja aconteceu.
+     *
+     * A animacao usa `fill: both`: ate ela rodar, a linha esta invisivel. Onde
+     * ela nao roda — compositor sem memoria para mais uma camada 3D, pagina
+     * carregada oculta pelo aplicativo da TV — a aula sumiria da grade sem que
+     * ninguem por perto pudesse recarregar. Assentada, a linha nao depende mais
+     * de animacao nenhuma para aparecer.
+     */
+    function assentar(pagina) {
+        window.clearTimeout(assentamento);
+        assentamento = window.setTimeout(function () {
+            const linhas = pagina.querySelectorAll('.linha');
+            for (let i = 0; i < linhas.length; i += 1) {
+                linhas[i].classList.add('assentada');
+            }
+        }, ASSENTAR_MS);
+    }
+
+    if (paginas.length) assentar(paginas[atual]);
+
     function trocarPagina() {
         if (paginas.length < 2) return;
 
@@ -131,12 +156,15 @@
         // Reinicia a animacao de entrada das linhas da pagina que aparece.
         const linhas = paginas[atual].querySelectorAll('.linha');
         for (let i = 0; i < linhas.length; i += 1) {
+            linhas[i].classList.remove('assentada');
             linhas[i].style.animation = 'none';
             // Leitura forcada: sem ela o navegador funde as duas atribuicoes e
             // a animacao nao recomeca.
             void linhas[i].offsetWidth;
             linhas[i].style.animation = '';
         }
+
+        assentar(paginas[atual]);
     }
 
     if (paginas.length > 1) {

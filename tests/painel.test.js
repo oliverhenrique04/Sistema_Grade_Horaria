@@ -1000,4 +1000,75 @@ describe('painel de corredor', () => {
             });
         });
     });
+
+    describe('ordem de pintura', () => {
+        /*
+         * O navegador do aplicativo das TVs pinta os filhos de z-index negativo
+         * ACIMA do conteudo em fluxo — o ceu tem animacoes que o compositor
+         * promove, e ele reordena as camadas na primeira recomposicao, isto e,
+         * a cada troca de pagina e a cada recarga. Sumiam o cabecalho inteiro, a
+         * barra de colunas, a legenda e o estado do rodape; sobrava o que ja
+         * estava na camada posicionada por outro motivo (a linha, a marca, o
+         * QR). O painel nao pode voltar a depender de z-index negativo.
+         */
+        const css = () => {
+            const fs = require('node:fs');
+            const path = require('node:path');
+            return fs.readFileSync(
+                path.join(__dirname, '..', 'public', 'css', 'painel.css'),
+                'utf8'
+            );
+        };
+
+        const regra = (folha, seletor) => {
+            const achado = new RegExp(`\\n${seletor.replace(/\./g, '\\.')}\\s*\\{([^}]*)\\}`).exec(
+                folha
+            );
+            expect(achado).not.toBeNull();
+            return achado[1];
+        };
+
+        test('nenhuma camada do painel usa z-index negativo', () => {
+            expect(css()).not.toMatch(/z-index:\s*-/);
+        });
+
+        test('cabeçalho, quadro e rodapé ficam explicitamente acima do céu', () => {
+            const folha = css();
+
+            ['.cabecalho', '.quadro', '.rodape'].forEach((seletor) => {
+                const corpo = regra(folha, seletor);
+                expect(corpo).toMatch(/position:\s*relative/);
+                expect(corpo).toMatch(/z-index:\s*1/);
+            });
+
+            expect(regra(folha, '.ceu')).toMatch(/z-index:\s*0/);
+        });
+
+        test('o fundo é do próprio .tv, e não de uma camada sob ele', () => {
+            const folha = css();
+
+            expect(folha).not.toMatch(/\.tv::before/);
+            expect(regra(folha, '.tv')).toMatch(/background:\s*linear-gradient/);
+        });
+    });
+
+    describe('a entrada das linhas não pode esconder aula', () => {
+        /*
+         * A animacao de entrada usa `fill: both` e transformacao 3D: ate ela
+         * rodar a linha esta invisivel, e cada linha vira uma camada no
+         * compositor. Onde uma camada nao sai do lugar, a aula sumiria da grade
+         * para sempre. Passada a cascata, o painel assenta as linhas.
+         */
+        test('o CSS tem o estado assentado e o JS o aplica e o refaz na troca', () => {
+            const fs = require('node:fs');
+            const path = require('node:path');
+            const publico = path.join(__dirname, '..', 'public');
+            const folha = fs.readFileSync(path.join(publico, 'css', 'painel.css'), 'utf8');
+            const script = fs.readFileSync(path.join(publico, 'js', 'painel.js'), 'utf8');
+
+            expect(folha).toMatch(/\.linha\.assentada\s*\{[^}]*animation:\s*none/);
+            expect(script).toMatch(/classList\.add\('assentada'\)/);
+            expect(script).toMatch(/classList\.remove\('assentada'\)/);
+        });
+    });
 });

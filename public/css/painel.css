@@ -97,6 +97,22 @@ body {
    A tela
    -------------------------------------------------------------------------- */
 
+/* O fundo e o ceu ficam ABAIXO do conteudo sem nenhum z-index negativo, e essa
+   e a regra mais importante desta folha.
+
+   O navegador do aplicativo das TVs pinta os filhos de z-index negativo por
+   cima do conteudo em fluxo — sao camadas que o compositor promove por causa
+   das animacoes do ceu (`translate3d`, `rotate`) e que ele reordena na primeira
+   recomposicao, isto e, a cada troca de pagina e a cada recarga. O que sumia
+   era exatamente o que se pinta em fluxo: o cabecalho inteiro, a barra de
+   colunas, a legenda e o estado do rodape. O que sobrava era o que ja estava na
+   camada posicionada por outro motivo — a linha (`position: relative`), a marca
+   e o QR (`opacity` < 1).
+
+   Por isso o degrade e o fundo do PROPRIO `.tv` (background do elemento pinta
+   antes de qualquer filho, em qualquer navegador), o ceu fica em `z-index: 0` e
+   as tres regioes sobem para `z-index: 1`. Nada muda na tela; muda a ordem, que
+   deixa de depender do compositor acertar o negativo. */
 .tv {
     position: absolute;
     top: 0;
@@ -110,6 +126,7 @@ body {
     overflow: hidden;
     font-family: 'Plex Condensed', system-ui, sans-serif;
     color: var(--tinta);
+    background: linear-gradient(172deg, var(--fundo-2) 0%, var(--fundo) 44%, #01030a 100%);
     isolation: isolate;
 
     --tinta: #f2f6f9;
@@ -156,14 +173,6 @@ body {
     --astro: radial-gradient(circle at 38% 34%, #ffffff 0%, #e8edff 44%, #c2cef4 74%, #a9b7e6 100%);
 }
 
-.tv::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    z-index: -3;
-    background: linear-gradient(172deg, var(--fundo-2) 0%, var(--fundo) 44%, #01030a 100%);
-}
-
 /* --------------------------------------------------------------------------
    Ceu: o efeito do turno.
 
@@ -176,7 +185,7 @@ body {
 .ceu {
     position: absolute;
     inset: 0;
-    z-index: -2;
+    z-index: 0;
     overflow: hidden;
     pointer-events: none;
 }
@@ -366,6 +375,8 @@ body {
    -------------------------------------------------------------------------- */
 
 .cabecalho {
+    position: relative;
+    z-index: 1;
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
     align-content: center;
@@ -476,6 +487,8 @@ body {
    -------------------------------------------------------------------------- */
 
 .quadro {
+    position: relative;
+    z-index: 1;
     display: flex;
     flex-direction: column;
     padding: 20px 36px 12px;
@@ -543,6 +556,16 @@ body {
         opacity: 1;
         transform: perspective(900px) rotateX(0);
     }
+}
+
+/* A entrada e enfeite; a aula, nao. Com `fill: both` a linha fica em
+   `opacity: 0` ate a animacao rodar, e a animacao usa transformacao 3D: cada
+   linha vira uma camada no compositor. Onde uma dessas camadas nao sai do
+   lugar — TV sem memoria de video, pagina carregada oculta pelo aplicativo — a
+   linha fica em branco para sempre, e ninguem esta no corredor para recarregar.
+   Passada a cascata, `painel.js` assenta as linhas e sobra o estado normal. */
+.linha.assentada {
+    animation: none;
 }
 
 .linha::before {
@@ -894,6 +917,8 @@ body {
    -------------------------------------------------------------------------- */
 
 .rodape {
+    position: relative;
+    z-index: 1;
     display: grid;
     grid-template-columns: auto minmax(0, 1fr) auto;
     align-content: center;

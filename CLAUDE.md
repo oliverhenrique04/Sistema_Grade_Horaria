@@ -304,6 +304,17 @@ Decisões que sustentam o desenho:
 - **Fontes auto-hospedadas** em `public/fontes/` (IBM Plex, OFL). A TV liga antes da rede da
   instituição: dependendo de CDN, a primeira pintura cai em Arial e a grade quebra justamente
   quando não há ninguém para recarregar.
+- **Nada essencial depende de `z-index` negativo.** O navegador do aplicativo das TVs pinta os
+  filhos de z-index negativo **acima** do conteúdo em fluxo assim que recompõe as camadas — o
+  céu tem animações que o compositor promove, e a recomposição acontece a cada troca de página
+  e a cada recarga. Sumiam o cabeçalho inteiro, a barra de colunas, a legenda e a linha de
+  estado do rodapé; sobrava exatamente o que já estava na camada posicionada por outro motivo:
+  a linha (`position: relative`), a marca e o QR (`opacity` < 1). Hoje o degradê é o fundo do
+  **próprio** `.tv` (o fundo do elemento pinta antes de qualquer filho, em qualquer navegador),
+  o céu está em `z-index: 0` e cabeçalho, quadro e rodapé em `z-index: 1`. Pela mesma razão a
+  animação de entrada sai de cena depois da cascata (`.linha.assentada`, aplicada por
+  `painel.js`): com `fill: both` ela deixa a aula invisível enquanto não roda, e cada linha em
+  transformação 3D é mais uma camada que a TV pode não dar conta de compor.
 - **QR próprio**, em `src/utils/qrcode.js` (modo byte, nível M, versões 1–10, saída SVG). Um
   QR errado renderiza lindamente e não lê, então `tests/qrcode.test.js` compara a matriz
   inteira — as oito máscaras de cada texto — contra vetores de um codificador de referência.
