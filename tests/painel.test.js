@@ -276,6 +276,203 @@ describe('painel de corredor', () => {
         });
     });
 
+    describe('ordem por relevância', () => {
+        /*
+         * O quadro responde "para onde eu vou agora?". A ordem cronologica pura
+         * poe o passado no topo e a proxima aula no fim — e a proxima aula e a
+         * unica linha que faz alguem andar.
+         */
+        const linha = (
+            inicio,
+            fim,
+            local = null,
+            turma = 'DIR01M1',
+            curso = 'DIR',
+            disciplina = 'Disciplina'
+        ) => ({
+            inicio: servico.paraMinutos(inicio),
+            fim: servico.paraMinutos(fim),
+            local,
+            disciplina,
+            turmas: [{ id: 1, codigo: turma, curso }],
+        });
+
+        const salas = (blocos) => blocos.map((bloco) => bloco.local);
+        const inicios = (blocos) => blocos.map((bloco) => servico.paraHora(bloco.inicio));
+
+        test('o que ainda vai começar vem antes do que está em aula', () => {
+            const ordenada = servico.ordenarPorRelevancia(
+                [
+                    linha('08:00', '11:30', '101 C'), // em aula
+                    linha('09:50', '11:30', '102 C'), // por vir
+                    linha('08:00', '09:40', '103 C'), // encerrada
+                ],
+                9 * 60 + 30
+            );
+
+            expect(salas(ordenada)).toEqual(['102 C', '101 C', '103 C']);
+        });
+
+        test('a linha encerrada nunca ocupa o topo do quadro', () => {
+            const ordenada = servico.ordenarPorRelevancia(
+                [linha('08:00', '09:40', '101 C'), linha('08:00', '12:20', '102 C')],
+                11 * 60 + 45
+            );
+
+            expect(ordenada[0].local).toBe('102 C');
+        });
+
+        test('dentro do que vai começar, a mais próxima vem primeiro', () => {
+            const ordenada = servico.ordenarPorRelevancia(
+                [
+                    linha('11:30', '12:20', '101 C'),
+                    linha('09:50', '10:40', '102 C'),
+                    linha('10:40', '11:30', '103 C'),
+                ],
+                9 * 60
+            );
+
+            expect(inicios(ordenada)).toEqual(['09:50', '10:40', '11:30']);
+        });
+
+        test('dentro do que está em aula, a ordem é a sala', () => {
+            // Todas comecaram; a hora de inicio ja nao orienta ninguem.
+            const ordenada = servico.ordenarPorRelevancia(
+                [
+                    linha('08:50', '11:30', '311/313 C'),
+                    linha('08:00', '11:30', '303 C'),
+                    linha('08:50', '11:30', '305 D'),
+                    linha('08:00', '11:30', '305 C'),
+                ],
+                10 * 60
+            );
+
+            expect(salas(ordenada)).toEqual(['303 C', '305 C', '311/313 C', '305 D']);
+        });
+
+        test('dentro do que encerrou, a que acabou agora fica junto do que ainda vive', () => {
+            const ordenada = servico.ordenarPorRelevancia(
+                [
+                    linha('08:00', '09:40', '101 C'),
+                    linha('08:00', '11:30', '102 C'),
+                    linha('08:00', '10:40', '103 C'),
+                ],
+                11 * 60 + 45
+            );
+
+            expect(salas(ordenada)).toEqual(['102 C', '103 C', '101 C']);
+        });
+
+        test('"terminando" não ganha faixa própria: entra em "acontecendo", pela sala', () => {
+            // Para quem esta no corredor a sala continua ocupada. Separar as duas
+            // quebraria a coluna de salas em duas sequencias, e o rotulo da linha
+            // ("Termina 10:40") ja carrega a nuance.
+            const ordenada = servico.ordenarPorRelevancia(
+                [
+                    linha('08:00', '11:30', '305 C'), // agora
+                    linha('08:00', '10:40', '101 C'), // terminando
+                    linha('08:00', '11:30', '203 C'), // agora
+                    linha('10:50', '11:40', '999 C'), // por vir
+                ],
+                10 * 60 + 35
+            );
+
+            // A que termina fica entre as duas em curso, na posicao da sala dela.
+            expect(salas(ordenada)).toEqual(['999 C', '101 C', '203 C', '305 C']);
+        });
+
+        test('sem relógio (o painel de amanhã) a ordem é cronológica pura', () => {
+            const ordenada = servico.ordenarPorRelevancia(
+                [
+                    linha('19:50', '21:40', '305 C'),
+                    linha('08:00', '09:40', '101 C'),
+                    linha('13:50', '15:30', '203 C'),
+                ],
+                -1
+            );
+
+            expect(inicios(ordenada)).toEqual(['08:00', '13:50', '19:50']);
+        });
+
+        test('a oferta paralela na mesma sala não troca de lugar entre recargas', () => {
+            // A turma gerencial oferta duas disciplinas no mesmo horario e na
+            // mesma sala: PSI07M1 tem "Estagio Supervisionado Basico I" e
+            // "Psicoterapia Infantil" as 08:00 na 303 C. Sem a disciplina no
+            // fim do desempate a ordem vinha da ordem das linhas cruas, e as
+            // duas trocavam de lugar a cada recarga (medido: 710 momentos).
+            const paralelas = [
+                linha('08:00', '09:40', '303 C', 'PSI07M1', 'PSI', 'Psicoterapia Infantil'),
+                linha('08:00', '11:30', '303 C', 'PSI07M1', 'PSI', 'Estagio Supervisionado I'),
+            ];
+            const nomes = (blocos) => blocos.map((bloco) => bloco.disciplina);
+
+            const ordenada = servico.ordenarPorRelevancia(paralelas, 7 * 60);
+            const invertida = servico.ordenarPorRelevancia([...paralelas].reverse(), 7 * 60);
+
+            expect(nomes(ordenada)).toEqual(nomes(invertida));
+            expect(nomes(ordenada)).toEqual(['Estagio Supervisionado I', 'Psicoterapia Infantil']);
+        });
+
+        test('não altera o array recebido', () => {
+            const original = [linha('09:50', '11:30', '102 C'), linha('08:00', '11:30', '101 C')];
+            const copia = [...original];
+
+            servico.ordenarPorRelevancia(original, 9 * 60 + 30);
+
+            expect(original).toEqual(copia);
+        });
+    });
+
+    describe('sala como chave de ordenação', () => {
+        const ordenar = (nomes) =>
+            [...nomes].sort((a, b) => {
+                const [ga, ba, na, ta] = servico.chaveSala(a);
+                const [gb, bb, nb, tb] = servico.chaveSala(b);
+                return ga - gb || ba.localeCompare(bb) || na - nb || ta.localeCompare(tb);
+            });
+
+        test('a sala de bloco ordena por letra e depois por número', () => {
+            expect(ordenar(['314 D', '103 C', '305 D', '311/313 C'])).toEqual([
+                '103 C',
+                '311/313 C',
+                '305 D',
+                '314 D',
+            ]);
+        });
+
+        test('o ambiente sem bloco desce, e a aula sem sala desce mais ainda', () => {
+            // Uma letra sentinela nao serviria: `localeCompare` ignora
+            // nao-caracteres, e '￾' compara MENOR que 'C' — o "Lab 01"
+            // subiria para o topo em vez de descer para o fim. Por isso o grupo
+            // e um numero.
+            expect(ordenar([null, 'Skill Lab', '103 C', 'Lab 01', null])).toEqual([
+                '103 C',
+                'Lab 01',
+                'Skill Lab',
+                null,
+                null,
+            ]);
+        });
+
+        test('dois locais sem número comparam sem produzir NaN', () => {
+            // `Infinity - Infinity` e NaN, e um comparador que devolve NaN torna
+            // a ordenacao indefinida. O ausente e um numero finito.
+            const [, , semNumero] = servico.chaveSala('Skill Lab');
+            const [, , semSala] = servico.chaveSala(null);
+
+            expect(Number.isFinite(semNumero)).toBe(true);
+            expect(semNumero - semSala).toBe(0);
+        });
+
+        test('o nome que só parece bloco não vira bloco', () => {
+            // `blocoDoLocal` exige espaco antes da letra final: sem isso, "EAD"
+            // entraria no bloco D e "BANCO DE DADOS ARQUITETURA" no bloco A.
+            expect(servico.chaveSala('EAD')[1]).toBe('');
+            expect(servico.chaveSala('BANCO DE DADOS ARQUITETURA')[1]).toBe('');
+            expect(servico.chaveSala('TUTORIAL 2 C')[1]).toBe('C');
+        });
+    });
+
     describe('bloco derivado do nome do local', () => {
         test('a letra final identifica o prédio', () => {
             expect(blocoDoLocal('101 C')).toBe('C');
@@ -942,6 +1139,101 @@ describe('painel de corredor', () => {
             expect(painel.amanha).toBe(true);
             expect(painel.diaSemana).toBeGreaterThanOrEqual(1);
             expect(painel.diaSemana).toBeLessThanOrEqual(6);
+        });
+
+        test('o quadro é encabeçado pelo que ainda vai começar, não pelo que está em curso', async () => {
+            // Cenario proprio: os testes acima compartilham o campus e este
+            // depende da ordem exata das linhas.
+            const campus = await bd.criarCampus({ nome: 'Campus da Ordem' });
+            const curso = await bd.criarCurso({
+                nome: 'Curso da Ordem',
+                campusIds: [campus.id],
+            });
+            const turma = await bd.criarTurma({
+                nome: 'ORD01M1',
+                codigo: 'ORD01M1',
+                campusId: campus.id,
+                cursoId: curso.id,
+                turnoSlug: 'matutino',
+                semestreCurricular: 1,
+            });
+
+            const emCurso = await bd.criarDisciplina({ nome: 'Aula em curso' });
+            const porVir = await bd.criarDisciplina({ nome: 'Aula por vir' });
+            const sala = await bd.criarLocal({ campusId: campus.id, nome: '801 Z' });
+
+            // Matutino: ordem 2 = 08:00-08:50, ordem 4 = 09:50-10:40.
+            await bd.criarAula({
+                turmaId: turma.id,
+                disciplinaId: emCurso.id,
+                localId: sala.id,
+                diaSemana: 3,
+                ordemHorario: 2,
+            });
+            await bd.criarAula({
+                turmaId: turma.id,
+                disciplinaId: porVir.id,
+                localId: sala.id,
+                diaSemana: 3,
+                ordemHorario: 4,
+            });
+
+            const painel = await servico.montarPainel(
+                { campusId: campus.id },
+                { agora: emSaoPaulo('08:30') }
+            );
+
+            expect(painel.paginas[0].map((linha) => linha.disciplina)).toEqual([
+                'Aula por vir',
+                'Aula em curso',
+            ]);
+            expect(painel.paginas[0][0].situacao).toBe('depois');
+            expect(painel.paginas[0][1].situacao).toBe('agora');
+        });
+
+        test('o painel de amanhã continua em ordem cronológica', async () => {
+            const campus = await bd.criarCampus({ nome: 'Campus de Amanhã' });
+            const curso = await bd.criarCurso({
+                nome: 'Curso de Amanhã',
+                campusIds: [campus.id],
+            });
+            const turma = await bd.criarTurma({
+                nome: 'AMN01M1',
+                codigo: 'AMN01M1',
+                campusId: campus.id,
+                cursoId: curso.id,
+                turnoSlug: 'matutino',
+                semestreCurricular: 1,
+            });
+
+            const cedo = await bd.criarDisciplina({ nome: 'Primeira de quinta' });
+            const tarde = await bd.criarDisciplina({ nome: 'Segunda de quinta' });
+            const sala = await bd.criarLocal({ campusId: campus.id, nome: '802 Z' });
+
+            for (const [disciplina, ordem] of [
+                [tarde, 4],
+                [cedo, 2],
+            ]) {
+                await bd.criarAula({
+                    turmaId: turma.id,
+                    disciplinaId: disciplina.id,
+                    localId: sala.id,
+                    diaSemana: 4,
+                    ordemHorario: ordem,
+                });
+            }
+
+            const painel = await servico.montarPainel(
+                { campusId: campus.id },
+                // Quarta, 23:30: nada hoje, o quadro vira para quinta.
+                { agora: emSaoPaulo('23:30') }
+            );
+
+            expect(painel.amanha).toBe(true);
+            expect(painel.paginas[0].map((linha) => linha.disciplina)).toEqual([
+                'Primeira de quinta',
+                'Segunda de quinta',
+            ]);
         });
 
         test('campus sem aula nenhuma cai no estado vazio, não em erro', async () => {

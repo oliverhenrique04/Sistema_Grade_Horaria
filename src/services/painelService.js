@@ -4,7 +4,7 @@
  * Entrega a view pronta: nenhuma decisao (faixa do dia, compactacao, descarte
  * do que ja terminou, paginacao) sobra para o EJS.
  *
- * Tres regras carregam o desenho inteiro:
+ * Quatro regras carregam o desenho inteiro:
  *
  * 1. A FAIXA DO DIA SAI DO RELOGIO, nao do turno da turma. No banco real o
  *    turno "Matutino" tem horarios ate 18:10 e o "Noturno" comeca 13:50 — o
@@ -12,12 +12,15 @@
  * 2. A COMPACTACAO ACONTECE DUAS VEZES: uma aula compartilhada chega repetida
  *    uma vez por turma que a cursa, e uma disciplina de tres horarios chega em
  *    tres linhas de 50 minutos. Vira uma linha so, "08:00 - 10:40".
- * 3. AULA ENCERRADA SO OCUPA ESPACO ENQUANTO SOBRA ESPACO. Se a faixa nao cabe
+ * 3. A ORDEM E POR RELEVANCIA DIANTE DO RELOGIO, e nao cronologica. O quadro
+ *    existe para responder "para onde eu vou agora?": o que ainda vai comecar
+ *    vem primeiro, o que esta acontecendo depois, o que acabou por ultimo.
+ * 4. AULA ENCERRADA SO OCUPA ESPACO ENQUANTO SOBRA ESPACO. Se a faixa nao cabe
  *    numa pagina, o que ja acabou sai da frente do que ainda vai acontecer.
  */
 const repositorio = require('../repositories/painelRepository');
 const { nomeDoDia, siglaDoDia, DIAS } = require('../utils/dias');
-const { agruparPorBloco } = require('../utils/blocos');
+const { agruparPorBloco, blocoDoLocal } = require('../utils/blocos');
 
 /** Fuso da instituicao. O processo pode rodar em UTC; a TV, nunca. */
 const FUSO = 'America/Sao_Paulo';
@@ -290,6 +293,130 @@ const situacaoDe = (bloco, agora) => {
 };
 
 /**
+ * Faixas de relevancia. O numero e a ordem em que aparecem no quadro.
+ *
+ * A separacao e por "o que eu faco com esta linha": o que ainda vai comecar
+ * move gente pelo corredor, o que esta acontecendo apenas diz que a sala esta
+ * ocupada, e o que acabou nao pede nada de ninguem.
+ */
+const POR_VIR = 0;
+const ACONTECENDO = 1;
+const ENCERRADA = 2;
+
+const RELEVANCIA = {
+    breve: POR_VIR,
+    depois: POR_VIR,
+    agora: ACONTECENDO,
+    terminando: ACONTECENDO,
+    fim: ENCERRADA,
+};
+
+/** Grupos de sala, na ordem em que aparecem. */
+const SALA_DE_BLOCO = 0;
+const SALA_SEM_BLOCO = 1;
+const SEM_SALA = 2;
+
+/** Numero de sala ausente. Finito de proposito: `Infinity - Infinity` e NaN. */
+const SEM_NUMERO = Number.MAX_SAFE_INTEGER;
+
+/**
+ * Sala como chave de ordenacao: primeiro as salas de bloco (letra, depois
+ * numero), depois os ambientes que nao seguem a convencao ("Lab 01",
+ * "Skill Lab") e, por ultimo, as aulas ainda sem sala.
+ *
+ * O grupo e um NUMERO, e nao uma letra sentinela: `localeCompare` ignora
+ * nao-caracteres, entao `'￾'.localeCompare('C')` devolve -1 e o "Lab 01"
+ * subiria para o topo em vez de descer para o fim.
+ *
+ * O numero sai da PRIMEIRA ocorrencia no nome, que e o que le "310/312 D" como
+ * o par do 310. "Lab 02/211 C" fica ordenado por 2, e nao por 211 — e um local
+ * entre os 66 em uso, e nenhuma regra mais esperta acerta os dois casos.
+ *
+ * @param {string|null} nome
+ * @returns {[number, string, number, string]} grupo, bloco, numero, nome
+ */
+const chaveSala = (nome) => {
+    if (!nome) return [SEM_SALA, '', SEM_NUMERO, ''];
+
+    const bloco = blocoDoLocal(nome);
+    const numero = /(\d+)/.exec(nome);
+
+    return [
+        bloco ? SALA_DE_BLOCO : SALA_SEM_BLOCO,
+        bloco || '',
+        numero ? Number(numero[1]) : SEM_NUMERO,
+        nome,
+    ];
+};
+
+/**
+ * Desempate de todas as faixas: sala, depois curso, turma e disciplina.
+ *
+ * A sala vem antes do curso porque e o "portao" do painel — a unica informacao
+ * que faz alguem mudar de direcao no corredor —, e porque e a coluna alinhada a
+ * direita, que so se le de relance se for monotonica.
+ *
+ * A DISCIPLINA fecha a cadeia para que a ordem seja determinada pelo conteudo, e
+ * nunca pela ordem de chegada do banco. Sem ela sobra empate real: a turma
+ * gerencial oferta duas disciplinas no mesmo horario e na mesma sala, e PSI07M1
+ * tem "Estagio Supervisionado Basico I" e "Psicoterapia Infantil" as 08:00 na
+ * 303 C. Medido: em 710 momentos as duas trocavam de lugar conforme a ordem das
+ * linhas cruas — a TV mostraria uma ou outra em cima a cada recarga.
+ */
+const compararSala = (a, b) => {
+    const [grupoA, blocoA, numeroA, nomeA] = chaveSala(a.local);
+    const [grupoB, blocoB, numeroB, nomeB] = chaveSala(b.local);
+
+    return (
+        grupoA - grupoB ||
+        blocoA.localeCompare(blocoB) ||
+        numeroA - numeroB ||
+        nomeA.localeCompare(nomeB) ||
+        (a.turmas[0]?.curso || '').localeCompare(b.turmas[0]?.curso || '') ||
+        (a.turmas[0]?.codigo || '').localeCompare(b.turmas[0]?.codigo || '') ||
+        (a.disciplina || '').localeCompare(b.disciplina || '')
+    );
+};
+
+/**
+ * Ordena a faixa por relevancia diante do relogio.
+ *
+ * A ordem cronologica pura vem do painel de voo, mas la o voo que partiu SAI do
+ * quadro — e aqui ele fica. Sem esta funcao o passado ocupa o topo (medido: em
+ * 22% dos momentos a primeira linha ja estava encerrada) e a proxima aula, a
+ * unica que move alguem, cai em media na 9a linha e as vezes fora da 1a pagina.
+ *
+ * Dentro de cada faixa, a ordem que serve aquela faixa:
+ *
+ * - POR VIR: hora de inicio crescente. E a fila do futuro, a mais proxima na
+ *   frente.
+ * - ACONTECENDO: sala. A hora de inicio ja passou e nao orienta ninguem; a sala
+ *   orienta, e a coluna vira um mapa do andar. "Terminando" nao ganha faixa
+ *   propria: para quem esta no corredor a sala continua ocupada, e separar as
+ *   duas quebraria a coluna de salas em duas sequencias. O rotulo da linha
+ *   ("Termina 10:40") ja carrega a nuance.
+ * - ENCERRADA: hora de termino decrescente, para a que acabou agora ficar junto
+ *   do que ainda vive.
+ *
+ * Com `agora = -1` nada comecou: tudo cai em POR_VIR e a ordem se reduz a
+ * cronologica. E o que o painel de amanha precisa, sem nenhum caso especial.
+ *
+ * @param {Array<object>} blocos
+ * @param {number} agora minutos desde a meia-noite
+ * @returns {Array<object>} novo array, ordenado
+ */
+const ordenarPorRelevancia = (blocos = [], agora) =>
+    [...blocos].sort((a, b) => {
+        const faixaA = RELEVANCIA[situacaoDe(a, agora)];
+        const faixaB = RELEVANCIA[situacaoDe(b, agora)];
+
+        if (faixaA !== faixaB) return faixaA - faixaB;
+        if (faixaA === POR_VIR) return a.inicio - b.inicio || compararSala(a, b);
+        if (faixaA === ENCERRADA) return b.fim - a.fim || compararSala(a, b);
+        return compararSala(a, b) || a.fim - b.fim;
+    });
+
+/**
  * Aula encerrada so ocupa espaco enquanto sobra espaco.
  *
  * Cabendo tudo numa pagina, o que ja terminou fica: da contexto e nao custa
@@ -460,11 +587,16 @@ const montarPainel = async (recorte = {}, opcoes = {}) => {
 
     if (!escolha) return { ...moldura, vazio: true, periodo };
 
-    const daFaixa = escolha.blocos;
+    // O relogio que vale para ordem, poda e situacao. Amanha nada comecou
+    // ainda: `-1` faz de tudo futuro, e a ordem por relevancia se reduz a
+    // cronologica sem nenhum caso especial.
+    const agora = amanha ? -1 : relogio.minutos;
+
+    const daFaixa = ordenarPorRelevancia(escolha.blocos, agora);
     // Amanha nada terminou ainda: apara so faz sentido contra o relogio de hoje.
-    const visiveis = amanha ? daFaixa : aparar(daFaixa, relogio.minutos, capacidade);
+    const visiveis = amanha ? daFaixa : aparar(daFaixa, agora, capacidade);
     const paginas = paginar(visiveis, capacidade).map((pagina) =>
-        pagina.map((bloco) => paraLinha(bloco, amanha ? -1 : relogio.minutos))
+        pagina.map((bloco) => paraLinha(bloco, agora))
     );
 
     return {
@@ -615,6 +747,8 @@ module.exports = {
     juntarHorariosSeguidos,
     escolherFaixa,
     situacaoDe,
+    ordenarPorRelevancia,
+    chaveSala,
     aparar,
     paginar,
     agoraLocal,

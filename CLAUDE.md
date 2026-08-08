@@ -281,17 +281,36 @@ Decisões que sustentam o desenho:
 - **A junção nunca atravessa a fronteira de uma faixa.** O turno Integral tem 17:20–18:10 e
   18:20–19:10 com exatos 10 min de vão; juntados, o bloco seria classificado como tarde pelo
   início e sumiria do quadro da noite enquanto acontece.
+- **A ordem é por relevância diante do relógio, não cronológica.** Três faixas, nesta ordem:
+  o que **ainda vai começar** (por hora de início, a mais próxima na frente), o que está
+  **acontecendo** (por sala) e o que **já encerrou** (por término decrescente). A ordem
+  cronológica pura veio do painel de voo, mas lá o voo que partiu *sai* do quadro — e aqui ele
+  fica. Medido nos 8 painéis, 6 dias letivos: o topo do quadro estava encerrado em 22% dos
+  momentos, e a próxima aula — a única linha que faz alguém andar, e a que o CSS já destacava
+  em laranja — caía na 9ª linha em média, às vezes fora da 1ª página. Hoje: 0%, 1ª linha, 0%.
+  O preço é o topo mexer em 1,4% das recargas, contra 0,4% — sempre num evento real.
+- **Dentro de "acontecendo", a ordem é a sala**, e não a hora de início: essa já passou e não
+  orienta ninguém. A coluna da direita fica monotônica e o quadro vira um mapa do andar. A
+  chave é bloco → número → nome, com os ambientes fora da convenção ("Lab 01") depois das salas
+  de bloco e as sem sala por último. O grupo é um **número**, e não uma letra sentinela:
+  `localeCompare` ignora não-caracteres, então `'￾'.localeCompare('C')` é `-1` e o "Lab 01"
+  subiria ao topo. O número da sala sai da primeira ocorrência no nome — lê "310/312 D" como o
+  par do 310 e erra "Lab 02/211 C", que ordena por 2.
+- **Com `agora = -1` a ordem se reduz a cronológica**, que é o que o painel de amanhã precisa.
+  Sem relógio tudo é futuro, e a mesma função serve os dois casos sem ramo especial.
 - **Aula encerrada só ocupa espaço enquanto sobra espaço.** Cabendo na página (18 linhas), o
   que já terminou fica, porque dá contexto. Não cabendo, sai da frente do que ainda vai
   acontecer — e com frequência isso dispensa a paginação. Se *tudo* terminou, o quadro volta
-  a mostrar tudo: tela vazia diria menos que a grade encerrada do turno.
-- **Aula sem sala continua no quadro**, com "a definir". Hoje 9 das 1477 aulas têm local (o
-  cubo do TOTVS não exporta sala), então um link de bloco que excluísse as demais mostraria
-  uma TV vazia até o ensalamento terminar. O painel entra no ar e vai estreitando sozinho
-  conforme o NAP aloca.
-- **EAD não aparece.** A coluna `modalidade` vale `presencial` nas 1477 aulas porque o ERP não
-  a preenche; o que existe é um **local** de `tipo = 'virtual'`. O filtro é por aí, com
-  `modalidade <> 'ead'` como critério secundário para quando o TOTVS passar a preencher.
+  a mostrar tudo: tela vazia diria menos que a grade encerrada do turno. Com a ordem por
+  relevância a poda virou rede de segurança: o que acabou já está no fim.
+- **Aula sem sala continua no quadro**, com "a definir". O cubo do TOTVS não exporta sala, e
+  um link de bloco que excluísse as demais mostraria uma TV vazia até o ensalamento terminar.
+  O painel entra no ar e vai estreitando sozinho conforme o NAP aloca — em 08/08/2026 já eram
+  1.642 das 1.806 aulas com local.
+- **EAD não aparece.** O filtro tem dois critérios porque a origem tem dois sinais: o **local**
+  de `tipo = 'virtual'` e a coluna `modalidade`. Quando o painel foi escrito, `modalidade` valia
+  `presencial` em todas as aulas e só o local distinguia; em 08/08/2026 já são 37 aulas `ead`
+  entre 1.806, então os dois critérios estão em uso. Manter ambos.
 - **O período letivo não viaja na URL.** Uma TV fica anos no ar; `periodo=1` colado atrás dela
   mostraria 2026.2 para sempre. Vem sempre de `periodos_letivos.atual`.
 - **`LINHAS_POR_PAGINA` mora no service**, não no CSS: decide quantas páginas existem e se as
