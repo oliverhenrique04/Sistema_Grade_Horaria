@@ -977,4 +977,27 @@ describe('painel de corredor', () => {
             expect(alturaMinima).toBeGreaterThan(31 + 20 + 10);
         });
     });
+
+    describe('carregamento das fontes', () => {
+        test('nenhuma face usa font-display: block', () => {
+            const fs = require('node:fs');
+            const path = require('node:path');
+            const css = fs.readFileSync(
+                path.join(__dirname, '..', 'public', 'css', 'painel.css'),
+                'utf8'
+            );
+
+            // `block` nao mostra fonte alternativa: enquanto a face nao chega o
+            // navegador reserva a linha e nao pinta glifo nenhum. O cabecalho,
+            // que e so texto, fica uma faixa vazia — e ninguem esta na frente da
+            // TV para recarregar. A troca de fonte incomoda menos que isso.
+            const faces = css.match(/@font-face\s*\{[^}]*\}/g) || [];
+
+            expect(faces.length).toBeGreaterThan(0);
+            faces.forEach((face) => {
+                expect(face).toMatch(/font-display:\s*swap/);
+                expect(face).not.toMatch(/font-display:\s*block/);
+            });
+        });
+    });
 });

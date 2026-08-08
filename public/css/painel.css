@@ -17,14 +17,22 @@
 /* --------------------------------------------------------------------------
    Fontes proprias. A TV liga antes da rede da instituicao: se a primeira
    pintura dependesse de uma CDN, a grade quebraria em Arial justamente quando
-   nao ha ninguem para recarregar. `font-display: block` evita o lampejo.
+   nao ha ninguem para recarregar.
+
+   `font-display: swap`, e nunca `block`. Com `block` o navegador reserva a
+   linha e NAO desenha glifo nenhum enquanto a face nao chega: sobram o fundo,
+   o filete e o SVG do sol, e o cabecalho — que e so texto — vira uma faixa
+   vazia. Foi o que a TV mostrou a cada recarga em que as fontes voltaram a vir
+   da rede. Numa tela de corredor que recarrega a cada 60 s, texto na fonte do
+   sistema vale infinitamente mais do que texto nenhum; o lampejo da troca
+   custa menos que a tela em branco.
    -------------------------------------------------------------------------- */
 
 @font-face {
     font-family: 'Plex Condensed';
     font-style: normal;
     font-weight: 400;
-    font-display: block;
+    font-display: swap;
     src: url('../fontes/plex-condensed-400.woff2') format('woff2');
 }
 
@@ -32,7 +40,7 @@
     font-family: 'Plex Condensed';
     font-style: normal;
     font-weight: 600;
-    font-display: block;
+    font-display: swap;
     src: url('../fontes/plex-condensed-600.woff2') format('woff2');
 }
 
@@ -40,7 +48,7 @@
     font-family: 'Plex Condensed';
     font-style: normal;
     font-weight: 700;
-    font-display: block;
+    font-display: swap;
     src: url('../fontes/plex-condensed-700.woff2') format('woff2');
 }
 
@@ -48,7 +56,7 @@
     font-family: 'Plex Mono';
     font-style: normal;
     font-weight: 500;
-    font-display: block;
+    font-display: swap;
     src: url('../fontes/plex-mono-500.woff2') format('woff2');
 }
 
@@ -56,7 +64,7 @@
     font-family: 'Plex Mono';
     font-style: normal;
     font-weight: 600;
-    font-display: block;
+    font-display: swap;
     src: url('../fontes/plex-mono-600.woff2') format('woff2');
 }
 
