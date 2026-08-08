@@ -300,6 +300,68 @@ describe('Importacao do cubo do TOTVS', () => {
             });
         });
 
+        /**
+         * O mesmo bloco repetido no sabado, como o cubo passou a exportar em
+         * 08/08/2026: mesmos horarios, mesmo professor, `Presencial`. E o tempo
+         * alternativo da aula quinzenal, nao um segundo encontro.
+         */
+        const blocoComSabado = (tempos, extra = {}) =>
+            montarCubo(
+                tempos.flatMap(([inicio, fim]) =>
+                    ['Segunda-Feira', 'Sábado'].map((dia) => ({
+                        SEMANA: dia,
+                        HORAINICIAL: inicio,
+                        HORAFINAL: fim,
+                        ...extra,
+                    }))
+                )
+            );
+
+        const porDiaEHora = (resultado) =>
+            Object.fromEntries(
+                resultado.aulas.map((aula) => [
+                    `${aula.diaSemana}|${aula.horaInicio}`,
+                    aula.presencial,
+                ])
+            );
+
+        it('nunca deixa aula presencial no sabado quando o bloco tem dia util', () => {
+            const { linhas } = lerPrimeiraAba(
+                blocoComSabado(
+                    [
+                        ['08:00', '08:50'],
+                        ['08:50', '09:40'],
+                    ],
+                    { AULAS_SEMANA: 2 }
+                )
+            );
+
+            // Sem a regra, o sabado venceria o desempate por ser o ultimo dia e
+            // levaria o encontro presencial junto.
+            expect(porDiaEHora(cubo.interpretar(linhas))).toEqual({
+                '1|08:00': true,
+                '1|08:50': true,
+                '6|08:00': false,
+                '6|08:50': false,
+            });
+        });
+
+        it('mantem presencial a disciplina que so tem tempo no sabado', () => {
+            const { linhas } = lerPrimeiraAba(
+                montarCubo([
+                    { SEMANA: 'Sábado', HORAINICIAL: '08:00', HORAFINAL: '08:50', AULAS_SEMANA: 1 },
+                ])
+            );
+
+            const resultado = cubo.interpretar(linhas);
+
+            // Marcar como EAD apagaria a disciplina da grade — melhor avisar.
+            expect(resultado.aulas[0].presencial).toBe(true);
+            expect(resultado.avisos.map((aviso) => aviso.tipo)).toContain(
+                'oferta_so_em_horario_ead'
+            );
+        });
+
         it('nunca deixa aula presencial as 18:10, mesmo se a quantidade permitisse', () => {
             const { linhas } = lerPrimeiraAba(
                 bloco(

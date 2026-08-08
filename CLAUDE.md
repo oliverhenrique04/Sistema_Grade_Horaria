@@ -176,6 +176,15 @@ Como funciona, e por quê:
 - **Co-docência.** `aulas.professor_id` continua sendo o professor principal (Titular tem
   precedência); a equipe completa fica em `aula_professores`.
 - **O cubo não traz sala.** As aulas entram sem local e viram pendência para o NAP.
+- **Presencial x EAD é heurística, e o sábado entrou nela.** O cubo diz *quantas* aulas do
+  bloco são presenciais (`AULAS_SEMANA`), nunca *quais*; ficam presenciais os últimos tempos,
+  descontados os que nunca recebem encontro — 18:10, 07:10 (salvo Odontologia) e **o sábado**.
+  A exportação de 08/08/2026 passou a repetir quase todo bloco no sábado (446 das 515
+  ofertas), com os mesmos horários e o mesmo professor: é o tempo alternativo da aula
+  quinzenal. Sem a regra, o sábado vence o desempate por ser o último dia e leva o presencial
+  junto — mediu-se uma turma com 14 das 18 aulas no sábado e **cinco disciplinas às 08:00 do
+  mesmo sábado**. Oferta que só tem sábado continua presencial, com aviso, para não sumir da
+  grade.
 - **Nada é apagado.** Aulas que saem da planilha só são inativadas se o operador marcar a
   opção, e apenas nas turmas presentes no arquivo.
 

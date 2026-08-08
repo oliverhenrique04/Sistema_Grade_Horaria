@@ -56,10 +56,20 @@
  * QUAIS tempos sao presenciais o cubo nao diz — so quantos. Duas regras
  * resolvem, nesta ordem:
  *
- *  1. Nenhuma aula presencial comeca as 18:10; esse tempo e sempre EAD.
- *     As 07:10 vale o mesmo, exceto em Odontologia, que comeca cedo.
+ *  1. Ha tempos que nunca recebem o encontro presencial:
+ *     - as 18:10, porque o turno da noite abre as 19:00;
+ *     - as 07:10, exceto em Odontologia, que comeca cedo;
+ *     - o SABADO inteiro (ver abaixo).
  *  2. Do que sobra, ficam presenciais os ULTIMOS tempos do bloco, na
  *     quantidade que `AULAS_SEMANA` indicar. Os demais viram EAD.
+ *
+ * O sabado entrou na regra 1 na exportacao de 08/08/2026, que passou a repetir
+ * quase todo bloco no sabado — mesmos horarios, mesmo professor, `Presencial` —
+ * como o tempo alternativo da aula quinzenal. Sao 446 das 515 ofertas. Sem a
+ * regra, a ordenacao por dia poe o sabado por ULTIMO, ele vence o desempate da
+ * regra 2 e leva o encontro presencial junto: mediu-se uma turma com 14 das 18
+ * aulas no sabado e CINCO disciplinas as 08:00 do mesmo sabado. O tempo de dia
+ * util e que descreve a grade; o de sabado e a repeticao.
  *
  * As aulas EAD sao gravadas INATIVAS: continuam rastreaveis pela origem, nao
  * aparecem na grade e nao entram no calculo de conflito.
@@ -67,11 +77,12 @@
  * Duas salvaguardas impedem que a regra apague disciplina da grade:
  *  - oferta sem `AULAS_SEMANA` (professor que nao compoe salario) fica toda
  *    presencial;
- *  - oferta cujos tempos caem TODOS em 18:10/07:10 fica toda presencial.
+ *  - oferta cujos tempos caem TODOS em tempo de EAD — inclusive a que so tem
+ *    sabado — fica toda presencial.
  * Ambas viram aviso na previa.
  */
 const { texto, chave, titulo, limitar } = require('../../utils/textos');
-const { valorDaSigla } = require('../../utils/dias');
+const { valorDaSigla, nomeDoDia } = require('../../utils/dias');
 
 /** Colunas exigidas na planilha. Sem qualquer uma delas a carga nao faz sentido. */
 const COLUNAS_OBRIGATORIAS = [
@@ -136,6 +147,12 @@ const HORARIO_EAD_NOTURNO = '18:10';
 
 /** Nem as 07:10, salvo nos cursos que realmente comecam nesse horario. */
 const HORARIO_EAD_DIURNO = '07:10';
+
+/**
+ * Nem no sabado: desde a exportacao de 08/08/2026 o cubo repete o bloco no
+ * sabado como tempo alternativo da aula quinzenal (ver o cabecalho do arquivo).
+ */
+const DIA_EAD = 6;
 
 /** Siglas de curso que comecam as 07:10. */
 const SIGLAS_INICIO_CEDO = new Set(['ODO']);
@@ -297,12 +314,13 @@ const comecaCedo = (turma) => {
 };
 
 /**
- * O horario e sempre EAD, independente do que `AULAS_SEMANA` disser?
+ * O tempo e sempre EAD, independente do que `AULAS_SEMANA` disser?
  * @param {object} turma
- * @param {string} horaInicio "HH:MM"
+ * @param {{diaSemana:number, horaInicio:string}} tempo dia e hora "HH:MM"
  * @returns {boolean}
  */
-const horarioSempreEad = (turma, horaInicio) => {
+const tempoSempreEad = (turma, { diaSemana, horaInicio }) => {
+    if (diaSemana === DIA_EAD) return true;
     if (horaInicio === HORARIO_EAD_NOTURNO) return true;
     if (horaInicio === HORARIO_EAD_DIURNO) return !comecaCedo(turma);
     return false;
@@ -777,11 +795,11 @@ const interpretar = (linhasBrutas = []) => {
             (a, b) => a.diaSemana - b.diaSemana || a.horaInicio.localeCompare(b.horaInicio)
         );
 
-        // Regra 1: os horarios que nunca recebem aula presencial.
-        const candidatas = ordenadas.filter((aula) => !horarioSempreEad(turma, aula.horaInicio));
+        // Regra 1: os tempos que nunca recebem aula presencial.
+        const candidatas = ordenadas.filter((aula) => !tempoSempreEad(turma, aula));
 
-        // Salvaguarda: a oferta inteira cai em 18:10/07:10. Marcar tudo como EAD
-        // apagaria a disciplina da grade — melhor manter e avisar.
+        // Salvaguarda: a oferta inteira cai em tempo de EAD. Marcar tudo como
+        // EAD apagaria a disciplina da grade — melhor manter e avisar.
         if (candidatas.length === 0) {
             soEmHorarioEad.push(ordenadas[0]);
             return;
@@ -836,8 +854,13 @@ const interpretar = (linhasBrutas = []) => {
     if (soEmHorarioEad.length > 0) {
         registrarAviso(
             'oferta_so_em_horario_ead',
-            `${soEmHorarioEad.length} disciplina(s) só têm tempos às ${HORARIO_EAD_NOTURNO}/${HORARIO_EAD_DIURNO} — mantidas presenciais para não sumirem da grade.`,
-            soEmHorarioEad.slice(0, 20).map((aula) => `${aula.disciplinaNome} (${aula.horaInicio})`)
+            `${soEmHorarioEad.length} disciplina(s) só têm tempos às ${HORARIO_EAD_NOTURNO}/${HORARIO_EAD_DIURNO} ou no sábado — mantidas presenciais para não sumirem da grade.`,
+            soEmHorarioEad
+                .slice(0, 20)
+                .map(
+                    (aula) =>
+                        `${aula.disciplinaNome} (${nomeDoDia(aula.diaSemana)} ${aula.horaInicio})`
+                )
         );
     }
 
@@ -1001,10 +1024,11 @@ module.exports = {
     siglaDoCodigo,
     codigoGerencial,
     aulasPresenciaisDaLinha,
-    horarioSempreEad,
+    tempoSempreEad,
     paraMinutos,
     paraHora,
     COLUNAS_OBRIGATORIAS,
     HORARIO_EAD_NOTURNO,
     HORARIO_EAD_DIURNO,
+    DIA_EAD,
 };
