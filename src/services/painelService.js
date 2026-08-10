@@ -494,7 +494,10 @@ const paraLinha = (bloco, agora) => {
         turmas: bloco.turmas.map((turma) => turma.codigo),
         situacao,
         situacaoRotulo: rotulos[situacao],
-        pulsa: situacao === 'agora' || situacao === 'terminando' || situacao === 'breve',
+        // O ponto no selo marca a aula viva: a que acontece agora, a que esta
+        // terminando e a que comeca em breve. Ja se chamou `pulsa`, de quando
+        // ele piscava; o painel nao anima mais nada (ver painel.css).
+        ponto: situacao === 'agora' || situacao === 'terminando' || situacao === 'breve',
     };
 };
 

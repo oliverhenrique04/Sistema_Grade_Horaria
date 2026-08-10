@@ -4,12 +4,16 @@
 
      1. escalar a tela de 1080x1920 para o tamanho real do monitor;
      2. andar com o relogio do cabecalho;
-     3. alternar as paginas quando o recorte nao cabe numa so;
+     3. alternar as paginas, e encher a barra que diz quanto falta;
      4. recarregar a pagina sozinha, sobrevivendo a queda de rede.
 
    O conteudo NAO e montado aqui: o servidor entrega todas as paginas prontas.
    Uma tela que fica meses ligada nao pode acumular estado, e remontar o DOM a
-   cada minuto seria a forma mais facil de vazar memoria. */
+   cada minuto seria a forma mais facil de vazar memoria.
+
+   Tudo o que se move na tela passa por aqui porque a folha de estilo nao anima
+   nada: animacao de CSS vira camada no compositor, e era isso que apagava
+   cabecalho, quadro e rodape na TV (o porque esta em painel.css). */
 (function () {
     'use strict';
 
@@ -115,32 +119,24 @@
 
     const paginas = quadro ? quadro.querySelectorAll('.pagina') : [];
     const indicador = document.getElementById('indicadorPagina');
+    const barra = document.querySelector('.barra i');
     let atual = 0;
-
-    /** Folga sobre a cascata inteira de entrada (18 linhas x 20 ms + 340 ms). */
-    const ASSENTAR_MS = 1500;
-    let assentamento = null;
+    let paginaDesde = Date.now();
 
     /**
-     * Tira a animacao de entrada do caminho depois que ela ja aconteceu.
+     * Enche a barra de giro, que diz quanto falta para a proxima pagina.
      *
-     * A animacao usa `fill: both`: ate ela rodar, a linha esta invisivel. Onde
-     * ela nao roda — compositor sem memoria para mais uma camada 3D, pagina
-     * carregada oculta pelo aplicativo da TV — a aula sumiria da grade sem que
-     * ninguem por perto pudesse recarregar. Assentada, a linha nao depende mais
-     * de animacao nenhuma para aparecer.
+     * Quem anda com ela e este relogio, e nao uma animacao de CSS: no navegador
+     * do aplicativo das TVs toda animacao vira uma camada no compositor, e as
+     * camadas promovidas eram exatamente o que a TV deixava de desenhar — o
+     * rodape inteiro sumia por causa desta barrinha e das animacoes do ceu. Um
+     * passo por segundo dentro dos 14 basta para dizer "ja vira".
      */
-    function assentar(pagina) {
-        window.clearTimeout(assentamento);
-        assentamento = window.setTimeout(function () {
-            const linhas = pagina.querySelectorAll('.linha');
-            for (let i = 0; i < linhas.length; i += 1) {
-                linhas[i].classList.add('assentada');
-            }
-        }, ASSENTAR_MS);
+    function pintarGiro() {
+        if (!barra) return;
+        const fracao = Math.min(1, (Date.now() - paginaDesde) / GIRO_MS);
+        barra.style.width = Math.round(fracao * 100) + '%';
     }
-
-    if (paginas.length) assentar(paginas[atual]);
 
     function trocarPagina() {
         if (paginas.length < 2) return;
@@ -149,28 +145,24 @@
         atual = (atual + 1) % paginas.length;
         paginas[atual].hidden = false;
 
+        paginaDesde = Date.now();
+        pintarGiro();
+
         if (indicador) {
             indicador.textContent = 'página ' + (atual + 1) + ' de ' + paginas.length;
         }
-
-        // Reinicia a animacao de entrada das linhas da pagina que aparece.
-        const linhas = paginas[atual].querySelectorAll('.linha');
-        for (let i = 0; i < linhas.length; i += 1) {
-            linhas[i].classList.remove('assentada');
-            linhas[i].style.animation = 'none';
-            // Leitura forcada: sem ela o navegador funde as duas atribuicoes e
-            // a animacao nao recomeca.
-            void linhas[i].offsetWidth;
-            linhas[i].style.animation = '';
-        }
-
-        assentar(paginas[atual]);
     }
 
     if (paginas.length > 1) {
-        const barra = document.querySelector('.barra i');
-        if (barra) barra.style.setProperty('--giro', GIRO_MS + 'ms');
         window.setInterval(trocarPagina, GIRO_MS);
+
+        // Mesma corrente de setTimeout do relogio, pelo mesmo motivo.
+        (function andar() {
+            window.setTimeout(function () {
+                pintarGiro();
+                andar();
+            }, 1000);
+        })();
     }
 
     /* ------------------------------------------------------------ recarga */

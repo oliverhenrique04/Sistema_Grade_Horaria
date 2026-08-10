@@ -94,8 +94,8 @@
 
                 <% paginas.forEach(function (pagina, indice) { %>
                     <div class="pagina" data-pagina="<%= indice %>" <%= indice === 0 ? '' : 'hidden' %>>
-                        <% pagina.forEach(function (linha, ordem) { %>
-                            <%- include('partials/painel-linha', { linha: linha, ordem: ordem }) %>
+                        <% pagina.forEach(function (linha) { %>
+                            <%- include('partials/painel-linha', { linha: linha }) %>
                         <% }) %>
                     </div>
                 <% }) %>

@@ -1303,13 +1303,17 @@ describe('painel de corredor', () => {
          * estava na camada posicionada por outro motivo (a linha, a marca, o
          * QR). O painel nao pode voltar a depender de z-index negativo.
          */
+        /*
+         * Sem os comentarios: a folha conta a historia de como o painel chegou
+         * aqui, e citar `.tv::before` ou o z-index negativo que ja existiu nao
+         * pode fazer o teste acusar o que a regra nao tem.
+         */
         const css = () => {
             const fs = require('node:fs');
             const path = require('node:path');
-            return fs.readFileSync(
-                path.join(__dirname, '..', 'public', 'css', 'painel.css'),
-                'utf8'
-            );
+            return fs
+                .readFileSync(path.join(__dirname, '..', 'public', 'css', 'painel.css'), 'utf8')
+                .replace(/\/\*[\s\S]*?\*\//g, '');
         };
 
         const regra = (folha, seletor) => {
@@ -1344,23 +1348,48 @@ describe('painel de corredor', () => {
         });
     });
 
-    describe('a entrada das linhas não pode esconder aula', () => {
+    describe('nada no painel depende do compositor', () => {
         /*
-         * A animacao de entrada usa `fill: both` e transformacao 3D: ate ela
-         * rodar a linha esta invisivel, e cada linha vira uma camada no
-         * compositor. Onde uma camada nao sai do lugar, a aula sumiria da grade
-         * para sempre. Passada a cascata, o painel assenta as linhas.
+         * O navegador do aplicativo das TVs nao da conta de compor esta pagina.
+         * Animacao de `transform` ou de `opacity` vira camada promovida, e tudo
+         * o que pinta ACIMA de uma camada promovida vira camada tambem — o ceu
+         * animado levava cabecalho, quadro e rodape junto, e a TV deixava de
+         * desenha-los. Nas fotos de 10/08/2026 uma TV mostrou o painel sem
+         * cabecalho e sem rodape, com o quadro cortado no meio da quarta aula, e
+         * outra mostrou so o ceu.
+         *
+         * A regra que restou e simples de verificar: a folha do painel nao anima
+         * nada. Quem se move na tela passa pelo `painel.js`.
          */
-        test('o CSS tem o estado assentado e o JS o aplica e o refaz na troca', () => {
+        const semComentarios = (fonte) => fonte.replace(/\/\*[\s\S]*?\*\//g, '');
+
+        const arquivo = (pasta, nome) => {
             const fs = require('node:fs');
             const path = require('node:path');
-            const publico = path.join(__dirname, '..', 'public');
-            const folha = fs.readFileSync(path.join(publico, 'css', 'painel.css'), 'utf8');
-            const script = fs.readFileSync(path.join(publico, 'js', 'painel.js'), 'utf8');
+            return fs.readFileSync(path.join(__dirname, '..', 'public', pasta, nome), 'utf8');
+        };
 
-            expect(folha).toMatch(/\.linha\.assentada\s*\{[^}]*animation:\s*none/);
-            expect(script).toMatch(/classList\.add\('assentada'\)/);
-            expect(script).toMatch(/classList\.remove\('assentada'\)/);
+        test('a folha do painel não anima nada', () => {
+            const folha = semComentarios(arquivo('css', 'painel.css'));
+
+            expect(folha).not.toMatch(/@keyframes/);
+            expect(folha).not.toMatch(/\banimation\b/);
+            expect(folha).not.toMatch(/\btransition\b/);
+            expect(folha).not.toMatch(/will-change/);
+        });
+
+        test('nenhuma transformação 3D promove camada', () => {
+            const folha = semComentarios(arquivo('css', 'painel.css'));
+
+            expect(folha).not.toMatch(/translate3d|rotate3d|translateZ|perspective\(/);
+        });
+
+        test('a barra de giro é preenchida pelo JavaScript', () => {
+            const script = arquivo('js', 'painel.js');
+
+            // Sem isto a barra fica num traco vazio para sempre: o CSS ja nao a
+            // move, e ela e o unico aviso de que a pagina vai virar.
+            expect(script).toMatch(/barra\.style\.width/);
         });
     });
 });

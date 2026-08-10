@@ -12,7 +12,7 @@
     const excedentes = linha.turmas.length - visiveis.length;
     const salaLonga = linha.local && linha.local.length > 7;
 %>
-<article class="linha" data-situacao="<%= linha.situacao %>" style="--i: <%= ordem %>">
+<article class="linha" data-situacao="<%= linha.situacao %>">
     <p class="linha-inicio"><%= linha.inicio %></p>
     <p class="linha-fim">→ <%= linha.fim %></p>
 
@@ -46,7 +46,7 @@
 
     <div class="linha-situacao">
         <span class="selo" data-situacao="<%= linha.situacao %>">
-            <% if (linha.pulsa) { %><i class="ponto" aria-hidden="true"></i><% } %>
+            <% if (linha.ponto) { %><i class="ponto" aria-hidden="true"></i><% } %>
             <span><%= linha.situacaoRotulo %></span>
         </span>
     </div>

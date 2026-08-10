@@ -323,17 +323,23 @@ Decisões que sustentam o desenho:
 - **Fontes auto-hospedadas** em `public/fontes/` (IBM Plex, OFL). A TV liga antes da rede da
   instituição: dependendo de CDN, a primeira pintura cai em Arial e a grade quebra justamente
   quando não há ninguém para recarregar.
-- **Nada essencial depende de `z-index` negativo.** O navegador do aplicativo das TVs pinta os
-  filhos de z-index negativo **acima** do conteúdo em fluxo assim que recompõe as camadas — o
-  céu tem animações que o compositor promove, e a recomposição acontece a cada troca de página
-  e a cada recarga. Sumiam o cabeçalho inteiro, a barra de colunas, a legenda e a linha de
-  estado do rodapé; sobrava exatamente o que já estava na camada posicionada por outro motivo:
-  a linha (`position: relative`), a marca e o QR (`opacity` < 1). Hoje o degradê é o fundo do
-  **próprio** `.tv` (o fundo do elemento pinta antes de qualquer filho, em qualquer navegador),
-  o céu está em `z-index: 0` e cabeçalho, quadro e rodapé em `z-index: 1`. Pela mesma razão a
-  animação de entrada sai de cena depois da cascata (`.linha.assentada`, aplicada por
-  `painel.js`): com `fill: both` ela deixa a aula invisível enquanto não roda, e cada linha em
-  transformação 3D é mais uma camada que a TV pode não dar conta de compor.
+- **O painel não anima nada, e nada depende de `z-index` negativo.** As duas regras são a mesma
+  história. O navegador do aplicativo das TVs não dá conta de compor esta página: animação de
+  `transform` ou de `opacity` vira uma camada promovida, e tudo que pinta **acima** de uma
+  camada promovida precisa virar camada também — o céu animado empurrava cabeçalho, quadro e
+  rodapé para o compositor, cada um com 1080 px de largura, e a TV deixava de desenhá-los. Em
+  10/08/2026 uma TV mostrou o painel sem cabeçalho e sem rodapé, com o quadro cortado no meio da
+  quarta aula, e outra mostrou só o céu; o céu, que pinta na camada raiz, nunca falhou.
+  A primeira tentativa mexeu só na ordem — `.tv::before` em -3 e `.ceu` em -2 subiram para 0 e
+  1 — e piorou: ao virarem contexto de empilhamento, as três regiões engoliram as camadas que
+  ainda escapavam sozinhas (a linha por `position: relative`, a marca e o QR por `opacity` < 1)
+  e passaram a sumir junto. Hoje o degradê é o fundo do **próprio** `.tv` (o fundo do elemento
+  pinta antes de qualquer filho, em qualquer navegador), o céu está em `z-index: 0`, cabeçalho,
+  quadro e rodapé em `z-index: 1`, e a folha não tem `animation`, `transition`, `will-change`
+  nem transformação 3D — `tests/painel.test.js` confere. O que se move na tela passa por
+  `painel.js`: o relógio, a troca de página e a barra de giro, preenchida em `width` um passo
+  por segundo. As estrelas ficaram nas três faixas do dia porque era o que a TV já mostrava — o
+  `opacity: 0` do dia era sobrescrito pelo próprio cintilar.
 - **QR próprio**, em `src/utils/qrcode.js` (modo byte, nível M, versões 1–10, saída SVG). Um
   QR errado renderiza lindamente e não lê, então `tests/qrcode.test.js` compara a matriz
   inteira — as oito máscaras de cada texto — contra vetores de um codificador de referência.

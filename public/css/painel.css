@@ -97,22 +97,32 @@ body {
    A tela
    -------------------------------------------------------------------------- */
 
-/* O fundo e o ceu ficam ABAIXO do conteudo sem nenhum z-index negativo, e essa
-   e a regra mais importante desta folha.
+/* O fundo e o ceu ficam ABAIXO do conteudo sem nenhum z-index negativo, e nada
+   nesta folha anima. As duas regras respondem ao mesmo defeito e sao as mais
+   importantes daqui.
 
-   O navegador do aplicativo das TVs pinta os filhos de z-index negativo por
-   cima do conteudo em fluxo — sao camadas que o compositor promove por causa
-   das animacoes do ceu (`translate3d`, `rotate`) e que ele reordena na primeira
-   recomposicao, isto e, a cada troca de pagina e a cada recarga. O que sumia
-   era exatamente o que se pinta em fluxo: o cabecalho inteiro, a barra de
-   colunas, a legenda e o estado do rodape. O que sobrava era o que ja estava na
-   camada posicionada por outro motivo — a linha (`position: relative`), a marca
-   e o QR (`opacity` < 1).
+   O navegador do aplicativo das TVs nao da conta de compor esta pagina. Toda
+   animacao de `transform` ou `opacity` vira uma camada que o compositor promove,
+   e tudo o que pinta ACIMA de uma camada promovida precisa virar camada tambem:
+   o ceu animado empurrava cabecalho, quadro e rodape para o compositor, cada um
+   uma textura de 1080 px de largura. A TV entao deixava de desenha-los. Nas
+   fotos de 10/08/2026, uma TV mostrou o painel sem cabecalho e sem rodape, com o
+   quadro cortado no meio da quarta aula, e outra mostrou so o ceu. O ceu, que
+   pinta na camada raiz, nunca falhou em nenhuma delas.
+
+   A primeira tentativa mexeu so na ordem — `.tv::before` em -3 e `.ceu` em -2
+   subiram para 0 e 1. Nao bastou, e piorou: ao virarem contexto de empilhamento,
+   as tres regioes engoliram as camadas que ainda escapavam sozinhas (a linha por
+   `position: relative`, a marca e o QR por `opacity` < 1) e passaram a sumir
+   junto com elas.
 
    Por isso o degrade e o fundo do PROPRIO `.tv` (background do elemento pinta
-   antes de qualquer filho, em qualquer navegador), o ceu fica em `z-index: 0` e
-   as tres regioes sobem para `z-index: 1`. Nada muda na tela; muda a ordem, que
-   deixa de depender do compositor acertar o negativo. */
+   antes de qualquer filho, em qualquer navegador), o ceu fica em `z-index: 0`,
+   cabecalho, quadro e rodape ficam em `z-index: 1` — e nenhuma regra desta folha
+   usa `animation`, `transition`, `will-change` ou transformacao 3D. Sem camada
+   promovida a pagina inteira pinta de uma vez, como o ceu sempre pintou. O que
+   se move na tela passa por `painel.js`, e e so o relogio, a troca de pagina e a
+   barra de giro. */
 .tv {
     position: absolute;
     top: 0;
@@ -176,10 +186,11 @@ body {
 /* --------------------------------------------------------------------------
    Ceu: o efeito do turno.
 
-   So `transform` e `opacity` sao animados — as duas propriedades que o
-   navegador compoe na GPU sem repintar. Nada de canvas e nada de timer de
-   quadro: a pagina fica ligada meses, e um laco de animacao em JS acumularia
-   trabalho ate a TV engasgar.
+   Degrade, astro, raios, bruma, estrelas e veu, todos parados. O ceu ja foi
+   animado — o sol subia, a bruma derivava, as estrelas cintilavam — e era esse
+   movimento que promovia as camadas e apagava o painel na TV (ver a regra de
+   composicao acima). Tambem nao ha canvas nem timer de quadro: a pagina fica
+   ligada meses, e um laco de animacao em JS acumularia trabalho ate engasgar.
    -------------------------------------------------------------------------- */
 
 .ceu {
@@ -207,7 +218,6 @@ body {
 .tv[data-faixa='manha'] .astro {
     right: -230px;
     top: -210px;
-    animation: subir 120s ease-in-out infinite alternate;
 }
 
 .tv[data-faixa='tarde'] .astro {
@@ -216,7 +226,6 @@ body {
     width: 620px;
     height: 620px;
     opacity: 0.38;
-    animation: descer 120s ease-in-out infinite alternate;
 }
 
 .tv[data-faixa='noite'] .astro {
@@ -225,7 +234,6 @@ body {
     width: 300px;
     height: 300px;
     opacity: 0.6;
-    animation: respirar 22s ease-in-out infinite;
 }
 
 .tv[data-faixa='noite'] .astro::after {
@@ -234,34 +242,6 @@ body {
     inset: -50%;
     border-radius: 50%;
     background: radial-gradient(circle, rgba(190, 205, 255, 0.16), transparent 62%);
-}
-
-@keyframes subir {
-    from {
-        transform: translate3d(0, 60px, 0) scale(0.96);
-    }
-    to {
-        transform: translate3d(-30px, -18px, 0) scale(1.04);
-    }
-}
-
-@keyframes descer {
-    from {
-        transform: translate3d(-30px, -30px, 0) scale(1.03);
-    }
-    to {
-        transform: translate3d(20px, 60px, 0) scale(0.97);
-    }
-}
-
-@keyframes respirar {
-    0%,
-    100% {
-        opacity: 0.6;
-    }
-    50% {
-        opacity: 0.82;
-    }
 }
 
 .raios {
@@ -274,17 +254,10 @@ body {
     );
     -webkit-mask-image: radial-gradient(circle at 92% 5%, #000 0%, transparent 36%);
     mask-image: radial-gradient(circle at 92% 5%, #000 0%, transparent 36%);
-    animation: girar 240s linear infinite;
 }
 
 .tv[data-faixa='noite'] .raios {
     display: none;
-}
-
-@keyframes girar {
-    to {
-        transform: rotate(360deg);
-    }
 }
 
 .bruma {
@@ -293,7 +266,6 @@ body {
     background:
         radial-gradient(110% 34% at 50% 106%, rgba(255, 150, 70, 0.2), transparent 62%),
         radial-gradient(70% 22% at 8% 0%, rgba(120, 190, 255, 0.12), transparent 70%);
-    animation: derivar 90s ease-in-out infinite alternate;
 }
 
 .tv[data-faixa='noite'] .bruma {
@@ -302,46 +274,26 @@ body {
         radial-gradient(64% 22% at 14% 4%, rgba(180, 130, 255, 0.14), transparent 72%);
 }
 
-@keyframes derivar {
-    from {
-        transform: translate3d(-26px, 0, 0);
-    }
-    to {
-        transform: translate3d(26px, -12px, 0);
-    }
-}
-
+/* As estrelas ficam nas tres faixas do dia, e nao so a noite. Elas nasceram com
+   `opacity: 0` fora da noite, mas o cintilar sobrescrevia esse zero em todas as
+   faixas, entao a tela que subiu no corredor sempre teve estrela — inclusive de
+   manha. Parado o cintilar, o valor fixo e a media do ciclo que a TV mostrava
+   (0,5 a 0,95): o ceu continua o mesmo, so nao pisca mais. */
 .estrelas {
     inset: -10%;
-    opacity: 0;
+    opacity: 0.72;
     background-image:
         radial-gradient(1.6px 1.6px at 24px 32px, rgba(255, 255, 255, 0.9), transparent 100%),
         radial-gradient(1.2px 1.2px at 168px 96px, rgba(220, 230, 255, 0.75), transparent 100%),
         radial-gradient(1.9px 1.9px at 96px 200px, rgba(255, 255, 255, 0.65), transparent 100%),
         radial-gradient(1.1px 1.1px at 260px 148px, rgba(200, 215, 255, 0.7), transparent 100%);
     background-size: 260px 210px;
-    animation: cintilar 9s ease-in-out infinite;
 }
 
-.tv[data-faixa='noite'] .estrelas {
-    opacity: 1;
-}
-
+/* Duas camadas de tamanhos diferentes: o padrao de 4 pontos nao se le como
+   padrao quando dois tamanhos de repeticao se sobrepoem. */
 .estrelas.lenta {
     background-size: 430px 350px;
-    animation: cintilar 14s ease-in-out infinite reverse;
-}
-
-@keyframes cintilar {
-    0%,
-    100% {
-        opacity: 0.5;
-        transform: translate3d(0, 0, 0);
-    }
-    50% {
-        opacity: 0.95;
-        transform: translate3d(10px, 6px, 0);
-    }
 }
 
 /* O veu garante o contraste do texto aconteca o que acontecer no ceu. A
@@ -358,17 +310,8 @@ body {
         );
 }
 
-@media (prefers-reduced-motion: reduce) {
-    .astro,
-    .raios,
-    .bruma,
-    .estrelas,
-    .ponto,
-    .barra i,
-    .linha {
-        animation: none !important;
-    }
-}
+/* Nao ha bloco de `prefers-reduced-motion` porque nao ha movimento nenhum a
+   reduzir: a folha inteira e estatica. */
 
 /* --------------------------------------------------------------------------
    Cabecalho
@@ -542,31 +485,13 @@ body {
     line-height: 1.2;
     padding: 0 10px 0 18px;
     border-bottom: 1px solid var(--fio);
-    animation: entrar 0.34s cubic-bezier(0.2, 0.7, 0.3, 1) both;
-    animation-delay: calc(var(--i, 0) * 20ms);
-    transform-origin: top center;
 }
 
-@keyframes entrar {
-    from {
-        opacity: 0;
-        transform: perspective(900px) rotateX(-46deg);
-    }
-    to {
-        opacity: 1;
-        transform: perspective(900px) rotateX(0);
-    }
-}
-
-/* A entrada e enfeite; a aula, nao. Com `fill: both` a linha fica em
-   `opacity: 0` ate a animacao rodar, e a animacao usa transformacao 3D: cada
-   linha vira uma camada no compositor. Onde uma dessas camadas nao sai do
-   lugar — TV sem memoria de video, pagina carregada oculta pelo aplicativo — a
-   linha fica em branco para sempre, e ninguem esta no corredor para recarregar.
-   Passada a cascata, `painel.js` assenta as linhas e sobra o estado normal. */
-.linha.assentada {
-    animation: none;
-}
+/* A linha ja teve uma animacao de entrada em cascata, com `fill: both` e
+   transformacao 3D. Era enfeite que custava a aula: ate a animacao rodar a linha
+   ficava em `opacity: 0`, e cada linha virava uma camada no compositor. Camada
+   que nao sai do lugar e aula em branco para sempre, sem ninguem no corredor
+   para recarregar. A grade aparece pintada, e pronto. */
 
 .linha::before {
     content: '';
@@ -773,23 +698,6 @@ body {
     flex: none;
 }
 
-.selo[data-situacao='agora'] .ponto,
-.selo[data-situacao='terminando'] .ponto {
-    animation: pulsar 2.4s ease-in-out infinite;
-}
-
-@keyframes pulsar {
-    0%,
-    100% {
-        opacity: 1;
-        transform: scale(1);
-    }
-    50% {
-        opacity: 0.35;
-        transform: scale(0.82);
-    }
-}
-
 /* --------------------------------------------------------------------------
    Densidade: tres regimes, escolhidos pela altura que cada linha recebe
    -------------------------------------------------------------------------- */
@@ -990,21 +898,17 @@ body {
     overflow: hidden;
 }
 
+/* O preenchimento vem de `painel.js`, em `width`, no mesmo tique de um segundo
+   que anda com o relogio. Como `scaleX` animado a barra era mais uma camada
+   promovida dentro do rodape, e o rodape inteiro deixava de ser desenhado. Um
+   passo por segundo dentro dos 14 basta para dizer "ja vira". */
 .barra i {
     position: absolute;
-    inset: 0;
-    transform-origin: left;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 0;
     background: var(--acento);
-    animation: correr var(--giro, 14s) linear infinite;
-}
-
-@keyframes correr {
-    from {
-        transform: scaleX(0);
-    }
-    to {
-        transform: scaleX(1);
-    }
 }
 
 /* Sem rede o painel avisa em vez de mentir uma grade velha em silencio. */
